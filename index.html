@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Duit Kita</title>
+
+<!-- PWA / iOS install -->
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Duit Kita">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="theme-color" content="#F4F6F1">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --paper:#F4F6F1; --card:#FFFFFF; --ink:#17251D; --muted:#6B776F;
+  --line:#DCE2DA; --coin:#F2C230;
+  --person:#1E7A50; --person-tint:#E2EFE7; --person-deep:#155C3B;
+  --radius:16px;
+  --disp:"Bricolage Grotesque", system-ui, sans-serif;
+  --num:"Space Grotesk", ui-monospace, monospace;
+  --body:system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+body.theme-dinda{ --person:#B04A72; --person-tint:#F6E6ED; --person-deep:#8C3055; }
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:var(--body); background:var(--paper); color:var(--ink);
+  padding-bottom:calc(170px + env(safe-area-inset-bottom));
+  transition:background .3s;
+}
+header{
+  padding:calc(14px + env(safe-area-inset-top)) 20px 6px;
+  display:flex; align-items:baseline; justify-content:space-between;
+}
+header h1{font-family:var(--disp); font-weight:800; font-size:26px; letter-spacing:-.02em}
+header h1 .dot{color:var(--person); transition:color .3s}
+header .today{font-family:var(--num); font-size:13px; color:var(--muted)}
+
+main{padding:0 16px}
+section{margin-top:18px}
+.label{
+  font-family:var(--disp); font-weight:600; font-size:12px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--muted); margin-bottom:8px; padding-left:4px;
+  display:flex; align-items:center; gap:8px;
+}
+.label .auto{
+  font-family:var(--body); font-weight:600; letter-spacing:0; text-transform:none;
+  font-size:11px; color:var(--person); background:var(--person-tint);
+  padding:2px 8px; border-radius:999px; transition:.3s; display:none;
+}
+.label .auto.show{display:inline-block}
+
+/* ---- name segmented switch ---- */
+.who{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.who button{
+  min-height:64px; border:2px solid var(--line); border-radius:var(--radius);
+  background:var(--card); font-family:var(--disp); font-weight:800; font-size:20px;
+  color:var(--ink); cursor:pointer; transition:.15s;
+}
+.who button.sel{border-color:var(--person); background:var(--person); color:#fff}
+#btn-andre.sel{border-color:#1E7A50; background:#1E7A50}
+#btn-dinda.sel{border-color:#B04A72; background:#B04A72}
+
+/* ---- generic chip grids ---- */
+.grid{display:grid; gap:10px}
+.g-cat{grid-template-columns:repeat(3,1fr)}
+.g-amt{grid-template-columns:repeat(4,1fr)}
+.g-src{grid-template-columns:1fr 1fr}
+.g-day{grid-template-columns:repeat(3,1fr)}
+.chip{
+  min-height:54px; border:1.5px solid var(--line); border-radius:var(--radius);
+  background:var(--card); color:var(--ink); font-size:15px; font-weight:600;
+  font-family:var(--body); cursor:pointer; transition:.15s;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  padding:8px 4px;
+}
+.chip .em{font-size:19px; line-height:1}
+.chip.sel{border-color:var(--person); background:var(--person-tint); color:var(--person-deep); border-width:2px}
+.chip.num{font-family:var(--num); font-weight:700; font-size:16px}
+.chip.src{align-items:flex-start; padding-left:14px}
+.chip.src small{font-size:11.5px; color:var(--muted); font-weight:600}
+.chip.sel.src small{color:var(--person-deep); opacity:.7}
+
+.reveal{display:none; margin-top:10px}
+.reveal.show{display:block}
+.reveal input{
+  width:100%; min-height:56px; border:2px solid var(--person); border-radius:var(--radius);
+  padding:0 16px; font-family:var(--num); font-size:20px; font-weight:700;
+  background:var(--card); color:var(--ink); outline:none;
+}
+.reveal .hint{font-size:12px; color:var(--muted); margin-top:6px; padding-left:4px}
+
+/* ---- sticky save ---- */
+.savebar{
+  position:fixed; left:0; right:0; bottom:0; padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(to top, var(--paper) 70%, transparent);
+}
+#save{
+  width:100%; min-height:60px; border:none; border-radius:18px;
+  background:var(--person); color:#fff; font-family:var(--disp); font-weight:800;
+  font-size:19px; letter-spacing:.01em; cursor:pointer; transition:.2s;
+  box-shadow:0 6px 18px rgba(0,0,0,.14);
+}
+#save:disabled{background:#C6CDC5; color:#fff; box-shadow:none}
+#save .sub{display:block; font-family:var(--num); font-weight:500; font-size:12px; opacity:.85; margin-top:2px}
+
+.foot{
+  font-family:var(--num); font-size:12px; color:var(--muted); text-align:center;
+  letter-spacing:.08em; padding:38px 0 44px; opacity:.65;
+}
+.errbar{
+  display:none; margin:0 16px 10px; padding:12px 14px; border-radius:14px;
+  background:#FBEAE7; color:#8C2B1D; font-size:14px; font-weight:600;
+}
+.errbar.show{display:block}
+
+/* ---- receipt overlay ---- */
+#overlay{
+  position:fixed; inset:0; background:rgba(23,37,29,.5); display:none;
+  align-items:flex-end; justify-content:center; z-index:20; backdrop-filter:blur(2px);
+}
+#overlay.show{display:flex}
+.slip{
+  width:min(420px,92%); background:#fff; border-radius:20px 20px 0 0;
+  padding:26px 22px calc(22px + env(safe-area-inset-bottom));
+  animation:up .3s ease-out;
+}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.slip .perf{
+  height:12px; margin:-26px -22px 18px;
+  background:radial-gradient(circle at 10px -4px, transparent 8px, #fff 8.5px);
+  background-size:20px 12px; background-position:0 0;
+}
+.slip h2{font-family:var(--disp); font-weight:800; font-size:22px; color:var(--person)}
+.slip .row{display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px dashed var(--line); font-size:15px}
+.slip .row b{font-family:var(--num)}
+.slip .amt{font-family:var(--num); font-weight:700; font-size:34px; margin:12px 0 6px; color:var(--ink)}
+.slip button{
+  width:100%; min-height:56px; margin-top:18px; border:none; border-radius:16px;
+  background:var(--person); color:#fff; font-family:var(--disp); font-weight:800; font-size:17px; cursor:pointer;
+}
+@media (prefers-reduced-motion: reduce){ .slip{animation:none} *{transition:none!important} }
+button:focus-visible,input:focus-visible{outline:3px solid var(--coin); outline-offset:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Duit Kita<span class="dot">.</span></h1>
+  <div class="today" id="hdr-date"></div>
+</header>
+
+<main>
+  <section>
+    <div class="label">Who's logging</div>
+    <div class="who">
+      <button id="btn-andre" type="button">Andre</button>
+      <button id="btn-dinda" type="button">Dinda</button>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Category</div>
+    <div class="grid g-cat" id="cats"></div>
+  </section>
+
+  <section>
+    <div class="label">Amount</div>
+    <div class="grid g-amt" id="amts"></div>
+    <div class="reveal" id="amt-reveal">
+      <input id="amt-input" inputmode="numeric" placeholder="e.g. 35.000" autocomplete="off">
+      <div class="hint">Type the full amount in Rupiah</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Source <span class="auto" id="src-auto">auto</span></div>
+    <div class="grid g-src" id="srcs"></div>
+  </section>
+
+  <section>
+    <div class="label">Day</div>
+    <div class="grid g-day" id="days"></div>
+    <div class="reveal" id="day-reveal">
+      <input id="day-input" type="date">
+      <div class="hint">Up to 30 days back</div>
+    </div>
+  </section>
+
+  <footer class="foot">duitkita_version1 · 2026</footer>
+</main>
+
+<div class="savebar">
+  <div class="errbar" id="err"></div>
+  <button id="save" type="button" disabled>Pick a name to start</button>
+</div>
+
+<div id="overlay">
+  <div class="slip">
+    <div class="perf"></div>
+    <h2 id="slip-title">Logged ✓</h2>
+    <div class="amt" id="slip-amt"></div>
+    <div class="row"><span>Category</span><b id="slip-cat"></b></div>
+    <div class="row"><span>Source</span><b id="slip-src"></b></div>
+    <div class="row"><span>Day</span><b id="slip-day"></b></div>
+    <div class="row"><span>By</span><b id="slip-who"></b></div>
+    <button id="again" type="button">Log another</button>
+  </div>
+</div>
+
+<script>
+/* ================= CONFIG =================
+   Paste your Google Apps Script Web App URL between the quotes. */
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby0k-IyHSOKKaYSmvhTdJdubpVHbQt1xaRawk312D41VAZSctuSEicXwATRrR-2GpyC1g/exec";
+/* ========================================== */
+
+const CATS = [
+  {k:"Food", em:"🍜"}, {k:"Transport", em:"🛵"}, {k:"Shopping", em:"🛍️"},
+  {k:"Bills", em:"🧾"}, {k:"Other", em:"✨"}
+];
+const AMTS = [10000, 20000, 50000, 100000];
+const SRCS = ["Seabank Andre","Seabank Dinda","BCA Andre","BCA Dinda","Ewallet Andre","Ewallet Dinda"];
+const DAYS = ["Today","Yesterday","Custom"];
+
+const S = { name:null, category:null, amount:null, custom:false, source:null, day:"Today", customDate:null };
+
+const $ = id => document.getElementById(id);
+const fmt = n => "Rp" + Number(n).toLocaleString("id-ID");
+const iso = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+
+/* header date */
+const now = new Date();
+$("hdr-date").textContent = now.toLocaleDateString("id-ID",{weekday:"short", day:"numeric", month:"short"});
+
+/* build chips */
+function chips(el, items, render, onTap){
+  items.forEach(it=>{
+    const b=document.createElement("button");
+    b.type="button"; b.className="chip"; render(b,it);
+    b.onclick=()=>onTap(it,b);
+    el.appendChild(b);
+  });
+}
+function selOnly(container, btn){ container.querySelectorAll(".chip").forEach(c=>c.classList.remove("sel")); btn.classList.add("sel"); }
+
+/* name */
+$("btn-andre").onclick = ()=>pickName("Andre");
+$("btn-dinda").onclick = ()=>pickName("Dinda");
+function pickName(n){
+  S.name=n;
+  document.body.classList.toggle("theme-dinda", n==="Dinda");
+  $("btn-andre").classList.toggle("sel", n==="Andre");
+  $("btn-dinda").classList.toggle("sel", n==="Dinda");
+  /* default source to their Seabank */
+  S.source = "Seabank "+n;
+  [... $("srcs").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.dataset.src===S.source));
+  $("src-auto").classList.add("show");
+  refresh();
+}
+
+/* categories */
+chips($("cats"), CATS, (b,it)=>{ b.innerHTML=`<span class="em">${it.em}</span>${it.k}`; },
+  (it,b)=>{ S.category=it.k; selOnly($("cats"),b); refresh(); });
+
+/* amounts */
+chips($("amts"), [...AMTS,"Custom"], (b,it)=>{
+    b.classList.add("num");
+    b.textContent = it==="Custom" ? "···" : (it/1000)+"k";
+    if(it==="Custom") b.title="Custom amount";
+  },
+  (it,b)=>{
+    selOnly($("amts"),b);
+    if(it==="Custom"){ S.custom=true; S.amount=parseAmt($("amt-input").value); $("amt-reveal").classList.add("show"); $("amt-input").focus(); }
+    else{ S.custom=false; S.amount=it; $("amt-reveal").classList.remove("show"); }
+    refresh();
+  });
+function parseAmt(v){ const n=Number(String(v).replace(/[^\d]/g,"")); return n>0?n:null; }
+$("amt-input").addEventListener("input", e=>{
+  const n=parseAmt(e.target.value);
+  e.target.value = n ? n.toLocaleString("id-ID") : "";
+  S.amount = n; refresh();
+});
+
+/* sources */
+chips($("srcs"), SRCS, (b,it)=>{
+    const [bank, who] = [it.split(" ")[0]==="Ewallet"?"E-wallet":it.split(" ")[0], it.split(" ")[1]];
+    b.classList.add("src"); b.dataset.src=it;
+    b.innerHTML = `${bank}<small>${who}</small>`;
+  },
+  (it,b)=>{ S.source=it; selOnly($("srcs"),b); $("src-auto").classList.remove("show"); refresh(); });
+
+/* days */
+const dayInput = $("day-input");
+{ const max=new Date(), min=new Date(); min.setDate(min.getDate()-30);
+  dayInput.max=iso(max); dayInput.min=iso(min); }
+chips($("days"), DAYS, (b,it)=>{ b.textContent=it; if(it==="Today") b.classList.add("sel"); },
+  (it,b)=>{
+    S.day=it; selOnly($("days"),b);
+    $("day-reveal").classList.toggle("show", it==="Custom");
+    if(it==="Custom" && !dayInput.value) dayInput.value=iso(new Date());
+    S.customDate = it==="Custom" ? dayInput.value : null;
+    refresh();
+  });
+dayInput.addEventListener("change", ()=>{ S.customDate=dayInput.value; refresh(); });
+
+/* validation + save */
+function entryDate(){
+  if(S.day==="Today") return iso(new Date());
+  if(S.day==="Yesterday"){ const d=new Date(); d.setDate(d.getDate()-1); return iso(d); }
+  return S.customDate;
+}
+function ready(){ return S.name && S.category && S.amount>0 && S.source && entryDate(); }
+function refresh(){
+  const btn=$("save");
+  if(!S.name){ btn.disabled=true; btn.textContent="Pick a name to start"; return; }
+  if(!ready()){
+    btn.disabled=true;
+    btn.textContent = !S.category ? "Pick a category" : (!S.amount ? "Pick an amount" : "Pick a day");
+    return;
+  }
+  btn.disabled=false;
+  btn.innerHTML = `Save ${fmt(S.amount)} <span class="sub">${S.category} · ${S.source} · ${S.day==="Custom"?S.customDate:S.day}</span>`;
+}
+
+$("save").onclick = async ()=>{
+  const btn=$("save"), err=$("err");
+  err.classList.remove("show");
+  if(SCRIPT_URL.startsWith("PASTE")){ err.textContent="Setup needed: paste your Apps Script URL into index.html (SCRIPT_URL)."; err.classList.add("show"); return; }
+  btn.disabled=true; btn.textContent="Saving…";
+  const payload = { date:entryDate(), name:S.name, category:S.category, amount:S.amount, source:S.source, loggedVia:"pwa" };
+  try{
+    const res = await fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+    const out = await res.json();
+    if(!out.ok) throw new Error(out.error || "Server rejected the entry");
+    showSlip(payload);
+  }catch(e){
+    err.textContent = "Couldn't save — check your connection and tap Save again. Nothing was lost.";
+    err.classList.add("show");
+    refresh();
+  }
+};
+
+/* receipt */
+function showSlip(p){
+  $("slip-amt").textContent = fmt(p.amount);
+  $("slip-cat").textContent = p.category;
+  $("slip-src").textContent = p.source;
+  $("slip-day").textContent = p.date;
+  $("slip-who").textContent = p.name;
+  $("overlay").classList.add("show");
+}
+$("again").onclick = ()=>{
+  $("overlay").classList.remove("show");
+  /* keep name + theme, clear the rest */
+  S.category=null; S.amount=null; S.custom=false; S.day="Today"; S.customDate=null;
+  S.source = "Seabank "+S.name; $("src-auto").classList.add("show");
+  $("amt-input").value="";
+  $("amt-reveal").classList.remove("show"); $("day-reveal").classList.remove("show");
+  document.querySelectorAll("#cats .chip,#amts .chip").forEach(c=>c.classList.remove("sel"));
+  [... $("srcs").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.dataset.src===S.source));
+  [... $("days").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.textContent==="Today"));
+  refresh();
+};
+
+refresh();
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
