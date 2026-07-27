@@ -187,6 +187,9 @@ section{margin-top:18px}
   width:100%; min-height:56px; margin-top:18px; border:none; border-radius:16px;
   background:var(--person); color:#fff; font-family:var(--disp); font-weight:800; font-size:17px; cursor:pointer;
 }
+.slip button.ghost{
+  background:none; color:#B23A2E; font-weight:700; font-size:14px; min-height:40px; margin-top:6px;
+}
 
 @media (prefers-reduced-motion: reduce){ .slip{animation:none} *{transition:none!important} }
 button:focus-visible,input:focus-visible{outline:3px solid var(--coin); outline-offset:2px}
@@ -295,6 +298,14 @@ body.on-report{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   background:var(--card); color:var(--ink); font-family:var(--disp); font-weight:700;
   font-size:14px; cursor:pointer;
 }
+
+/* swipe-to-delete */
+.rwrap{position:relative; margin-bottom:8px; border-radius:16px; overflow:hidden}
+.rwrap .rcard{margin-bottom:0; position:relative; z-index:1; touch-action:pan-y; cursor:pointer}
+.rtrash{
+  position:absolute; top:0; right:0; bottom:0; width:76px; z-index:0;
+  background:#B23A2E; border:none; color:#fff; font-size:22px; cursor:pointer;
+}
 </style>
 </head>
 <body>
@@ -355,7 +366,7 @@ body.on-report{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     </div>
   </section>
 
-  <footer class="foot">duitkita_version9 · 2026</footer>
+  <footer class="foot">duitkita_version10 · 2026</footer>
 </main>
 
 <!-- ============ REPORT ============ -->
@@ -377,7 +388,7 @@ body.on-report{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   <div id="rlist"></div>
   <div class="lm-wrap" id="lm-wrap" style="display:none"><button id="loadmore" type="button">Load More</button></div>
   <div id="rstate" class="rstate"></div>
-  <footer class="foot">duitkita_version9 · 2026</footer>
+  <footer class="foot">duitkita_version10 · 2026</footer>
 </main>
 
 
@@ -398,6 +409,7 @@ body.on-report{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     <div class="row"><span>Day</span><b id="slip-day"></b></div>
     <div class="row"><span>By</span><b id="slip-who"></b></div>
     <button id="again" type="button">Log another</button>
+    <button id="slip-delete" type="button" class="ghost">Delete this entry</button>
   </div>
 </div>
 
@@ -620,6 +632,7 @@ $("save").onclick = async ()=>{
     const res = await fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
     const out = await res.json();
     if(!out.ok) throw new Error(out.error || "Server rejected the entry");
+    payload.loggedAt = out.loggedAt;
     showSlip(payload);
   }catch(e){
     err.textContent = "Couldn't save — check your connection and tap Save again. Nothing was lost.";
@@ -629,7 +642,12 @@ $("save").onclick = async ()=>{
 };
 
 /* ---------- receipt ---------- */
+let lastLoggedAt = null;
 function showSlip(p){
+  lastLoggedAt = p.loggedAt || null;
+  $("slip-delete").style.display = lastLoggedAt ? "block" : "none";
+  $("slip-delete").textContent = "Delete this entry";
+  $("slip-delete").disabled = false;
   $("slip-title").textContent = p.type==="Income" ? "Income logged ✓" : "Logged ✓";
   $("slip-amt").textContent = (p.type==="Income"?"+":"") + fmt(p.amount);
   $("slip-type").textContent = p.type;
@@ -640,6 +658,21 @@ function showSlip(p){
   $("slip-who").textContent = p.name;
   $("overlay").classList.add("show");
 }
+$("slip-delete").onclick = async ()=>{
+  if(!lastLoggedAt) return;
+  const btn = $("slip-delete");
+  btn.disabled = true; btn.textContent = "Deleting…";
+  try{
+    const res = await fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"delete", loggedAt:lastLoggedAt }) });
+    const out = await res.json();
+    if(!out.ok) throw new Error(out.error || "Delete failed");
+    lastLoggedAt = null;
+    $("overlay").classList.remove("show");
+  }catch(e){
+    btn.textContent = "Couldn't delete — tap to retry";
+    btn.disabled = false;
+  }
+};
 $("again").onclick = ()=>{
   $("overlay").classList.remove("show");
   S.category=null; S.customCat=null; S.day="Today"; S.customDate=null;
@@ -783,19 +816,75 @@ function renderList(rows){
       list.appendChild(h);
     }
     const isIn = r.type === "Income";
-    const card = document.createElement("div");
-    card.className = "rcard " + (isIn ? "inc" : "exp");
-    card.innerHTML =
-      `<div class="cico">${catIcon(r.category)}<span class="badge ${r.name==="Andre"?"A":"D"}">${(r.name||"?")[0]}</span></div>`+
-      `<div class="mid"><div class="cat"></div><div class="sub"></div></div>`+
-      `<div class="amt">${isIn?"+":"−"}${fmt(r.amount)}</div>`;
-    card.querySelector(".cat").textContent = r.category;
-    card.querySelector(".sub").textContent = r.source;
-    list.appendChild(card);
+    const wrap = document.createElement("div");
+    wrap.className = "rwrap";
+    wrap.innerHTML =
+      `<button class="rtrash" type="button" aria-label="Delete">🗑️</button>`+
+      `<div class="rcard ${isIn?"inc":"exp"}">`+
+        `<div class="cico">${catIcon(r.category)}<span class="badge ${r.name==="Andre"?"A":"D"}">${(r.name||"?")[0]}</span></div>`+
+        `<div class="mid"><div class="cat"></div><div class="sub"></div></div>`+
+        `<div class="amt">${isIn?"+":"−"}${fmt(r.amount)}</div>`+
+      `</div>`;
+    wrap.querySelector(".cat").textContent = r.category;
+    wrap.querySelector(".sub").textContent = r.source;
+    attachSwipeDelete(wrap, r);
+    list.appendChild(wrap);
   });
   $("lm-wrap").style.display = sorted.length > RPT.shown ? "flex" : "none";
 }
 $("loadmore").onclick = ()=>{ RPT.shown += PAGE; renderList(filtered()); };
+
+/* ---- swipe-left-to-reveal delete (instant delete on tap, no confirm) ---- */
+const TRASH_W = 76;
+function closeAllSwipes(except){
+  document.querySelectorAll(".rwrap .rcard").forEach(c=>{ if(c!==except) c.style.transform = "translateX(0)"; });
+}
+function attachSwipeDelete(wrap, entry){
+  const card = wrap.querySelector(".rcard");
+  const trash = wrap.querySelector(".rtrash");
+  let startX = 0, curX = 0, dragging = false;
+
+  card.addEventListener("touchstart", e=>{
+    startX = e.touches[0].clientX; dragging = true;
+    card.style.transition = "none";
+  }, {passive:true});
+  card.addEventListener("touchmove", e=>{
+    if(!dragging) return;
+    curX = e.touches[0].clientX - startX;
+    if(curX > 0) curX = 0; // no swipe right
+    if(curX < -TRASH_W) curX = -TRASH_W - (curX + TRASH_W) * 0.25; // slight resistance past reveal
+    card.style.transform = `translateX(${curX}px)`;
+  }, {passive:true});
+  card.addEventListener("touchend", ()=>{
+    dragging = false;
+    card.style.transition = "transform .18s ease-out";
+    if(curX < -TRASH_W/2){ closeAllSwipes(card); card.style.transform = `translateX(-${TRASH_W}px)`; }
+    else { card.style.transform = "translateX(0)"; }
+    curX = 0;
+  });
+  /* desktop testing convenience: click the card to toggle reveal */
+  card.addEventListener("click", ()=>{
+    const open = card.style.transform === `translateX(-${TRASH_W}px)`;
+    closeAllSwipes();
+    card.style.transition = "transform .18s ease-out";
+    card.style.transform = open ? "translateX(0)" : `translateX(-${TRASH_W}px)`;
+  });
+
+  trash.onclick = async (ev)=>{
+    ev.stopPropagation();
+    if(entry.loggedAt == null){ trash.textContent="⚠️"; return; } // old rows without a timestamp can't be targeted safely
+    trash.disabled = true; trash.textContent = "…";
+    try{
+      const res = await fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"delete", loggedAt: entry.loggedAt }) });
+      const out = await res.json();
+      if(!out.ok) throw new Error(out.error || "Delete failed");
+      RPT.entries = RPT.entries.filter(e2=>e2.loggedAt !== entry.loggedAt);
+      renderAll();
+    }catch(e){
+      trash.disabled = false; trash.textContent = "⚠️";
+    }
+  };
+}
 
 refresh();
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
