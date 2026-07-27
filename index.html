@@ -70,23 +70,49 @@ section{margin-top:18px}
 }
 .type button.sel{background:var(--ink); color:#fff}
 
-/* ---- name segmented switch ---- */
-.who{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+/* ---- name: circular avatar picker ---- */
+.who{display:flex; justify-content:center; gap:34px; padding:6px 0 2px}
 .who button{
-  min-height:64px; border:2px solid var(--line); border-radius:var(--radius);
-  background:var(--card); font-family:var(--disp); font-weight:800; font-size:20px;
-  color:var(--ink); cursor:pointer; transition:.15s;
+  background:none; border:none; cursor:pointer; display:flex; flex-direction:column;
+  align-items:center; gap:8px; padding:4px;
 }
-#btn-andre.sel{border-color:#1E7A50; background:#1E7A50; color:#fff}
-#btn-dinda.sel{border-color:#B04A72; background:#B04A72; color:#fff}
+.who .ava{
+  width:78px; height:78px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-family:var(--disp); font-weight:800; font-size:32px; transition:.18s;
+  border:3px solid transparent; overflow:hidden;
+}
+.who .ava img{width:100%; height:100%; object-fit:cover; border-radius:50%}
+.who .nm{font-family:var(--disp); font-weight:700; font-size:15px; color:var(--muted); transition:.18s}
+#btn-andre .ava{background:#E2EFE7; color:#1E7A50}
+#btn-dinda .ava{background:#F6E6ED; color:#B04A72}
+#btn-andre.sel .ava{background:#1E7A50; color:#fff; border-color:#155C3B; transform:scale(1.06); box-shadow:0 6px 16px rgba(30,122,80,.3)}
+#btn-dinda.sel .ava{background:#B04A72; color:#fff; border-color:#8C3055; transform:scale(1.06); box-shadow:0 6px 16px rgba(176,74,114,.3)}
+.who button.sel .nm{color:var(--ink)}
 
 /* ---- generic chip grids ---- */
 .grid{display:grid; gap:10px}
-.g-cat{grid-template-columns:repeat(3,1fr)}
-.g-cat.income{grid-template-columns:repeat(2,1fr)}
-.g-amt{grid-template-columns:repeat(4,1fr)}
+.g-amt{grid-template-columns:repeat(3,1fr)}
 .g-src{grid-template-columns:1fr 1fr}
 .g-day{grid-template-columns:repeat(3,1fr)}
+
+/* ---- category: circular slideable row ---- */
+.catrow{
+  display:flex; gap:14px; overflow-x:auto; padding:4px 2px 10px;
+  -webkit-overflow-scrolling:touch; scrollbar-width:none;
+}
+.catrow::-webkit-scrollbar{display:none}
+.chip-cat{
+  flex:0 0 auto; background:none; border:none; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; gap:6px; min-width:64px; padding:2px;
+}
+.chip-cat .circ{
+  width:60px; height:60px; border-radius:50%; background:var(--card);
+  border:1.5px solid var(--line); display:flex; align-items:center; justify-content:center;
+  font-size:26px; transition:.15s;
+}
+.chip-cat .lbl{font-size:12px; font-weight:600; color:var(--muted); white-space:nowrap}
+.chip-cat.sel .circ{border:2.5px solid var(--person); background:var(--person-tint); transform:scale(1.06)}
+.chip-cat.sel .lbl{color:var(--person-deep); font-weight:700}
 .chip{
   min-height:54px; border:1.5px solid var(--line); border-radius:var(--radius);
   background:var(--card); color:var(--ink); font-size:15px; font-weight:600;
@@ -108,6 +134,7 @@ section{margin-top:18px}
   padding:0 16px; font-family:var(--num); font-size:20px; font-weight:700;
   background:var(--card); color:var(--ink); outline:none;
 }
+#cat-input{font-family:var(--body); font-size:17px; font-weight:600;}
 .reveal .hint{font-size:12px; color:var(--muted); margin-top:6px; padding-left:4px}
 
 .foot{
@@ -184,14 +211,18 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--coin); outline-
   <section>
     <div class="label">Who's logging</div>
     <div class="who">
-      <button id="btn-andre" type="button">Andre</button>
-      <button id="btn-dinda" type="button">Dinda</button>
+      <button id="btn-andre" type="button"><span class="ava" id="ava-andre">A</span><span class="nm">Andre</span></button>
+      <button id="btn-dinda" type="button"><span class="ava" id="ava-dinda">D</span><span class="nm">Dinda</span></button>
     </div>
   </section>
 
   <section>
     <div class="label">Category</div>
-    <div class="grid g-cat" id="cats"></div>
+    <div class="catrow" id="cats"></div>
+    <div class="reveal" id="cat-reveal">
+      <input id="cat-input" type="text" placeholder="Type category name" autocomplete="off" maxlength="30">
+      <div class="hint">e.g. School fee, Gift, Medicine</div>
+    </div>
   </section>
 
   <section id="amt-section">
@@ -217,7 +248,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--coin); outline-
     </div>
   </section>
 
-  <footer class="foot">duitkita_version3 · 2026</footer>
+  <footer class="foot">duitkita_version6 · 2026</footer>
 </main>
 
 
@@ -246,18 +277,34 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--coin); outline-
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby0k-IyHSOKKaYSmvhTdJdubpVHbQt1xaRawk312D41VAZSctuSEicXwATRrR-2GpyC1g/exec";
 /* ========================================== */
 
-const EXP_CATS = [
-  {k:"Food", em:"🍜"}, {k:"Transport", em:"🛵"}, {k:"Shopping", em:"🛍️"},
-  {k:"Bills", em:"🧾"}, {k:"Other", em:"✨"}
-];
-const INC_CATS = [
-  {k:"Salary", em:"💼"}, {k:"Bonus", em:"🎁"}, {k:"Transfer", em:"🔁"}, {k:"Other", em:"✨"}
-];
-const AMTS = [10000, 20000, 50000, 100000];
-const SRCS = ["Seabank Andre","Seabank Dinda","BCA Andre","BCA Dinda","Ewallet Andre","Ewallet Dinda"];
+/* Avatars: set a photo URL later to replace the initial, e.g. {img:"dinda.jpg"} */
+const AVATARS = { Andre:{img:null, initial:"A"}, Dinda:{img:null, initial:"D"} };
+
+const EXP_CATS = {
+  Andre: [
+    {k:"Food", em:"🍜"}, {k:"Transport", em:"🛵"}, {k:"Shopping", em:"🛍️"},
+    {k:"Bills", em:"🧾"}, {k:"Baby Stuff", em:"🍼"}, {k:"Cash", em:"💵"}, {k:"Other", em:"✨"}
+  ],
+  Dinda: [
+    {k:"Food", em:"🍜"}, {k:"Transport", em:"🛵"}, {k:"Shopping", em:"🛍️"},
+    {k:"Groceries", em:"🛒"}, {k:"Baby Stuff", em:"🍼"}, {k:"Cash", em:"💵"}, {k:"Other", em:"✨"}
+  ]
+};
+const INC_CATS = {
+  Andre: [
+    {k:"Salary", em:"💼"}, {k:"Transfer", em:"🔁"}, {k:"Reimbursement", em:"🧾"},
+    {k:"Bonus", em:"🎁"}, {k:"Other", em:"✨"}
+  ],
+  Dinda: [
+    {k:"Salary", em:"💼"}, {k:"Monthly Allowance", em:"📅"}, {k:"Household", em:"🏠"},
+    {k:"Transfer", em:"🔁"}, {k:"Reimbursement", em:"🧾"}, {k:"Bonus", em:"🎁"}, {k:"Other", em:"✨"}
+  ]
+};
+const AMTS = [50000, 100000];
+const SRCS = ["Seabank", "BCA", "Ewallet", "Cash"];
 const DAYS = ["Today","Yesterday","Custom"];
 
-const S = { type:"Expense", name:null, category:null, amount:null, custom:false, source:null, day:"Today", customDate:null };
+const S = { type:"Expense", name:null, category:null, customCat:null, amount:null, custom:false, source:null, day:"Today", customDate:null };
 
 const $ = id => document.getElementById(id);
 const fmt = n => "Rp" + Number(n).toLocaleString("id-ID");
@@ -286,7 +333,8 @@ function setType(t){
   S.type = t;
   $("t-exp").classList.toggle("sel", t==="Expense");
   $("t-inc").classList.toggle("sel", t==="Income");
-  S.category = null;
+  S.category = null; S.customCat = null;
+  $("cat-reveal").classList.remove("show"); $("cat-input").value = "";
   buildCats();
   /* amount: income skips tiers, goes straight to input */
   if (t === "Income"){
@@ -297,9 +345,7 @@ function setType(t){
     $("src-label").textContent = "Destination";
   } else {
     $("amts").style.display = "";
-    $("amt-reveal").classList.remove("show");
-    document.querySelectorAll("#amts .chip").forEach(c=>c.classList.remove("sel"));
-    S.custom = false; S.amount = null;
+    presetCustomAmount();
     $("src-label").textContent = "Source";
   }
   refresh();
@@ -313,26 +359,59 @@ function pickName(n){
   document.body.classList.toggle("theme-dinda", n==="Dinda");
   $("btn-andre").classList.toggle("sel", n==="Andre");
   $("btn-dinda").classList.toggle("sel", n==="Dinda");
-  S.source = "Seabank "+n;
-  [... $("srcs").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.dataset.src===S.source));
+  /* both income & expense categories differ per person — rebuild fresh, clear prior selection */
+  S.category=null; S.customCat=null; $("cat-reveal").classList.remove("show"); $("cat-input").value="";
+  buildCats();
+  /* source auto-defaults to this person's Seabank */
+  S.source = "Seabank";
+  [... $("srcs").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.dataset.src==="Seabank"));
   $("src-auto").classList.add("show");
   refresh();
 }
 
-/* ---------- categories ---------- */
+/* ---------- avatars (photo-ready) ---------- */
+["Andre","Dinda"].forEach(n=>{
+  const a = AVATARS[n], el = $("ava-"+n.toLowerCase());
+  el.innerHTML = a.img ? `<img src="${a.img}" alt="${n}">` : a.initial;
+});
+
+/* ---------- categories (circular, slideable) ---------- */
 function buildCats(){
-  const list = S.type==="Income" ? INC_CATS : EXP_CATS;
-  $("cats").classList.toggle("income", S.type==="Income");
-  chips($("cats"), list, (b,it)=>{ b.innerHTML=`<span class="em">${it.em}</span>${it.k}`; },
-    (it,b)=>{ S.category=it.k; selOnly($("cats"),b); refresh(); });
+  const isInc = S.type==="Income";
+  /* both income and expense categories now depend on who's logging */
+  const table = isInc ? INC_CATS : EXP_CATS;
+  const list = S.name ? table[S.name] : table.Andre; /* placeholder until a name is picked */
+
+  const el = $("cats");
+  el.innerHTML = "";
+  list.forEach(it=>{
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip-cat";
+    b.innerHTML = `<span class="circ">${it.em}</span><span class="lbl">${it.k}</span>`;
+    b.onclick = ()=>{
+      el.querySelectorAll(".chip-cat").forEach(c=>c.classList.remove("sel"));
+      b.classList.add("sel");
+      if (it.k === "Other"){
+        S.category = "Other"; S.customCat = parseCat($("cat-input").value);
+        $("cat-reveal").classList.add("show"); $("cat-input").focus();
+      } else {
+        S.category = it.k; S.customCat = null;
+        $("cat-reveal").classList.remove("show");
+      }
+      refresh();
+    };
+    el.appendChild(b);
+  });
 }
 buildCats();
+function parseCat(v){ const s=String(v).trim(); return s.length ? s : null; }
+$("cat-input").addEventListener("input", e=>{ S.customCat = parseCat(e.target.value); refresh(); });
 
-/* ---------- amounts ---------- */
+/* ---------- amounts (Custom preselected by default) ---------- */
 chips($("amts"), [...AMTS,"Custom"], (b,it)=>{
     b.classList.add("num");
     b.textContent = it==="Custom" ? "···" : (it/1000)+"k";
-    if(it==="Custom") b.title="Custom amount";
+    if(it==="Custom"){ b.title="Custom amount"; b.dataset.custom="1"; }
   },
   (it,b)=>{
     selOnly($("amts"),b);
@@ -340,6 +419,12 @@ chips($("amts"), [...AMTS,"Custom"], (b,it)=>{
     else{ S.custom=false; S.amount=it; $("amt-reveal").classList.remove("show"); }
     refresh();
   });
+function presetCustomAmount(){
+  S.custom = true; S.amount = parseAmt($("amt-input").value);
+  [... $("amts").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.dataset.custom==="1"));
+  $("amt-reveal").classList.add("show");
+}
+presetCustomAmount();
 function parseAmt(v){ const n=Number(String(v).replace(/[^\d]/g,"")); return n>0?n:null; }
 $("amt-input").addEventListener("input", e=>{
   const n=parseAmt(e.target.value);
@@ -347,14 +432,15 @@ $("amt-input").addEventListener("input", e=>{
   S.amount = n; refresh();
 });
 
-/* ---------- sources ---------- */
+/* ---------- sources (person applied at save; Cash is shared) ---------- */
 chips($("srcs"), SRCS, (b,it)=>{
-    const parts = it.split(" ");
-    const bank = parts[0]==="Ewallet" ? "E-wallet" : parts[0];
+    const label = it==="Ewallet" ? "E-wallet" : it;
     b.classList.add("src"); b.dataset.src=it;
-    b.innerHTML = `${bank}<small>${parts[1]}</small>`;
+    b.innerHTML = it==="Cash" ? `${label}<small>shared</small>` : `${label}<small>auto-named</small>`;
   },
   (it,b)=>{ S.source=it; selOnly($("srcs"),b); $("src-auto").classList.remove("show"); refresh(); });
+/* resolve the stored source string: person-suffixed unless Cash */
+function resolvedSource(){ return S.source==="Cash" ? "Cash" : (S.source + " " + S.name); }
 
 /* ---------- days ---------- */
 const dayInput = $("day-input");
@@ -376,18 +462,23 @@ function entryDate(){
   if(S.day==="Yesterday"){ const d=new Date(); d.setDate(d.getDate()-1); return iso(d); }
   return S.customDate;
 }
-function ready(){ return S.name && S.category && S.amount>0 && S.source && entryDate(); }
+/* the category actually saved: custom text when "Other" is chosen */
+function effectiveCat(){ return S.category==="Other" ? S.customCat : S.category; }
+function ready(){ return S.name && effectiveCat() && S.amount>0 && S.source && entryDate(); }
 function refresh(){
   const btn=$("save");
   if(!S.name){ btn.disabled=true; btn.textContent="Pick a name to start"; return; }
   if(!ready()){
     btn.disabled=true;
-    btn.textContent = !S.category ? "Pick a category" : (!S.amount ? (S.type==="Income"?"Type the amount":"Pick an amount") : "Pick a day");
+    if(!S.category) btn.textContent="Pick a category";
+    else if(S.category==="Other" && !S.customCat) btn.textContent="Type the category name";
+    else if(!S.amount) btn.textContent = S.custom ? "Type the amount" : "Pick an amount";
+    else btn.textContent="Pick a day";
     return;
   }
   btn.disabled=false;
   const verb = S.type==="Income" ? "Save +" : "Save ";
-  btn.innerHTML = `${verb}${fmt(S.amount)} <span class="sub">${S.type} · ${S.category} · ${S.source} · ${S.day==="Custom"?S.customDate:S.day}</span>`;
+  btn.innerHTML = `${verb}${fmt(S.amount)} <span class="sub">${S.type} · ${effectiveCat()} · ${resolvedSource()} · ${S.day==="Custom"?S.customDate:S.day}</span>`;
 }
 
 $("save").onclick = async ()=>{
@@ -395,7 +486,7 @@ $("save").onclick = async ()=>{
   err.classList.remove("show");
   if(SCRIPT_URL.startsWith("PASTE")){ err.textContent="Setup needed: paste your Apps Script URL into index.html (SCRIPT_URL)."; err.classList.add("show"); return; }
   btn.disabled=true; btn.textContent="Saving…";
-  const payload = { type:S.type, date:entryDate(), name:S.name, category:S.category, amount:S.amount, source:S.source, loggedVia:"pwa" };
+  const payload = { type:S.type, date:entryDate(), name:S.name, category:effectiveCat(), amount:S.amount, source:resolvedSource(), loggedVia:"pwa" };
   try{
     const res = await fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
     const out = await res.json();
@@ -422,13 +513,14 @@ function showSlip(p){
 }
 $("again").onclick = ()=>{
   $("overlay").classList.remove("show");
-  S.category=null; S.day="Today"; S.customDate=null;
-  S.source = "Seabank "+S.name; $("src-auto").classList.add("show");
+  S.category=null; S.customCat=null; S.day="Today"; S.customDate=null;
+  S.source = "Seabank"; $("src-auto").classList.add("show");
   $("amt-input").value=""; S.amount=null;
-  if (S.type==="Expense"){ S.custom=false; $("amt-reveal").classList.remove("show"); }
+  $("cat-input").value=""; $("cat-reveal").classList.remove("show");
+  if (S.type==="Expense") presetCustomAmount();
   $("day-reveal").classList.remove("show");
-  document.querySelectorAll("#cats .chip,#amts .chip").forEach(c=>c.classList.remove("sel"));
-  [... $("srcs").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.dataset.src===S.source));
+  document.querySelectorAll("#cats .chip-cat").forEach(c=>c.classList.remove("sel"));
+  [... $("srcs").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.dataset.src==="Seabank"));
   [... $("days").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.textContent==="Today"));
   refresh();
 };
