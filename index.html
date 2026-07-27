@@ -38,7 +38,6 @@ body{
   padding-bottom:calc(170px + env(safe-area-inset-bottom));
   transition:background .3s;
 }
-body.on-report{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
 header{
   padding:calc(14px + env(safe-area-inset-top)) 20px 6px;
   display:flex; align-items:center; justify-content:space-between; gap:10px;
@@ -47,14 +46,6 @@ header h1{font-family:var(--disp); font-weight:800; font-size:26px; letter-spaci
 header h1 .dot{color:var(--person); transition:color .3s}
 .hdr-right{display:flex; align-items:center; gap:10px}
 .hdr-right .today{font-family:var(--num); font-size:13px; color:var(--muted)}
-#btn-report,#btn-back{
-  border:1.5px solid var(--line); background:var(--card); color:var(--ink);
-  border-radius:999px; min-height:40px; padding:0 14px; font-family:var(--disp);
-  font-weight:600; font-size:13.5px; cursor:pointer; display:flex; align-items:center; gap:6px;
-}
-#btn-back{display:none}
-body.on-report #btn-report{display:none}
-body.on-report #btn-back{display:flex}
 
 main{padding:0 16px}
 section{margin-top:18px}
@@ -129,7 +120,6 @@ section{margin-top:18px}
   position:fixed; left:0; right:0; bottom:0; padding:12px 16px calc(12px + env(safe-area-inset-bottom));
   background:linear-gradient(to top, var(--paper) 70%, transparent);
 }
-body.on-report .savebar{display:none}
 #save{
   width:100%; min-height:60px; border:none; border-radius:18px;
   background:var(--person); color:#fff; font-family:var(--disp); font-weight:800;
@@ -171,75 +161,6 @@ body.on-report .savebar{display:none}
   background:var(--person); color:#fff; font-family:var(--disp); font-weight:800; font-size:17px; cursor:pointer;
 }
 
-/* ============ REPORT PAGE ============ */
-#report{display:none}
-body.on-report #report{display:block}
-body.on-report #home{display:none}
-
-.monthnav{
-  display:flex; align-items:center; justify-content:space-between; margin-top:14px;
-  background:var(--card); border:1.5px solid var(--line); border-radius:var(--radius); padding:6px;
-}
-.monthnav button{
-  min-width:52px; min-height:46px; border:none; background:transparent; font-size:22px;
-  color:var(--ink); cursor:pointer; border-radius:12px; font-family:var(--num);
-}
-.monthnav button:disabled{color:var(--line)}
-.monthnav .mlabel{font-family:var(--disp); font-weight:800; font-size:17px}
-
-.pfilter{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px}
-.pfilter button{
-  min-height:46px; border:1.5px solid var(--line); border-radius:999px; background:var(--card);
-  font-family:var(--disp); font-weight:700; font-size:14px; color:var(--ink); cursor:pointer;
-}
-.pfilter button.sel{background:var(--ink); border-color:var(--ink); color:#fff}
-
-.sumcard{
-  margin-top:14px; background:var(--card); border:1.5px solid var(--line);
-  border-radius:var(--radius); padding:16px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;
-}
-.sumcard .cell{text-align:center}
-.sumcard .cap{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
-.sumcard .val{font-family:var(--num); font-weight:700; font-size:15px; margin-top:4px}
-.sumcard .in{color:var(--income)} .sumcard .out{color:var(--expense)}
-.sumcard .net{color:var(--ink)} .sumcard .net.neg{color:var(--expense)}
-
-.chartcard{
-  margin-top:14px; background:var(--card); border:1.5px solid var(--line);
-  border-radius:var(--radius); padding:16px;
-}
-.chartwrap{display:flex; align-items:center; gap:16px}
-.chartwrap svg{flex:0 0 132px}
-.legend{flex:1; display:flex; flex-direction:column; gap:7px}
-.legend .li{display:flex; align-items:center; gap:8px; font-size:13px}
-.legend .sw{width:11px; height:11px; border-radius:3px; flex:0 0 11px}
-.legend .nm{flex:1}
-.legend .pv{font-family:var(--num); font-weight:700; font-size:12.5px; color:var(--muted)}
-
-.elist{margin-top:14px}
-.eday{font-family:var(--num); font-size:12px; color:var(--muted); letter-spacing:.06em; margin:14px 4px 6px}
-.erow{
-  background:var(--card); border:1.5px solid var(--line); border-radius:14px;
-  padding:12px 14px; display:flex; align-items:center; gap:11px; margin-bottom:8px;
-}
-.erow .who-dot{
-  width:30px; height:30px; border-radius:999px; flex:0 0 30px;
-  display:flex; align-items:center; justify-content:center;
-  font-family:var(--disp); font-weight:800; font-size:13px; color:#fff;
-}
-.who-dot.A{background:#1E7A50} .who-dot.D{background:#B04A72}
-.erow .mid{flex:1; min-width:0}
-.erow .cat{font-weight:700; font-size:14.5px}
-.erow .sub{font-size:12px; color:var(--muted); margin-top:1px}
-.erow .amt{font-family:var(--num); font-weight:700; font-size:15px; white-space:nowrap}
-.erow .amt.in{color:var(--income)} .erow .amt.out{color:var(--ink)}
-
-.rstate{margin-top:26px; text-align:center; color:var(--muted); font-size:14px; padding:0 20px}
-.rstate button{
-  margin-top:12px; min-height:46px; padding:0 20px; border:none; border-radius:12px;
-  background:var(--ink); color:#fff; font-family:var(--disp); font-weight:700; cursor:pointer;
-}
-
 @media (prefers-reduced-motion: reduce){ .slip{animation:none} *{transition:none!important} }
 button:focus-visible,input:focus-visible{outline:3px solid var(--coin); outline-offset:2px}
 </style>
@@ -249,8 +170,6 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--coin); outline-
 <header>
   <h1>Duit Kita<span class="dot">.</span></h1>
   <div class="hdr-right">
-    <button id="btn-report" type="button">📊 Report</button>
-    <button id="btn-back" type="button">‹ Log</button>
     <div class="today" id="hdr-date"></div>
   </div>
 </header>
@@ -298,41 +217,10 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--coin); outline-
     </div>
   </section>
 
-  <footer class="foot">duitkita_version2 · 2026</footer>
+  <footer class="foot">duitkita_version3 · 2026</footer>
 </main>
 
-<!-- ============ REPORT ============ -->
-<main id="report">
-  <div class="monthnav">
-    <button id="m-prev" type="button" aria-label="Previous month">‹</button>
-    <div class="mlabel" id="m-label"></div>
-    <button id="m-next" type="button" aria-label="Next month">›</button>
-  </div>
 
-  <div class="pfilter">
-    <button data-p="All" class="sel" type="button">All</button>
-    <button data-p="Andre" type="button">Andre</button>
-    <button data-p="Dinda" type="button">Dinda</button>
-  </div>
-
-  <div class="sumcard" id="sumcard">
-    <div class="cell"><div class="cap">Income</div><div class="val in" id="s-in">–</div></div>
-    <div class="cell"><div class="cap">Expense</div><div class="val out" id="s-out">–</div></div>
-    <div class="cell"><div class="cap">Net</div><div class="val net" id="s-net">–</div></div>
-  </div>
-
-  <div class="chartcard" id="chartcard">
-    <div class="label" style="margin-bottom:12px">Expense by category</div>
-    <div class="chartwrap">
-      <svg id="donut" viewBox="0 0 42 42" width="132" height="132"></svg>
-      <div class="legend" id="legend"></div>
-    </div>
-  </div>
-
-  <div class="elist" id="elist"></div>
-  <div class="rstate" id="rstate"></div>
-  <footer class="foot">duitkita_version2 · 2026</footer>
-</main>
 
 <div class="savebar">
   <div class="errbar" id="err"></div>
@@ -368,18 +256,11 @@ const INC_CATS = [
 const AMTS = [10000, 20000, 50000, 100000];
 const SRCS = ["Seabank Andre","Seabank Dinda","BCA Andre","BCA Dinda","Ewallet Andre","Ewallet Dinda"];
 const DAYS = ["Today","Yesterday","Custom"];
-const CAT_COLORS = {Food:"#E8863C", Transport:"#3F7FBF", Shopping:"#B04A72", Bills:"#6B5CA5", Other:"#7A8B7F"};
 
 const S = { type:"Expense", name:null, category:null, amount:null, custom:false, source:null, day:"Today", customDate:null };
 
 const $ = id => document.getElementById(id);
 const fmt = n => "Rp" + Number(n).toLocaleString("id-ID");
-const fmtShort = n => {
-  n = Number(n);
-  if (n >= 1000000) return "Rp" + (n/1000000).toLocaleString("id-ID",{maximumFractionDigits:1}) + "jt";
-  if (n >= 1000) return "Rp" + Math.round(n/1000).toLocaleString("id-ID") + "rb";
-  return "Rp" + n;
-};
 const iso = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 
 const now = new Date();
@@ -519,7 +400,6 @@ $("save").onclick = async ()=>{
     const res = await fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
     const out = await res.json();
     if(!out.ok) throw new Error(out.error || "Server rejected the entry");
-    monthCache = {}; /* report data changed */
     showSlip(payload);
   }catch(e){
     err.textContent = "Couldn't save — check your connection and tap Save again. Nothing was lost.";
@@ -552,129 +432,6 @@ $("again").onclick = ()=>{
   [... $("days").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.textContent==="Today"));
   refresh();
 };
-
-/* ============ REPORT PAGE ============ */
-let rMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-let rPerson = "All";
-let monthCache = {};
-
-$("btn-report").onclick = ()=>{ document.body.classList.add("on-report"); renderMonthNav(); loadMonth(); };
-$("btn-back").onclick = ()=>{ document.body.classList.remove("on-report"); };
-
-$("m-prev").onclick = ()=>{ rMonth = new Date(rMonth.getFullYear(), rMonth.getMonth()-1, 1); renderMonthNav(); loadMonth(); };
-$("m-next").onclick = ()=>{ rMonth = new Date(rMonth.getFullYear(), rMonth.getMonth()+1, 1); renderMonthNav(); loadMonth(); };
-
-document.querySelectorAll(".pfilter button").forEach(b=>{
-  b.onclick = ()=>{
-    document.querySelectorAll(".pfilter button").forEach(x=>x.classList.remove("sel"));
-    b.classList.add("sel");
-    rPerson = b.dataset.p;
-    renderReport();
-  };
-});
-
-function monthKey(){ return rMonth.getFullYear()+"-"+String(rMonth.getMonth()+1).padStart(2,"0"); }
-function renderMonthNav(){
-  $("m-label").textContent = rMonth.toLocaleDateString("en-GB",{month:"long", year:"numeric"});
-  const cur = new Date(now.getFullYear(), now.getMonth(), 1);
-  $("m-next").disabled = rMonth >= cur;
-}
-
-async function loadMonth(){
-  const key = monthKey();
-  if (monthCache[key]){ renderReport(); return; }
-  $("elist").innerHTML = ""; $("legend").innerHTML = ""; $("donut").innerHTML = "";
-  $("sumcard").style.display = "none"; $("chartcard").style.display = "none";
-  $("rstate").innerHTML = "Loading…";
-  try{
-    const res = await fetch(SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "list", month: key })
-    });
-    const out = await res.json();
-    if(!out.ok) throw new Error(out.error || "load failed");
-    monthCache[key] = out.entries;
-    renderReport();
-  }catch(e){
-    $("rstate").innerHTML = "Couldn't load this month — check your connection.<br><button id='r-retry' type='button'>Retry</button>";
-    $("r-retry").onclick = loadMonth;
-  }
-}
-
-function renderReport(){
-  const all = monthCache[monthKey()] || [];
-  const rows = rPerson==="All" ? all : all.filter(r=>r.name===rPerson);
-
-  $("sumcard").style.display = "";
-  const inc = rows.filter(r=>r.type==="Income").reduce((a,r)=>a+r.amount,0);
-  const exp = rows.filter(r=>r.type!=="Income").reduce((a,r)=>a+r.amount,0);
-  const net = inc - exp;
-  $("s-in").textContent = fmtShort(inc);
-  $("s-out").textContent = fmtShort(exp);
-  $("s-net").textContent = (net<0?"−":"") + fmtShort(Math.abs(net));
-  $("s-net").classList.toggle("neg", net<0);
-
-  drawDonut(rows.filter(r=>r.type!=="Income"));
-
-  const list = $("elist");
-  list.innerHTML = "";
-  $("rstate").innerHTML = rows.length ? "" : "No entries this month yet.";
-  const byDate = {};
-  rows.slice().sort((a,b)=> b.date.localeCompare(a.date)).forEach(r=>{
-    (byDate[r.date] = byDate[r.date] || []).push(r);
-  });
-  Object.keys(byDate).forEach(d=>{
-    const h = document.createElement("div");
-    h.className = "eday";
-    h.textContent = new Date(d+"T00:00:00").toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"short"});
-    list.appendChild(h);
-    byDate[d].forEach(r=>{
-      const isIn = r.type==="Income";
-      const row = document.createElement("div");
-      row.className = "erow";
-      row.innerHTML =
-        `<div class="who-dot ${r.name==="Andre"?"A":"D"}">${r.name[0]}</div>`+
-        `<div class="mid"><div class="cat">${r.category}</div><div class="sub">${r.source}${isIn?" · Income":""}</div></div>`+
-        `<div class="amt ${isIn?"in":"out"}">${isIn?"+":"−"}${fmt(r.amount)}</div>`;
-      list.appendChild(row);
-    });
-  });
-}
-
-function drawDonut(expRows){
-  const svg = $("donut"), legend = $("legend");
-  svg.innerHTML = ""; legend.innerHTML = "";
-  const sums = {};
-  expRows.forEach(r=>{ sums[r.category] = (sums[r.category]||0) + r.amount; });
-  const cats = Object.keys(sums).sort((a,b)=>sums[b]-sums[a]);
-  const total = cats.reduce((a,c)=>a+sums[c],0);
-  $("chartcard").style.display = "";
-  if(!total){
-    svg.innerHTML = `<circle cx="21" cy="21" r="15.9" fill="none" stroke="#EDF0EA" stroke-width="6"/>`;
-    legend.innerHTML = `<div class="li"><span class="nm" style="color:var(--muted)">No expenses yet</span></div>`;
-    return;
-  }
-  const C = 2 * Math.PI * 15.9;
-  let offset = 0;
-  svg.innerHTML = `<circle cx="21" cy="21" r="15.9" fill="none" stroke="#EDF0EA" stroke-width="6"/>`;
-  cats.forEach(c=>{
-    const frac = sums[c]/total;
-    const seg = document.createElementNS("http://www.w3.org/2000/svg","circle");
-    seg.setAttribute("cx",21); seg.setAttribute("cy",21); seg.setAttribute("r",15.9);
-    seg.setAttribute("fill","none");
-    seg.setAttribute("stroke", CAT_COLORS[c] || "#7A8B7F");
-    seg.setAttribute("stroke-width",6);
-    seg.setAttribute("stroke-dasharray", (frac*C).toFixed(2) + " " + (C-frac*C).toFixed(2));
-    seg.setAttribute("stroke-dashoffset", (-offset*C + C/4).toFixed(2));
-    svg.appendChild(seg);
-    offset += frac;
-    const li = document.createElement("div");
-    li.className = "li";
-    li.innerHTML = `<span class="sw" style="background:${CAT_COLORS[c]||"#7A8B7F"}"></span>`+
-      `<span class="nm">${c}</span><span class="pv">${fmtShort(sums[c])} · ${Math.round(frac*100)}%</span>`;
-    legend.appendChild(li);
-  });
-}
 
 refresh();
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
