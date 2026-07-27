@@ -355,7 +355,7 @@ body.on-report{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     </div>
   </section>
 
-  <footer class="foot">duitkita_version8 · 2026</footer>
+  <footer class="foot">duitkita_version9 · 2026</footer>
 </main>
 
 <!-- ============ REPORT ============ -->
@@ -377,7 +377,7 @@ body.on-report{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   <div id="rlist"></div>
   <div class="lm-wrap" id="lm-wrap" style="display:none"><button id="loadmore" type="button">Load More</button></div>
   <div id="rstate" class="rstate"></div>
-  <footer class="foot">duitkita_version8 · 2026</footer>
+  <footer class="foot">duitkita_version9 · 2026</footer>
 </main>
 
 
@@ -766,19 +766,20 @@ function renderList(rows){
   let curMonth = "", curDay = "";
   slice.forEach(r=>{
     const d = new Date(r.date + "T00:00:00");
+    const valid = !isNaN(d.getTime());
     const mKey = r.date.slice(0,7);
     if (mKey !== curMonth){
       curMonth = mKey; curDay = "";
       const h = document.createElement("div");
       h.className = "rmonth";
-      h.textContent = d.toLocaleDateString("id-ID",{month:"long", year:"numeric"});
+      h.textContent = valid ? d.toLocaleDateString("id-ID",{month:"long", year:"numeric"}) : mKey;
       list.appendChild(h);
     }
     if (r.date !== curDay){
       curDay = r.date;
       const h = document.createElement("div");
       h.className = "rday";
-      h.textContent = d.toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"short"});
+      h.textContent = valid ? d.toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"short"}) : r.date;
       list.appendChild(h);
     }
     const isIn = r.type === "Income";
