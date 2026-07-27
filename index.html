@@ -587,7 +587,7 @@ async function loadMonth(){
   $("sumcard").style.display = "none"; $("chartcard").style.display = "none";
   $("rstate").innerHTML = "Loading…";
   try{
-    const res = await fetch(SCRIPT_URL + "?action=list&month=" + key);
+    const res = await fetch(SCRIPT_URL + "?action=list&month=" + key + "&_=" + Date.now());
     const out = await res.json();
     if(!out.ok) throw new Error(out.error || "load failed");
     monthCache[key] = out.entries;
