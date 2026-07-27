@@ -241,6 +241,60 @@ body.on-report{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   text-align:left; font-family:var(--num); font-size:11px; background:var(--card);
   border:1px solid var(--line); border-radius:10px; padding:10px; word-break:break-all; margin-top:14px;
 }
+
+/* person filter */
+.pfilter{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px}
+.pfilter button{
+  min-height:46px; border:1.5px solid var(--line); border-radius:999px; background:var(--card);
+  font-family:var(--disp); font-weight:700; font-size:14px; color:var(--ink); cursor:pointer;
+}
+.pfilter button.sel{background:var(--ink); border-color:var(--ink); color:#fff}
+
+/* slideable summary */
+.sumslider{
+  display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory;
+  margin-top:14px; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+}
+.sumslider::-webkit-scrollbar{display:none}
+.sumbig{
+  flex:0 0 100%; scroll-snap-align:start; background:var(--card);
+  border:1.5px solid var(--line); border-radius:20px; padding:20px 22px;
+}
+.sumbig .cap{font-family:var(--disp); font-weight:700; font-size:14px; color:var(--muted)}
+.sumbig .dt{font-family:var(--num); font-size:12px; color:var(--muted); margin-top:2px}
+.sumbig .big{font-family:var(--num); font-weight:700; font-size:32px; color:#B23A2E; margin-top:10px}
+.sumbig .big.zero{color:var(--muted)}
+.dots{display:flex; justify-content:center; gap:6px; margin-top:10px}
+.dots span{width:7px; height:7px; border-radius:50%; background:var(--line); transition:.2s}
+.dots span.on{background:var(--ink); transform:scale(1.2)}
+
+/* week / month tiles */
+.stat2{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px}
+.stat{background:var(--card); border:1.5px solid var(--line); border-radius:16px; padding:14px 16px}
+.stat .cap{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.stat .val{font-family:var(--num); font-weight:700; font-size:17px; color:#B23A2E; margin-top:5px}
+.stat .val.zero{color:var(--muted)}
+
+/* category icon on cards */
+.rcard .cico{
+  width:40px; height:40px; border-radius:999px; flex:0 0 40px; position:relative;
+  background:#fff; border:1.5px solid var(--line);
+  display:flex; align-items:center; justify-content:center; font-size:19px;
+}
+.rcard .cico .badge{
+  position:absolute; right:-4px; bottom:-4px; width:17px; height:17px; border-radius:50%;
+  font-family:var(--disp); font-weight:800; font-size:9.5px; color:#fff;
+  display:flex; align-items:center; justify-content:center; border:1.5px solid #fff;
+}
+.badge.A{background:#1E7A50} .badge.D{background:#B04A72}
+
+/* load more */
+.lm-wrap{display:flex; justify-content:center; margin:16px 0 6px}
+#loadmore{
+  min-height:48px; padding:0 26px; border:1.5px solid var(--line); border-radius:999px;
+  background:var(--card); color:var(--ink); font-family:var(--disp); font-weight:700;
+  font-size:14px; cursor:pointer;
+}
 </style>
 </head>
 <body>
@@ -301,14 +355,29 @@ body.on-report{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     </div>
   </section>
 
-  <footer class="foot">duitkita_version7 · 2026</footer>
+  <footer class="foot">duitkita_version8 · 2026</footer>
 </main>
 
 <!-- ============ REPORT ============ -->
 <main id="report">
+  <div class="pfilter">
+    <button data-p="All" class="sel" type="button">All</button>
+    <button data-p="Andre" type="button">Andre</button>
+    <button data-p="Dinda" type="button">Dinda</button>
+  </div>
+
+  <div class="sumslider" id="sumslider"></div>
+  <div class="dots" id="sumdots"></div>
+
+  <div class="stat2">
+    <div class="stat"><div class="cap">This Week</div><div class="val" id="stat-week">–</div></div>
+    <div class="stat"><div class="cap">This Month</div><div class="val" id="stat-month">–</div></div>
+  </div>
+
   <div id="rlist"></div>
+  <div class="lm-wrap" id="lm-wrap" style="display:none"><button id="loadmore" type="button">Load More</button></div>
   <div id="rstate" class="rstate"></div>
-  <footer class="foot">duitkita_version7 · 2026</footer>
+  <footer class="foot">duitkita_version8 · 2026</footer>
 </main>
 
 
@@ -586,11 +655,32 @@ $("again").onclick = ()=>{
 };
 
 /* ============ REPORT ============ */
+const RPT = { entries: [], person: "All", shown: 10 };
+const PAGE = 10;
+
+/* category → emoji map, built from both people's lists; fallback ✨ */
+const CAT_EMOJI = {};
+[EXP_CATS.Andre, EXP_CATS.Dinda, INC_CATS.Andre, INC_CATS.Dinda].forEach(list=>{
+  list.forEach(it=>{ CAT_EMOJI[it.k] = it.em; });
+});
+const catIcon = c => CAT_EMOJI[c] || "✨";
+
 $("btn-report").onclick = ()=>{ document.body.classList.add("on-report"); loadReport(); };
 $("btn-back").onclick = ()=>{ document.body.classList.remove("on-report"); };
 
+document.querySelectorAll(".pfilter button").forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll(".pfilter button").forEach(x=>x.classList.remove("sel"));
+    b.classList.add("sel");
+    RPT.person = b.dataset.p;
+    RPT.shown = PAGE;
+    renderAll();
+  };
+});
+
 async function loadReport(){
-  $("rlist").innerHTML = "";
+  $("rlist").innerHTML = ""; $("sumslider").innerHTML = ""; $("sumdots").innerHTML = "";
+  $("lm-wrap").style.display = "none";
   $("rstate").innerHTML = "Loading…";
   let raw = "";
   try{
@@ -598,7 +688,9 @@ async function loadReport(){
     raw = await res.text();
     const out = JSON.parse(raw);
     if(!out.ok) throw new Error(out.error || "load failed");
-    renderReport(out.entries || []);
+    RPT.entries = out.entries || [];
+    RPT.shown = PAGE;
+    renderAll();
   }catch(e){
     $("rstate").innerHTML =
       "Couldn't load the report — check your connection.<br><button id='r-retry' type='button'>Retry</button>" +
@@ -607,14 +699,72 @@ async function loadReport(){
   }
 }
 
-function renderReport(entries){
-  if(!entries.length){ $("rstate").innerHTML = "No entries yet — log something in the Journal first."; return; }
-  $("rstate").innerHTML = "";
-  /* newest first */
-  entries.sort((a,b)=> b.date.localeCompare(a.date));
+function filtered(){
+  return RPT.person==="All" ? RPT.entries : RPT.entries.filter(r=>r.name===RPT.person);
+}
+
+function renderAll(){
+  const rows = filtered();
+  renderSummary(rows);
+  renderList(rows);
+}
+
+/* ---- summary: 3-day slider + week/month tiles (expenses only) ---- */
+function sumExpOn(rows, dateStr){
+  return rows.filter(r=>r.type!=="Income" && r.date===dateStr).reduce((a,r)=>a+r.amount,0);
+}
+function renderSummary(rows){
+  const slider = $("sumslider"), dots = $("sumdots");
+  slider.innerHTML = ""; dots.innerHTML = "";
+  const labels = ["Today's Expenses","Yesterday's Expenses","2 Days Ago"];
+  for(let i=0;i<3;i++){
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const key = iso(d);
+    const total = sumExpOn(rows, key);
+    const card = document.createElement("div");
+    card.className = "sumbig";
+    card.innerHTML =
+      `<div class="cap">${labels[i]}</div>`+
+      `<div class="dt">${d.toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"short"})}</div>`+
+      `<div class="big ${total?"":"zero"}">${total ? "−"+fmt(total) : "Rp0"}</div>`;
+    slider.appendChild(card);
+    const dot = document.createElement("span");
+    if(i===0) dot.className="on";
+    dots.appendChild(dot);
+  }
+  slider.scrollLeft = 0;
+  slider.onscroll = ()=>{
+    const idx = Math.round(slider.scrollLeft / slider.clientWidth);
+    [...dots.children].forEach((s,i)=>s.classList.toggle("on", i===idx));
+  };
+
+  /* week: Monday → today; month: MTD */
+  const today = new Date(); const tKey = iso(today);
+  const mon = new Date(today); mon.setDate(mon.getDate() - ((mon.getDay()+6)%7));
+  const monKey = iso(mon);
+  const monthPrefix = tKey.slice(0,7);
+  const wk = rows.filter(r=>r.type!=="Income" && r.date>=monKey && r.date<=tKey).reduce((a,r)=>a+r.amount,0);
+  const mo = rows.filter(r=>r.type!=="Income" && r.date.indexOf(monthPrefix)===0).reduce((a,r)=>a+r.amount,0);
+  $("stat-week").textContent = wk ? "−"+fmt(wk) : "Rp0";
+  $("stat-week").classList.toggle("zero", !wk);
+  $("stat-month").textContent = mo ? "−"+fmt(mo) : "Rp0";
+  $("stat-month").classList.toggle("zero", !mo);
+}
+
+/* ---- paginated grouped list ---- */
+function renderList(rows){
   const list = $("rlist");
+  list.innerHTML = "";
+  if(!rows.length){
+    $("rstate").innerHTML = "No entries yet — log something in the Journal first.";
+    $("lm-wrap").style.display = "none";
+    return;
+  }
+  $("rstate").innerHTML = "";
+  const sorted = rows.slice().sort((a,b)=> b.date.localeCompare(a.date));
+  const slice = sorted.slice(0, RPT.shown);
   let curMonth = "", curDay = "";
-  entries.forEach(r=>{
+  slice.forEach(r=>{
     const d = new Date(r.date + "T00:00:00");
     const mKey = r.date.slice(0,7);
     if (mKey !== curMonth){
@@ -635,14 +785,16 @@ function renderReport(entries){
     const card = document.createElement("div");
     card.className = "rcard " + (isIn ? "inc" : "exp");
     card.innerHTML =
-      `<div class="who-dot ${r.name==="Andre"?"A":"D"}">${(r.name||"?")[0]}</div>`+
+      `<div class="cico">${catIcon(r.category)}<span class="badge ${r.name==="Andre"?"A":"D"}">${(r.name||"?")[0]}</span></div>`+
       `<div class="mid"><div class="cat"></div><div class="sub"></div></div>`+
       `<div class="amt">${isIn?"+":"−"}${fmt(r.amount)}</div>`;
     card.querySelector(".cat").textContent = r.category;
     card.querySelector(".sub").textContent = r.source;
     list.appendChild(card);
   });
+  $("lm-wrap").style.display = sorted.length > RPT.shown ? "flex" : "none";
 }
+$("loadmore").onclick = ()=>{ RPT.shown += PAGE; renderList(filtered()); };
 
 refresh();
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
