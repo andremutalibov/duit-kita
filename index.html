@@ -190,6 +190,57 @@ section{margin-top:18px}
 
 @media (prefers-reduced-motion: reduce){ .slip{animation:none} *{transition:none!important} }
 button:focus-visible,input:focus-visible{outline:3px solid var(--coin); outline-offset:2px}
+
+/* ============ REPORT ============ */
+#btn-report,#btn-back{
+  border:1.5px solid var(--line); background:var(--card); color:var(--ink);
+  border-radius:999px; min-height:40px; padding:0 14px; font-family:var(--disp);
+  font-weight:600; font-size:13.5px; cursor:pointer; display:flex; align-items:center; gap:6px;
+}
+#btn-back{display:none}
+#report{display:none}
+body.on-report #btn-report{display:none}
+body.on-report #btn-back{display:flex}
+body.on-report #report{display:block}
+body.on-report #home{display:none}
+body.on-report .savebar{display:none}
+body.on-report{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+
+.rmonth{
+  font-family:var(--disp); font-weight:800; font-size:20px; margin:22px 4px 4px;
+}
+.rday{
+  font-family:var(--num); font-size:12px; color:var(--muted); letter-spacing:.06em;
+  margin:14px 4px 8px;
+}
+.rcard{
+  border-radius:16px; padding:13px 15px; margin-bottom:8px;
+  display:flex; align-items:center; gap:12px; border:1.5px solid transparent;
+}
+.rcard.exp{background:#FBEDEB; border-color:#F3D9D4}
+.rcard.inc{background:#EAF3EC; border-color:#D5E7DA}
+.rcard .who-dot{
+  width:32px; height:32px; border-radius:999px; flex:0 0 32px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--disp); font-weight:800; font-size:14px; color:#fff;
+}
+.who-dot.A{background:#1E7A50} .who-dot.D{background:#B04A72}
+.rcard .mid{flex:1; min-width:0}
+.rcard .cat{font-weight:700; font-size:15px; color:var(--ink)}
+.rcard .sub{font-size:12px; color:var(--muted); margin-top:1px}
+.rcard .amt{font-family:var(--num); font-weight:700; font-size:15.5px; white-space:nowrap}
+.rcard.exp .amt{color:#B23A2E}
+.rcard.inc .amt{color:#1E7A50}
+
+.rstate{margin-top:30px; text-align:center; color:var(--muted); font-size:14px; padding:0 20px}
+.rstate button{
+  margin-top:12px; min-height:46px; padding:0 20px; border:none; border-radius:12px;
+  background:var(--ink); color:#fff; font-family:var(--disp); font-weight:700; cursor:pointer;
+}
+.rstate .raw{
+  text-align:left; font-family:var(--num); font-size:11px; background:var(--card);
+  border:1px solid var(--line); border-radius:10px; padding:10px; word-break:break-all; margin-top:14px;
+}
 </style>
 </head>
 <body>
@@ -197,6 +248,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--coin); outline-
 <header>
   <h1>Duit Kita<span class="dot">.</span></h1>
   <div class="hdr-right">
+    <button id="btn-report" type="button">📊 Report</button>
+    <button id="btn-back" type="button">‹ Journal</button>
     <div class="today" id="hdr-date"></div>
   </div>
 </header>
@@ -248,7 +301,14 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--coin); outline-
     </div>
   </section>
 
-  <footer class="foot">duitkita_version6 · 2026</footer>
+  <footer class="foot">duitkita_version7 · 2026</footer>
+</main>
+
+<!-- ============ REPORT ============ -->
+<main id="report">
+  <div id="rlist"></div>
+  <div id="rstate" class="rstate"></div>
+  <footer class="foot">duitkita_version7 · 2026</footer>
 </main>
 
 
@@ -524,6 +584,65 @@ $("again").onclick = ()=>{
   [... $("days").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.textContent==="Today"));
   refresh();
 };
+
+/* ============ REPORT ============ */
+$("btn-report").onclick = ()=>{ document.body.classList.add("on-report"); loadReport(); };
+$("btn-back").onclick = ()=>{ document.body.classList.remove("on-report"); };
+
+async function loadReport(){
+  $("rlist").innerHTML = "";
+  $("rstate").innerHTML = "Loading…";
+  let raw = "";
+  try{
+    const res = await fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"list" }) });
+    raw = await res.text();
+    const out = JSON.parse(raw);
+    if(!out.ok) throw new Error(out.error || "load failed");
+    renderReport(out.entries || []);
+  }catch(e){
+    $("rstate").innerHTML =
+      "Couldn't load the report — check your connection.<br><button id='r-retry' type='button'>Retry</button>" +
+      "<div class='raw'>" + String(raw || e).replace(/</g,"&lt;").slice(0,400) + "</div>";
+    $("r-retry").onclick = loadReport;
+  }
+}
+
+function renderReport(entries){
+  if(!entries.length){ $("rstate").innerHTML = "No entries yet — log something in the Journal first."; return; }
+  $("rstate").innerHTML = "";
+  /* newest first */
+  entries.sort((a,b)=> b.date.localeCompare(a.date));
+  const list = $("rlist");
+  let curMonth = "", curDay = "";
+  entries.forEach(r=>{
+    const d = new Date(r.date + "T00:00:00");
+    const mKey = r.date.slice(0,7);
+    if (mKey !== curMonth){
+      curMonth = mKey; curDay = "";
+      const h = document.createElement("div");
+      h.className = "rmonth";
+      h.textContent = d.toLocaleDateString("id-ID",{month:"long", year:"numeric"});
+      list.appendChild(h);
+    }
+    if (r.date !== curDay){
+      curDay = r.date;
+      const h = document.createElement("div");
+      h.className = "rday";
+      h.textContent = d.toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"short"});
+      list.appendChild(h);
+    }
+    const isIn = r.type === "Income";
+    const card = document.createElement("div");
+    card.className = "rcard " + (isIn ? "inc" : "exp");
+    card.innerHTML =
+      `<div class="who-dot ${r.name==="Andre"?"A":"D"}">${(r.name||"?")[0]}</div>`+
+      `<div class="mid"><div class="cat"></div><div class="sub"></div></div>`+
+      `<div class="amt">${isIn?"+":"−"}${fmt(r.amount)}</div>`;
+    card.querySelector(".cat").textContent = r.category;
+    card.querySelector(".sub").textContent = r.source;
+    list.appendChild(card);
+  });
+}
 
 refresh();
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
