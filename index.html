@@ -258,31 +258,26 @@ body[data-view="report"], body[data-view="balance"]{padding-bottom:calc(96px + e
   border:1px solid var(--line); border-radius:10px; padding:10px; word-break:break-all; margin-top:14px;
 }
 
-/* person filter */
-.pfilter{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px}
-.pfilter button{
+/* person filter (2 options now: Andre / Dinda) */
+.pfilter2{display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:14px}
+.pfilter2 button{
   min-height:46px; border:1.5px solid var(--line); border-radius:999px; background:var(--card);
   font-family:var(--disp); font-weight:700; font-size:14px; color:var(--ink); cursor:pointer;
 }
-.pfilter button.sel{background:var(--ink); border-color:var(--ink); color:#fff}
+.pfilter2 button.sel{background:var(--ink); border-color:var(--ink); color:#fff}
 
-/* slideable summary */
-.sumslider{
-  display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory;
-  margin-top:14px; -webkit-overflow-scrolling:touch; scrollbar-width:none;
-}
-.sumslider::-webkit-scrollbar{display:none}
+/* single bigger Today's Expenses card, with Yesterday + Avg Daily folded in */
 .sumbig{
-  flex:0 0 100%; scroll-snap-align:start; background:var(--card);
-  border:1.5px solid var(--line); border-radius:20px; padding:20px 22px;
+  margin-top:14px; background:var(--card); border:1.5px solid var(--line);
+  border-radius:20px; padding:22px 24px;
 }
 .sumbig .cap{font-family:var(--disp); font-weight:700; font-size:14px; color:var(--muted)}
 .sumbig .dt{font-family:var(--num); font-size:12px; color:var(--muted); margin-top:2px}
-.sumbig .big{font-family:var(--num); font-weight:700; font-size:32px; color:#B23A2E; margin-top:10px}
+.sumbig .big{font-family:var(--num); font-weight:700; font-size:36px; color:#B23A2E; margin-top:10px}
 .sumbig .big.zero{color:var(--muted)}
-.dots{display:flex; justify-content:center; gap:6px; margin-top:10px}
-.dots span{width:7px; height:7px; border-radius:50%; background:var(--line); transition:.2s}
-.dots span.on{background:var(--ink); transform:scale(1.2)}
+.sumbig .sb-sub{margin-top:14px; padding-top:12px; border-top:1px dashed var(--line); display:flex; flex-direction:column; gap:7px}
+.sb-row{display:flex; justify-content:space-between; font-size:13px; color:var(--muted)}
+.sb-row b{font-family:var(--num); font-weight:700; color:var(--ink)}
 
 /* week / month tiles */
 .stat2{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px}
@@ -325,13 +320,15 @@ body[data-view="report"], body[data-view="balance"]{padding-bottom:calc(96px + e
   font-family:var(--disp); font-weight:800; font-size:18px; margin:22px 4px 10px;
 }
 .balcard{
-  border-radius:20px; padding:18px 20px; margin-bottom:12px; color:#fff;
+  border-radius:20px; padding:20px 22px; margin-bottom:12px; color:#fff;
   display:flex; align-items:center; justify-content:space-between; gap:12px;
   box-shadow:0 4px 14px rgba(0,0,0,.08);
 }
-.balcard .bmeta .bsrc{font-family:var(--disp); font-weight:700; font-size:15px; opacity:.95}
-.balcard .bmeta .bhint{font-size:11.5px; opacity:.75; margin-top:2px}
-.balcard .bval{font-family:var(--num); font-weight:700; font-size:21px; white-space:nowrap; margin-left:auto}
+.balcard.has-debt{border-radius:20px 20px 0 0; margin-bottom:0}
+.balcard .bmeta .bsrc{font-family:var(--disp); font-weight:700; font-size:16px; opacity:.95}
+.balcard .bmeta .bhint{font-size:11.5px; opacity:.75; margin-top:3px}
+.balcard .bright{display:flex; align-items:center; gap:10px}
+.balcard .bval{font-family:var(--num); font-weight:700; font-size:23px; white-space:nowrap}
 .balcard .bedit{
   background:rgba(255,255,255,.25); border:none; color:#fff; border-radius:999px;
   width:34px; height:34px; font-size:15px; cursor:pointer; flex:0 0 34px;
@@ -340,6 +337,27 @@ body[data-view="report"], body[data-view="balance"]{padding-bottom:calc(96px + e
 .bc-bca{background:linear-gradient(135deg,#2D6CDF,#1E4FA8)}
 .bc-ewallet{background:linear-gradient(135deg,#8B5C8F,#6B4570)}
 .bc-cash{background:linear-gradient(135deg,#C9962A,#A97C18)}
+.bc-mandiri{background:linear-gradient(135deg,#0E7A6B,#0A5A4F)}
+
+/* CC/SPayLater bill box nested under its linked account card */
+.debtbox{
+  background:var(--card); border:1.5px solid var(--line); border-top:none;
+  border-radius:0 0 16px 16px; padding:10px 22px 14px; margin-bottom:12px;
+}
+.debtbox .drow{display:flex; justify-content:space-between; align-items:center; font-size:12.5px; color:#B23A2E; padding:3px 0}
+.debtbox .drow b{font-family:var(--num); font-weight:700}
+.debtbox .drow.approx{color:var(--muted); border-top:1px dashed var(--line); margin-top:2px; padding-top:6px}
+.debtbox .drow.approx b{color:var(--ink)}
+.swipepay{
+  position:relative; margin-top:10px; height:34px; border-radius:999px; overflow:hidden;
+  background:#F1E4C8; border:1px solid #E3D2A6; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; touch-action:pan-y;
+}
+.swipepay .fill{position:absolute; left:0; top:0; bottom:0; width:0; background:#C9962A}
+.swipepay span{position:relative; z-index:1; font-size:11.5px; font-weight:700; color:#7A5C15}
+.swipepay.done{background:#E2EFE7; border-color:#CFE3D6; cursor:default}
+.swipepay.done span{color:#1E7A50}
+
 #bal-edit-input{
   width:100%; min-height:56px; border:2px solid var(--person); border-radius:var(--radius);
   padding:0 16px; font-family:var(--num); font-size:20px; font-weight:700;
@@ -409,14 +427,20 @@ body[data-view="report"], body[data-view="balance"]{padding-bottom:calc(96px + e
 
 <!-- ============ REPORT ============ -->
 <main id="report">
-  <div class="pfilter">
-    <button data-p="All" class="sel" type="button">All</button>
-    <button data-p="Andre" type="button">Andre</button>
+  <div class="pfilter pfilter2">
+    <button data-p="Andre" class="sel" type="button">Andre</button>
     <button data-p="Dinda" type="button">Dinda</button>
   </div>
 
-  <div class="sumslider" id="sumslider"></div>
-  <div class="dots" id="sumdots"></div>
+  <div class="sumbig" id="sumbig">
+    <div class="cap">Today's Expenses</div>
+    <div class="dt" id="sb-date"></div>
+    <div class="big" id="sb-today">Rp0</div>
+    <div class="sb-sub">
+      <div class="sb-row"><span>Yesterday</span><b id="sb-yesterday">Rp0</b></div>
+      <div class="sb-row"><span>Avg Daily (this week)</span><b id="sb-avg">Rp0</b></div>
+    </div>
+  </div>
 
   <div class="stat2">
     <div class="stat"><div class="cap">This Week</div><div class="val" id="stat-week">–</div></div>
@@ -504,7 +528,16 @@ const INC_CATS = {
   ]
 };
 const AMTS = [50000, 100000];
-const SRCS = ["Seabank", "BCA", "Ewallet", "Cash"];
+const EXP_SRCS = {
+  Andre: ["Seabank","BCA","Ewallet","Cash","Mandiri","CC","SPayLater"],
+  Dinda: ["Seabank","BCA","Ewallet","Cash"]
+};
+const INC_SRCS = {
+  Andre: ["Seabank","BCA","Ewallet","Cash","Mandiri"],
+  Dinda: ["Seabank","BCA","Ewallet","Cash"]
+};
+/* sources without a person suffix, since they're shared/joint by nature */
+const NO_SUFFIX_SRCS = ["Mandiri"];
 const DAYS = ["Today","Yesterday","Custom"];
 
 const S = { type:"Expense", name:null, category:null, customCat:null, amount:null, custom:false, source:null, day:"Today", customDate:null };
@@ -539,6 +572,11 @@ function setType(t){
   S.category = null; S.customCat = null;
   $("cat-reveal").classList.remove("show"); $("cat-input").value = "";
   buildCats();
+  /* source options differ by type too (CC/SPayLater are expense-only) — rebuild fresh */
+  S.source = "Seabank";
+  buildSrcs();
+  [... $("srcs").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.dataset.src==="Seabank"));
+  $("src-auto").classList.add("show");
   /* amount: income skips tiers, goes straight to input */
   if (t === "Income"){
     $("amts").style.display = "none";
@@ -565,8 +603,9 @@ function pickName(n){
   /* both income & expense categories differ per person — rebuild fresh, clear prior selection */
   S.category=null; S.customCat=null; $("cat-reveal").classList.remove("show"); $("cat-input").value="";
   buildCats();
-  /* source auto-defaults to this person's Seabank */
+  /* source auto-defaults to this person's Seabank; rebuild since options differ per person */
   S.source = "Seabank";
+  buildSrcs();
   [... $("srcs").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.dataset.src==="Seabank"));
   $("src-auto").classList.add("show");
   refresh();
@@ -635,15 +674,25 @@ $("amt-input").addEventListener("input", e=>{
   S.amount = n; refresh();
 });
 
-/* ---------- sources (person applied at save; Cash is shared) ---------- */
-chips($("srcs"), SRCS, (b,it)=>{
+/* ---------- sources (person + type specific; person applied at save except Mandiri) ---------- */
+function buildSrcs(){
+  const table = S.type==="Income" ? INC_SRCS : EXP_SRCS;
+  const list = S.name ? table[S.name] : table.Andre; /* placeholder until a name is picked */
+  const el = $("srcs");
+  el.innerHTML = "";
+  list.forEach(it=>{
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip src"; b.dataset.src = it;
     const label = it==="Ewallet" ? "E-wallet" : it;
-    b.classList.add("src"); b.dataset.src=it;
-    b.innerHTML = it==="Cash" ? `${label}<small>shared</small>` : `${label}<small>auto-named</small>`;
-  },
-  (it,b)=>{ S.source=it; selOnly($("srcs"),b); $("src-auto").classList.remove("show"); refresh(); });
-/* resolve the stored source string: person-suffixed unless Cash */
-function resolvedSource(){ return S.source==="Cash" ? "Cash" : (S.source + " " + S.name); }
+    const isShared = NO_SUFFIX_SRCS.indexOf(it) !== -1;
+    b.innerHTML = `${label}<small>${isShared ? "joint account" : "auto-named"}</small>`;
+    b.onclick = ()=>{ S.source=it; selOnly(el,b); $("src-auto").classList.remove("show"); refresh(); };
+    el.appendChild(b);
+  });
+}
+buildSrcs();
+/* resolve the stored source string: no suffix for joint accounts like Mandiri */
+function resolvedSource(){ return NO_SUFFIX_SRCS.indexOf(S.source) !== -1 ? S.source : (S.source + " " + S.name); }
 
 /* ---------- days ---------- */
 const dayInput = $("day-input");
@@ -753,7 +802,7 @@ $("again").onclick = ()=>{
 };
 
 /* ============ REPORT ============ */
-const RPT = { entries: [], person: "All", shown: 10 };
+const RPT = { entries: [], person: "Andre", shown: 10 };
 const PAGE = 10;
 
 /* category → emoji map, built from both people's lists; fallback ✨ */
@@ -776,9 +825,9 @@ document.querySelectorAll(".navbtn").forEach(btn=>{
   };
 });
 
-document.querySelectorAll(".pfilter button").forEach(b=>{
+document.querySelectorAll(".pfilter2 button").forEach(b=>{
   b.onclick = ()=>{
-    document.querySelectorAll(".pfilter button").forEach(x=>x.classList.remove("sel"));
+    document.querySelectorAll(".pfilter2 button").forEach(x=>x.classList.remove("sel"));
     b.classList.add("sel");
     RPT.person = b.dataset.p;
     RPT.shown = PAGE;
@@ -787,7 +836,7 @@ document.querySelectorAll(".pfilter button").forEach(b=>{
 });
 
 async function loadReport(){
-  $("rlist").innerHTML = ""; $("sumslider").innerHTML = ""; $("sumdots").innerHTML = "";
+  $("rlist").innerHTML = "";
   $("lm-wrap").style.display = "none";
   $("rstate").innerHTML = "Loading…";
   let raw = "";
@@ -808,7 +857,7 @@ async function loadReport(){
 }
 
 function filtered(){
-  return RPT.person==="All" ? RPT.entries : RPT.entries.filter(r=>r.name===RPT.person);
+  return RPT.entries.filter(r=>r.name===RPT.person);
 }
 
 function renderAll(){
@@ -817,42 +866,32 @@ function renderAll(){
   renderList(rows);
 }
 
-/* ---- summary: 3-day slider + week/month tiles (expenses only) ---- */
+/* ---- summary: Today card (with Yesterday + Avg Daily folded in) + week/month tiles ---- */
 function sumExpOn(rows, dateStr){
   return rows.filter(r=>r.type!=="Income" && r.date===dateStr).reduce((a,r)=>a+r.amount,0);
 }
 function renderSummary(rows){
-  const slider = $("sumslider"), dots = $("sumdots");
-  slider.innerHTML = ""; dots.innerHTML = "";
-  const labels = ["Today's Expenses","Yesterday's Expenses","2 Days Ago"];
-  for(let i=0;i<3;i++){
-    const d = new Date(); d.setDate(d.getDate()-i);
-    const key = iso(d);
-    const total = sumExpOn(rows, key);
-    const card = document.createElement("div");
-    card.className = "sumbig";
-    card.innerHTML =
-      `<div class="cap">${labels[i]}</div>`+
-      `<div class="dt">${d.toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"short"})}</div>`+
-      `<div class="big ${total?"":"zero"}">${total ? "−"+fmt(total) : "Rp0"}</div>`;
-    slider.appendChild(card);
-    const dot = document.createElement("span");
-    if(i===0) dot.className="on";
-    dots.appendChild(dot);
-  }
-  slider.scrollLeft = 0;
-  slider.onscroll = ()=>{
-    const idx = Math.round(slider.scrollLeft / slider.clientWidth);
-    [...dots.children].forEach((s,i)=>s.classList.toggle("on", i===idx));
-  };
-
-  /* week: Monday → today; month: MTD */
   const today = new Date(); const tKey = iso(today);
+  const yest = new Date(today); yest.setDate(yest.getDate()-1); const yKey = iso(yest);
+
+  $("sb-date").textContent = today.toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"short"});
+  const todayTotal = sumExpOn(rows, tKey);
+  $("sb-today").textContent = todayTotal ? "−"+fmt(todayTotal) : "Rp0";
+  $("sb-today").classList.toggle("zero", !todayTotal);
+
+  const yestTotal = sumExpOn(rows, yKey);
+  $("sb-yesterday").textContent = yestTotal ? "−"+fmt(yestTotal) : "Rp0";
+
+  /* week: Monday → today; average daily = week total / days elapsed so far (min 1) */
   const mon = new Date(today); mon.setDate(mon.getDate() - ((mon.getDay()+6)%7));
   const monKey = iso(mon);
+  const daysElapsed = Math.max(1, Math.round((today - mon) / 86400000) + 1);
   const monthPrefix = tKey.slice(0,7);
   const wk = rows.filter(r=>r.type!=="Income" && r.date>=monKey && r.date<=tKey).reduce((a,r)=>a+r.amount,0);
   const mo = rows.filter(r=>r.type!=="Income" && r.date.indexOf(monthPrefix)===0).reduce((a,r)=>a+r.amount,0);
+  const avgDaily = Math.round(wk / daysElapsed);
+  $("sb-avg").textContent = avgDaily ? fmt(avgDaily) : "Rp0";
+
   $("stat-week").textContent = wk ? "−"+fmt(wk) : "Rp0";
   $("stat-week").classList.toggle("zero", !wk);
   $("stat-month").textContent = mo ? "−"+fmt(mo) : "Rp0";
@@ -963,15 +1002,18 @@ function attachSwipeDelete(wrap, entry){
 
 /* ============ BALANCE ============ */
 const BAL_SOURCES = [
-  { key:"Seabank Andre", person:"Andre", label:"Seabank", theme:"bc-seabank" },
-  { key:"BCA Andre",     person:"Andre", label:"BCA",     theme:"bc-bca" },
-  { key:"Ewallet Andre", person:"Andre", label:"E-wallet",theme:"bc-ewallet" },
-  { key:"Seabank Dinda", person:"Dinda", label:"Seabank", theme:"bc-seabank" },
-  { key:"BCA Dinda",     person:"Dinda", label:"BCA",     theme:"bc-bca" },
-  { key:"Ewallet Dinda", person:"Dinda", label:"E-wallet",theme:"bc-ewallet" },
-  { key:"Cash",          person:"Shared",label:"Cash",    theme:"bc-cash" },
+  { key:"Mandiri", person:"Joint", label:"Mandiri", theme:"bc-mandiri", debtChild:null },
+  { key:"Seabank Andre", person:"Andre", label:"Seabank", theme:"bc-seabank", debtChild:"SPayLater Andre" },
+  { key:"BCA Andre",     person:"Andre", label:"BCA",     theme:"bc-bca",     debtChild:"CC Andre" },
+  { key:"Ewallet Andre", person:"Andre", label:"E-wallet",theme:"bc-ewallet", debtChild:null },
+  { key:"Cash Andre",    person:"Andre", label:"Cash",    theme:"bc-cash",    debtChild:null },
+  { key:"Seabank Dinda", person:"Dinda", label:"Seabank", theme:"bc-seabank", debtChild:null },
+  { key:"BCA Dinda",     person:"Dinda", label:"BCA",     theme:"bc-bca",     debtChild:null },
+  { key:"Ewallet Dinda", person:"Dinda", label:"E-wallet",theme:"bc-ewallet", debtChild:null },
+  { key:"Cash Dinda",    person:"Dinda", label:"Cash",    theme:"bc-cash",    debtChild:null },
 ];
-let BAL = { balances:{}, starting:{} };
+const DEBT_LABEL = { "CC Andre":"CC Bills", "SPayLater Andre":"SPayLater Bills" };
+let BAL = { balances:{}, starting:{}, debts:{} };
 
 async function loadBalances(){
   $("bal-list").innerHTML = "";
@@ -984,6 +1026,7 @@ async function loadBalances(){
     if(!out.ok) throw new Error(out.error || "load failed");
     BAL.balances = out.balances || {};
     BAL.starting = out.starting || {};
+    BAL.debts = out.debts || {};
     renderBalances();
   }catch(e){
     $("bal-state").innerHTML =
@@ -991,6 +1034,12 @@ async function loadBalances(){
       "<div class='raw'>" + String(raw || e).replace(/</g,"&lt;").slice(0,400) + "</div>";
     $("b-retry").onclick = loadBalances;
   }
+}
+
+function personGroupLabel(p){
+  if(p==="Joint") return "Joint Savings";
+  if(p==="Andre" || p==="Dinda") return p + "'s Accounts";
+  return p;
 }
 
 function renderBalances(){
@@ -1002,29 +1051,83 @@ function renderBalances(){
       curPerson = s.person;
       const h = document.createElement("div");
       h.className = "bal-person";
-      h.textContent = s.person==="Shared" ? "Shared" : s.person + "'s Accounts";
+      h.textContent = personGroupLabel(s.person);
       list.appendChild(h);
     }
     const val = BAL.balances[s.key] || 0;
     const card = document.createElement("div");
-    card.className = "balcard " + s.theme;
+    card.className = "balcard " + s.theme + (s.debtChild ? " has-debt" : "");
     card.innerHTML =
       `<div class="bmeta"><div class="bsrc"></div><div class="bhint"></div></div>`+
-      `<div class="bval">${fmt(val)}</div>`+
-      `<button class="bedit" type="button" aria-label="Edit starting balance">✎</button>`;
-    card.querySelector(".bsrc").textContent = s.label + (s.person==="Shared" ? "" : " · " + s.person);
+      `<div class="bright"><div class="bval"></div><button class="bedit" type="button" aria-label="Edit starting balance">✎</button></div>`;
+    card.querySelector(".bsrc").textContent = s.label + (s.person==="Joint" ? "" : " · " + s.person);
     const start = BAL.starting[s.key];
     card.querySelector(".bhint").textContent = start ? ("start " + fmt(start)) : "no starting balance set";
+    card.querySelector(".bval").textContent = fmt(val);
     card.querySelector(".bedit").onclick = ()=>openBalEdit(s);
     list.appendChild(card);
+
+    // linked debt (CC under BCA, SPayLater under Seabank): small bill line + approx balance + swipe-to-pay
+    if (s.debtChild){
+      const debtAmt = BAL.debts[s.debtChild] || 0;
+      const approx = val - debtAmt;
+      const debtBox = document.createElement("div");
+      debtBox.className = "debtbox";
+      debtBox.innerHTML =
+        `<div class="drow"><span>${DEBT_LABEL[s.debtChild]}</span><b>−${fmt(debtAmt)}</b></div>`+
+        `<div class="drow approx"><span>Approx. Balance</span><b>${fmt(approx)}</b></div>`+
+        (debtAmt>0
+          ? `<div class="swipepay"><div class="fill"></div><span>Swipe to confirm ${s.debtChild.split(" ")[0]} paid</span></div>`
+          : `<div class="swipepay done">All caught up ✓</div>`);
+      list.appendChild(debtBox);
+      if (debtAmt>0) attachSwipePay(debtBox.querySelector(".swipepay"), s.debtChild);
+    }
   });
+}
+
+/* ---- swipe-to-confirm-paid (thin bar, full swipe = confirm, no typed confirmation) ---- */
+function attachSwipePay(bar, debtSource){
+  const fill = bar.querySelector(".fill");
+  const label = bar.querySelector("span");
+  let startX = 0, dragging = false, w = 0;
+  bar.addEventListener("touchstart", e=>{ startX=e.touches[0].clientX; w=bar.clientWidth; dragging=true; fill.style.transition="none"; }, {passive:true});
+  bar.addEventListener("touchmove", e=>{
+    if(!dragging) return;
+    let dx = e.touches[0].clientX - startX;
+    if(dx<0) dx=0; if(dx>w) dx=w;
+    fill.style.width = dx+"px";
+  }, {passive:true});
+  bar.addEventListener("touchend", e=>{
+    dragging = false;
+    const pct = fill.offsetWidth / w;
+    fill.style.transition = "width .18s ease-out";
+    if(pct > 0.85){
+      confirmPaid(debtSource, bar);
+    } else {
+      fill.style.width = "0px";
+    }
+  });
+  /* desktop testing convenience */
+  bar.addEventListener("click", ()=> confirmPaid(debtSource, bar));
+}
+async function confirmPaid(debtSource, bar){
+  bar.querySelector("span").textContent = "Confirming…";
+  try{
+    const res = await fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"markPaid", source:debtSource }) });
+    const out = await res.json();
+    if(!out.ok) throw new Error(out.error || "Failed");
+    loadBalances();
+  }catch(e){
+    bar.querySelector("span").textContent = "Couldn't confirm — tap to retry";
+    bar.querySelector(".fill").style.width = "0px";
+  }
 }
 
 /* ---- starting balance editor ---- */
 let balEditSource = null;
 function openBalEdit(s){
   balEditSource = s.key;
-  $("bal-edit-src").textContent = s.label + (s.person==="Shared" ? " (shared)" : " · " + s.person);
+  $("bal-edit-src").textContent = s.label + (s.person==="Joint" ? " (joint)" : " · " + s.person);
   const cur = BAL.starting[s.key];
   $("bal-edit-input").value = cur ? Number(cur).toLocaleString("id-ID") : "";
   $("bal-save").disabled = false; $("bal-save").textContent = "Save balance";
