@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Duit Kita</title>
 
-<!-- PWA / iOS install -->
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -23,190 +22,53 @@
   --paper:#F4F6F1; --card:#FFFFFF; --ink:#17251D; --muted:#6B776F;
   --line:#DCE2DA; --coin:#F2C230;
   --person:#1E7A50; --person-tint:#E2EFE7; --person-deep:#155C3B;
-  --income:#1E7A50; --expense:#B23A2E;
+  --exp:#B23A2E; --inc:#1E7A50;
   --radius:16px;
   --disp:"Bricolage Grotesque", system-ui, sans-serif;
   --num:"Space Grotesk", ui-monospace, monospace;
   --body:system-ui, -apple-system, "Segoe UI", sans-serif;
 }
-body.theme-dinda{ --person:#B04A72; --person-tint:#F6E6ED; --person-deep:#8C3055; }
-
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{
   font-family:var(--body); background:var(--paper); color:var(--ink);
-  padding-bottom:calc(40px + env(safe-area-inset-bottom));
-  transition:background .3s;
+  padding-bottom:calc(170px + env(safe-area-inset-bottom));
 }
+body[data-view="add"]{padding-bottom:calc(300px + env(safe-area-inset-bottom))}
+
 header{
-  padding:calc(14px + env(safe-area-inset-top)) 20px 6px;
+  padding:calc(14px + env(safe-area-inset-top)) 20px 4px;
   display:flex; align-items:center; justify-content:space-between; gap:10px;
 }
-header h1{font-family:var(--disp); font-weight:800; font-size:26px; letter-spacing:-.02em}
-header h1 .dot{color:var(--person); transition:color .3s}
-.hdr-right{display:flex; align-items:center; gap:10px}
-.hdr-right .today{font-family:var(--num); font-size:13px; color:var(--muted)}
-
+header h1{font-family:var(--disp); font-weight:800; font-size:25px; letter-spacing:-.02em}
+header h1 .dot{color:var(--person)}
+header .today{font-family:var(--num); font-size:13px; color:var(--muted)}
 main{padding:0 16px}
 section{margin-top:18px}
 .label{
   font-family:var(--disp); font-weight:600; font-size:12px; letter-spacing:.14em;
   text-transform:uppercase; color:var(--muted); margin-bottom:8px; padding-left:4px;
-  display:flex; align-items:center; gap:8px;
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
 }
-.label .auto{
-  font-family:var(--body); font-weight:600; letter-spacing:0; text-transform:none;
-  font-size:11px; color:var(--person); background:var(--person-tint);
-  padding:2px 8px; border-radius:999px; transition:.3s; display:none;
+.label .mini{
+  font-family:var(--body); font-weight:700; letter-spacing:0; text-transform:none;
+  font-size:12px; color:var(--person); background:var(--person-tint);
+  border:none; padding:5px 11px; border-radius:999px; cursor:pointer;
 }
-.label .auto.show{display:inline-block}
+.foot{font-family:var(--num); font-size:12px; color:var(--muted); text-align:center;
+  letter-spacing:.08em; padding:34px 0 30px; opacity:.6}
+.scroll-spacer{height:180px}
+.nav-spacer{height:90px}
 
-/* ---- type toggle ---- */
-.type{display:grid; grid-template-columns:1fr 1fr; gap:0; border:1.5px solid var(--line);
-  border-radius:999px; background:var(--card); padding:4px; margin-top:14px}
-.type button{
-  min-height:44px; border:none; border-radius:999px; background:transparent;
-  font-family:var(--disp); font-weight:700; font-size:15px; color:var(--muted); cursor:pointer; transition:.15s;
-}
-.type button.sel{background:var(--ink); color:#fff}
+/* ---------- view switching ---------- */
+#v-home,#v-add,#v-wallet{display:none}
+body[data-view="home"] #v-home{display:block}
+body[data-view="add"] #v-add{display:block}
+body[data-view="wallet"] #v-wallet{display:block}
+body[data-view="add"] .savebar{display:block}
+.savebar{display:none}
 
-/* ---- name: circular avatar picker ---- */
-.who{display:flex; justify-content:center; gap:34px; padding:6px 0 2px}
-.who button{
-  background:none; border:none; cursor:pointer; display:flex; flex-direction:column;
-  align-items:center; gap:8px; padding:4px;
-}
-.who .ava{
-  width:78px; height:78px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-  font-family:var(--disp); font-weight:800; font-size:32px; transition:.18s;
-  border:3px solid transparent; overflow:hidden;
-}
-.who .ava img{width:100%; height:100%; object-fit:cover; border-radius:50%}
-.who .nm{font-family:var(--disp); font-weight:700; font-size:15px; color:var(--muted); transition:.18s}
-#btn-andre .ava{background:#E2EFE7; color:#1E7A50}
-#btn-dinda .ava{background:#F6E6ED; color:#B04A72}
-#btn-andre.sel .ava{background:#1E7A50; color:#fff; border-color:#155C3B; transform:scale(1.06); box-shadow:0 6px 16px rgba(30,122,80,.3)}
-#btn-dinda.sel .ava{background:#B04A72; color:#fff; border-color:#8C3055; transform:scale(1.06); box-shadow:0 6px 16px rgba(176,74,114,.3)}
-.who button.sel .nm{color:var(--ink)}
-
-/* ---- generic chip grids ---- */
-.grid{display:grid; gap:10px}
-.g-amt{grid-template-columns:repeat(3,1fr)}
-.g-src{grid-template-columns:1fr 1fr}
-.g-day{grid-template-columns:repeat(3,1fr)}
-
-/* ---- category: circular slideable row ---- */
-.catrow{
-  display:flex; gap:14px; overflow-x:auto; padding:4px 2px 10px;
-  -webkit-overflow-scrolling:touch; scrollbar-width:none;
-}
-.catrow::-webkit-scrollbar{display:none}
-.chip-cat{
-  flex:0 0 auto; background:none; border:none; cursor:pointer;
-  display:flex; flex-direction:column; align-items:center; gap:6px; min-width:64px; padding:2px;
-}
-.chip-cat .circ{
-  width:60px; height:60px; border-radius:50%; background:var(--card);
-  border:1.5px solid var(--line); display:flex; align-items:center; justify-content:center;
-  font-size:26px; transition:.15s;
-}
-.chip-cat .lbl{font-size:12px; font-weight:600; color:var(--muted); white-space:nowrap}
-.chip-cat.sel .circ{border:2.5px solid var(--person); background:var(--person-tint); transform:scale(1.06)}
-.chip-cat.sel .lbl{color:var(--person-deep); font-weight:700}
-.chip{
-  min-height:54px; border:1.5px solid var(--line); border-radius:var(--radius);
-  background:var(--card); color:var(--ink); font-size:15px; font-weight:600;
-  font-family:var(--body); cursor:pointer; transition:.15s;
-  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
-  padding:8px 4px;
-}
-.chip .em{font-size:19px; line-height:1}
-.chip.sel{border-color:var(--person); background:var(--person-tint); color:var(--person-deep); border-width:2px}
-.chip.num{font-family:var(--num); font-weight:700; font-size:16px}
-.chip.src{align-items:flex-start; padding-left:14px}
-.chip.src small{font-size:11.5px; color:var(--muted); font-weight:600}
-.chip.sel.src small{color:var(--person-deep); opacity:.7}
-
-.reveal{display:none; margin-top:10px}
-.reveal.show{display:block}
-.reveal input{
-  width:100%; min-height:56px; border:2px solid var(--person); border-radius:var(--radius);
-  padding:0 16px; font-family:var(--num); font-size:20px; font-weight:700;
-  background:var(--card); color:var(--ink); outline:none;
-}
-#cat-input{font-family:var(--body); font-size:17px; font-weight:600;}
-.reveal .hint{font-size:12px; color:var(--muted); margin-top:6px; padding-left:4px}
-
-.foot{
-  font-family:var(--num); font-size:12px; color:var(--muted); text-align:center;
-  letter-spacing:.08em; padding:38px 0 44px; opacity:.65;
-}
-.scroll-spacer{height:200px}
-
-/* ---- sticky save ---- */
-.savebar{
-  position:fixed; left:0; right:0; z-index:16;
-  bottom:calc(68px + env(safe-area-inset-bottom));
-  padding:12px 16px; background:linear-gradient(to top, var(--paper) 70%, transparent);
-}
-#save{
-  width:100%; min-height:60px; border:none; border-radius:18px;
-  background:var(--person); color:#fff; font-family:var(--disp); font-weight:800;
-  font-size:19px; letter-spacing:.01em; cursor:pointer; transition:.2s;
-  box-shadow:0 6px 18px rgba(0,0,0,.14);
-}
-#save:disabled{background:#C6CDC5; color:#fff; box-shadow:none}
-#save .sub{display:block; font-family:var(--num); font-weight:500; font-size:12px; opacity:.85; margin-top:2px}
-
-.errbar{
-  display:none; margin:0 16px 10px; padding:12px 14px; border-radius:14px;
-  background:#FBEAE7; color:#8C2B1D; font-size:14px; font-weight:600;
-}
-.errbar.show{display:block}
-
-/* ---- receipt overlay ---- */
-#overlay, .ovl{
-  position:fixed; inset:0; background:rgba(23,37,29,.5); display:none;
-  align-items:flex-end; justify-content:center; z-index:20; backdrop-filter:blur(2px);
-}
-#overlay.show, .ovl.show{display:flex}
-.slip{
-  width:min(420px,92%); background:#fff; border-radius:20px 20px 0 0;
-  padding:26px 22px calc(22px + env(safe-area-inset-bottom));
-  animation:up .3s ease-out;
-}
-@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
-.slip .perf{
-  height:12px; margin:-26px -22px 18px;
-  background:radial-gradient(circle at 10px -4px, transparent 8px, #fff 8.5px);
-  background-size:20px 12px;
-}
-.slip h2{font-family:var(--disp); font-weight:800; font-size:22px; color:var(--person)}
-.slip .row{display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px dashed var(--line); font-size:15px}
-.slip .row b{font-family:var(--num)}
-.slip .amt{font-family:var(--num); font-weight:700; font-size:34px; margin:12px 0 6px; color:var(--ink)}
-.slip button{
-  width:100%; min-height:56px; margin-top:18px; border:none; border-radius:16px;
-  background:var(--person); color:#fff; font-family:var(--disp); font-weight:800; font-size:17px; cursor:pointer;
-}
-.slip button.ghost{
-  background:none; color:#B23A2E; font-weight:700; font-size:14px; min-height:40px; margin-top:6px;
-}
-
-@media (prefers-reduced-motion: reduce){ .slip{animation:none} *{transition:none!important} }
-button:focus-visible,input:focus-visible{outline:3px solid var(--coin); outline-offset:2px}
-
-/* ============ VIEW SWITCHING (navbar) ============ */
-#report, #balance{display:none}
-body[data-view="report"] #home, body[data-view="balance"] #home{display:none}
-body[data-view="report"] #report{display:block}
-body[data-view="balance"] #balance{display:block}
-/* save bar only on Journal */
-body[data-view="report"] .savebar, body[data-view="balance"] .savebar{display:none}
-/* leave room for navbar on report/balance (no save bar there) */
-body[data-view="report"], body[data-view="balance"]{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
-
-/* bottom navbar */
+/* ---------- navbar ---------- */
 .navbar{
   position:fixed; left:0; right:0; bottom:0; z-index:15;
   display:grid; grid-template-columns:repeat(3,1fr);
@@ -216,190 +78,346 @@ body[data-view="report"], body[data-view="balance"]{padding-bottom:calc(96px + e
 .navbtn{
   background:none; border:none; cursor:pointer; display:flex; flex-direction:column;
   align-items:center; gap:3px; padding:6px 0; color:var(--muted);
-  font-family:var(--disp); font-weight:700; font-size:11px; letter-spacing:.02em;
+  font-family:var(--disp); font-weight:700; font-size:11px;
 }
-.navbtn .ic{font-size:21px; line-height:1; filter:grayscale(1) opacity(.55); transition:.15s}
+.navbtn .ic{font-size:21px; line-height:1; filter:grayscale(1) opacity(.5); transition:.15s}
 .navbtn.sel{color:var(--ink)}
 .navbtn.sel .ic{filter:none}
 
-.rmonth{
-  font-family:var(--disp); font-weight:800; font-size:20px; margin:22px 4px 4px;
+/* ---------- generic chips ---------- */
+.grid{display:grid; gap:10px}
+.g-amt{grid-template-columns:repeat(3,1fr)}
+.g-wal{grid-template-columns:1fr 1fr}
+.g-day{grid-template-columns:repeat(3,1fr)}
+.chip{
+  min-height:54px; border:1.5px solid var(--line); border-radius:var(--radius);
+  background:var(--card); color:var(--ink); font-size:15px; font-weight:600;
+  font-family:var(--body); cursor:pointer; transition:.15s;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:8px 4px;
 }
-.rday{
-  font-family:var(--num); font-size:12px; color:var(--muted); letter-spacing:.06em;
-  margin:14px 4px 8px;
+.chip.sel{border-color:var(--person); background:var(--person-tint); color:var(--person-deep); border-width:2px}
+.chip.num{font-family:var(--num); font-weight:700; font-size:16px}
+.chip.wal{align-items:flex-start; padding-left:14px; text-align:left}
+.chip.wal small{font-size:11.5px; color:var(--muted); font-weight:600}
+.chip.sel.wal small{color:var(--person-deep); opacity:.75}
+.chip.add{border-style:dashed; color:var(--muted); font-weight:700}
+
+.reveal{display:none; margin-top:10px}
+.reveal.show{display:block}
+.reveal input{
+  width:100%; min-height:56px; border:2px solid var(--person); border-radius:var(--radius);
+  padding:0 16px; font-family:var(--num); font-size:20px; font-weight:700;
+  background:var(--card); color:var(--ink); outline:none;
 }
+.reveal .hint{font-size:12px; color:var(--muted); margin-top:6px; padding-left:4px}
+
+/* ---------- type toggle ---------- */
+.type{display:grid; grid-template-columns:1fr 1fr; border:1.5px solid var(--line);
+  border-radius:999px; background:var(--card); padding:4px; margin-top:14px}
+.type button{
+  min-height:44px; border:none; border-radius:999px; background:transparent;
+  font-family:var(--disp); font-weight:700; font-size:15px; color:var(--muted); cursor:pointer; transition:.15s;
+}
+.type button.sel{background:var(--ink); color:#fff}
+
+/* ---------- member avatars ---------- */
+.who{display:flex; gap:22px; overflow-x:auto; padding:6px 2px 4px; scrollbar-width:none}
+.who::-webkit-scrollbar{display:none}
+.who button{
+  flex:0 0 auto; background:none; border:none; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; gap:7px; padding:2px; min-width:66px;
+}
+.who .ava{
+  width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-family:var(--disp); font-weight:800; font-size:25px; color:#fff; transition:.18s;
+  border:3px solid transparent; opacity:.45;
+}
+.who .nm{font-family:var(--disp); font-weight:700; font-size:13px; color:var(--muted)}
+.who button.sel .ava{opacity:1; transform:scale(1.07); box-shadow:0 6px 16px rgba(0,0,0,.18)}
+.who button.sel .nm{color:var(--ink)}
+.who .ava.plus{background:var(--card); border:2px dashed var(--line); color:var(--muted); opacity:1; font-size:26px}
+
+/* ---------- category circles ---------- */
+.catrow{display:flex; gap:13px; overflow-x:auto; padding:4px 2px 10px; scrollbar-width:none}
+.catrow::-webkit-scrollbar{display:none}
+.chip-cat{
+  flex:0 0 auto; background:none; border:none; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; gap:6px; min-width:62px; padding:2px;
+}
+.chip-cat .circ{
+  width:58px; height:58px; border-radius:50%; background:var(--card);
+  border:1.5px solid var(--line); display:flex; align-items:center; justify-content:center;
+  font-size:25px; transition:.15s;
+}
+.chip-cat .lbl{font-size:11.5px; font-weight:600; color:var(--muted); white-space:nowrap; max-width:74px; overflow:hidden; text-overflow:ellipsis}
+.chip-cat.sel .circ{border:2.5px solid var(--person); background:var(--person-tint); transform:scale(1.06)}
+.chip-cat.sel .lbl{color:var(--person-deep); font-weight:700}
+.chip-cat .circ.plus{border-style:dashed; color:var(--muted); font-size:24px}
+
+/* ---------- save bar ---------- */
+.savebar{
+  position:fixed; left:0; right:0; z-index:16;
+  bottom:calc(68px + env(safe-area-inset-bottom));
+  padding:12px 16px; background:linear-gradient(to top, var(--paper) 72%, transparent);
+}
+#save{
+  width:100%; min-height:58px; border:none; border-radius:18px;
+  background:var(--person); color:#fff; font-family:var(--disp); font-weight:800;
+  font-size:18px; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.14);
+}
+#save:disabled{background:#C6CDC5; box-shadow:none}
+#save .sub{display:block; font-family:var(--num); font-weight:500; font-size:12px; opacity:.85; margin-top:2px}
+.errbar{display:none; margin:0 0 10px; padding:12px 14px; border-radius:14px;
+  background:#FBEAE7; color:#8C2B1D; font-size:14px; font-weight:600}
+.errbar.show{display:block}
+
+/* ---------- HOME ---------- */
+.periods{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px}
+.periods button{
+  min-height:44px; border:1.5px solid var(--line); border-radius:999px; background:var(--card);
+  font-family:var(--disp); font-weight:700; font-size:13.5px; color:var(--ink); cursor:pointer;
+}
+.periods button.sel{background:var(--ink); border-color:var(--ink); color:#fff}
+.sumcard{
+  margin-top:12px; background:var(--card); border:1.5px solid var(--line);
+  border-radius:20px; padding:20px 22px;
+}
+.sumcard .cap{font-family:var(--disp); font-weight:700; font-size:14px; color:var(--muted)}
+.sumcard .dt{font-family:var(--num); font-size:12px; color:var(--muted); margin-top:2px}
+.sumcard .big{font-family:var(--num); font-weight:700; font-size:34px; color:var(--exp); margin-top:10px}
+.sumcard .big.zero{color:var(--muted)}
+.sumcard .split{margin-top:14px; padding-top:12px; border-top:1px dashed var(--line);
+  display:flex; flex-direction:column; gap:7px}
+.sr{display:flex; justify-content:space-between; font-size:13px; color:var(--muted)}
+.sr b{font-family:var(--num); font-weight:700; color:var(--ink)}
+.sr b.inc{color:var(--inc)}
+
+.mfilter{display:flex; gap:8px; overflow-x:auto; margin-top:12px; padding-bottom:2px; scrollbar-width:none}
+.mfilter::-webkit-scrollbar{display:none}
+.mfilter button{
+  flex:0 0 auto; min-height:38px; padding:0 16px; border:1.5px solid var(--line);
+  border-radius:999px; background:var(--card); font-family:var(--disp);
+  font-weight:700; font-size:13px; color:var(--ink); cursor:pointer;
+}
+.mfilter button.sel{background:var(--ink); border-color:var(--ink); color:#fff}
+
+/* budgets */
+.bud{background:var(--card); border:1.5px solid var(--line); border-radius:14px;
+  padding:12px 14px; margin-bottom:8px}
+.bud .top{display:flex; align-items:center; gap:9px; font-size:14px; font-weight:700}
+.bud .top .em{font-size:17px}
+.bud .top .rem{margin-left:auto; font-family:var(--num); font-size:12.5px; font-weight:700}
+.bud .rem.ok{color:var(--inc)} .bud .rem.over{color:var(--exp)}
+.bar{height:7px; border-radius:999px; background:#EDF0EA; margin-top:9px; overflow:hidden}
+.bar i{display:block; height:100%; border-radius:999px; background:var(--inc); transition:width .3s}
+.bar i.warn{background:var(--coin)} .bar i.over{background:var(--exp)}
+.bud .sub{font-size:11.5px; color:var(--muted); margin-top:6px; font-family:var(--num)}
+
+/* transaction list */
+.rmonth{font-family:var(--disp); font-weight:800; font-size:19px; margin:20px 4px 2px}
+.rday{font-family:var(--num); font-size:12px; color:var(--muted); letter-spacing:.06em; margin:13px 4px 7px}
+.rwrap{position:relative; margin-bottom:8px; border-radius:16px; overflow:hidden}
 .rcard{
-  border-radius:16px; padding:13px 15px; margin-bottom:8px;
-  display:flex; align-items:center; gap:12px; border:1.5px solid transparent;
+  border-radius:16px; padding:12px 14px; display:flex; align-items:center; gap:11px;
+  border:1.5px solid transparent; position:relative; z-index:1; background:var(--card);
+  touch-action:pan-y; cursor:pointer;
 }
 .rcard.exp{background:#FBEDEB; border-color:#F3D9D4}
 .rcard.inc{background:#EAF3EC; border-color:#D5E7DA}
-.rcard .who-dot{
-  width:32px; height:32px; border-radius:999px; flex:0 0 32px;
-  display:flex; align-items:center; justify-content:center;
-  font-family:var(--disp); font-weight:800; font-size:14px; color:#fff;
-}
-.who-dot.A{background:#1E7A50} .who-dot.D{background:#B04A72}
-.rcard .mid{flex:1; min-width:0}
-.rcard .cat{font-weight:700; font-size:15px; color:var(--ink)}
-.rcard .sub{font-size:12px; color:var(--muted); margin-top:1px}
-.rcard .amt{font-family:var(--num); font-weight:700; font-size:15.5px; white-space:nowrap}
-.rcard.exp .amt{color:#B23A2E}
-.rcard.inc .amt{color:#1E7A50}
-
-.rstate{margin-top:30px; text-align:center; color:var(--muted); font-size:14px; padding:0 20px}
-.rstate button{
-  margin-top:12px; min-height:46px; padding:0 20px; border:none; border-radius:12px;
-  background:var(--ink); color:#fff; font-family:var(--disp); font-weight:700; cursor:pointer;
-}
-.rstate .raw{
-  text-align:left; font-family:var(--num); font-size:11px; background:var(--card);
-  border:1px solid var(--line); border-radius:10px; padding:10px; word-break:break-all; margin-top:14px;
-}
-
-/* person filter (2 options now: Andre / Dinda) */
-.pfilter2{display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:14px}
-.pfilter2 button{
-  min-height:46px; border:1.5px solid var(--line); border-radius:999px; background:var(--card);
-  font-family:var(--disp); font-weight:700; font-size:14px; color:var(--ink); cursor:pointer;
-}
-.pfilter2 button.sel{background:var(--ink); border-color:var(--ink); color:#fff}
-
-/* single bigger Today's Expenses card, with Yesterday + Avg Daily folded in */
-.sumbig{
-  margin-top:14px; background:var(--card); border:1.5px solid var(--line);
-  border-radius:20px; padding:22px 24px;
-}
-.sumbig .cap{font-family:var(--disp); font-weight:700; font-size:14px; color:var(--muted)}
-.sumbig .dt{font-family:var(--num); font-size:12px; color:var(--muted); margin-top:2px}
-.sumbig .big{font-family:var(--num); font-weight:700; font-size:36px; color:#B23A2E; margin-top:10px}
-.sumbig .big.zero{color:var(--muted)}
-.sumbig .sb-sub{margin-top:14px; padding-top:12px; border-top:1px dashed var(--line); display:flex; flex-direction:column; gap:7px}
-.sb-row{display:flex; justify-content:space-between; font-size:13px; color:var(--muted)}
-.sb-row b{font-family:var(--num); font-weight:700; color:var(--ink)}
-
-/* week / month tiles */
-.stat2{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px}
-.stat{background:var(--card); border:1.5px solid var(--line); border-radius:16px; padding:14px 16px}
-.stat .cap{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
-.stat .val{font-family:var(--num); font-weight:700; font-size:17px; color:#B23A2E; margin-top:5px}
-.stat .val.zero{color:var(--muted)}
-
-/* category icon on cards */
 .rcard .cico{
   width:40px; height:40px; border-radius:999px; flex:0 0 40px; position:relative;
   background:#fff; border:1.5px solid var(--line);
   display:flex; align-items:center; justify-content:center; font-size:19px;
 }
 .rcard .cico .badge{
-  position:absolute; right:-4px; bottom:-4px; width:17px; height:17px; border-radius:50%;
+  position:absolute; right:-4px; bottom:-4px; width:18px; height:18px; border-radius:50%;
   font-family:var(--disp); font-weight:800; font-size:9.5px; color:#fff;
   display:flex; align-items:center; justify-content:center; border:1.5px solid #fff;
 }
-.badge.A{background:#1E7A50} .badge.D{background:#B04A72}
-
-/* load more */
+.rcard .mid{flex:1; min-width:0}
+.rcard .cat{font-weight:700; font-size:14.5px}
+.rcard .sub{font-size:12px; color:var(--muted); margin-top:1px}
+.rcard .amt{font-family:var(--num); font-weight:700; font-size:15px; white-space:nowrap}
+.rcard.exp .amt{color:var(--exp)} .rcard.inc .amt{color:var(--inc)}
+.rtrash{position:absolute; top:0; right:0; bottom:0; width:76px; z-index:0;
+  background:var(--exp); border:none; color:#fff; font-size:21px; cursor:pointer}
 .lm-wrap{display:flex; justify-content:center; margin:16px 0 6px}
-#loadmore{
-  min-height:48px; padding:0 26px; border:1.5px solid var(--line); border-radius:999px;
-  background:var(--card); color:var(--ink); font-family:var(--disp); font-weight:700;
-  font-size:14px; cursor:pointer;
-}
+#loadmore{min-height:46px; padding:0 24px; border:1.5px solid var(--line); border-radius:999px;
+  background:var(--card); color:var(--ink); font-family:var(--disp); font-weight:700; font-size:14px; cursor:pointer}
 
-/* swipe-to-delete */
-.rwrap{position:relative; margin-bottom:8px; border-radius:16px; overflow:hidden}
-.rwrap .rcard{margin-bottom:0; position:relative; z-index:1; touch-action:pan-y; cursor:pointer}
-.rtrash{
-  position:absolute; top:0; right:0; bottom:0; width:76px; z-index:0;
-  background:#B23A2E; border:none; color:#fff; font-size:22px; cursor:pointer;
+/* ---------- WALLET ---------- */
+.wgroup{font-family:var(--disp); font-weight:800; font-size:17px; margin:22px 4px 10px}
+.wcard{
+  border-radius:20px; padding:19px 21px; margin-bottom:12px; color:#fff;
+  display:flex; align-items:center; gap:12px; box-shadow:0 4px 14px rgba(0,0,0,.08);
 }
-
-/* ============ BALANCE ============ */
-.bal-person{
-  font-family:var(--disp); font-weight:800; font-size:18px; margin:22px 4px 10px;
-}
-.balcard{
-  border-radius:20px; padding:20px 22px; margin-bottom:12px; color:#fff;
-  display:flex; align-items:center; justify-content:space-between; gap:12px;
-  box-shadow:0 4px 14px rgba(0,0,0,.08);
-}
-.balcard.has-debt{border-radius:20px 20px 0 0; margin-bottom:0}
-.balcard .bmeta .bsrc{font-family:var(--disp); font-weight:700; font-size:16px; opacity:.95}
-.balcard .bmeta .bhint{font-size:11.5px; opacity:.75; margin-top:3px}
-.balcard .bright{display:flex; align-items:center; gap:10px}
-.balcard .bval{font-family:var(--num); font-weight:700; font-size:23px; white-space:nowrap}
-.balcard .bedit{
-  background:rgba(255,255,255,.25); border:none; color:#fff; border-radius:999px;
-  width:34px; height:34px; font-size:15px; cursor:pointer; flex:0 0 34px;
-}
-.bc-seabank{background:linear-gradient(135deg,#1E7A50,#155C3B)}
-.bc-bca{background:linear-gradient(135deg,#2D6CDF,#1E4FA8)}
-.bc-ewallet{background:linear-gradient(135deg,#8B5C8F,#6B4570)}
-.bc-cash{background:linear-gradient(135deg,#C9962A,#A97C18)}
-.bc-mandiri{background:linear-gradient(135deg,#0E7A6B,#0A5A4F)}
-
-/* CC/SPayLater bill box nested under its linked account card */
-.debtbox{
-  background:var(--card); border:1.5px solid var(--line); border-top:none;
-  border-radius:0 0 16px 16px; padding:10px 22px 14px; margin-bottom:12px;
-}
-.debtbox .drow{display:flex; justify-content:space-between; align-items:center; font-size:12.5px; color:#B23A2E; padding:3px 0}
+.wcard.has-debt{border-radius:20px 20px 0 0; margin-bottom:0}
+.wcard .wmeta{flex:1; min-width:0}
+.wcard .wname{font-family:var(--disp); font-weight:700; font-size:16px}
+.wcard .whint{font-size:11.5px; opacity:.75; margin-top:3px}
+.wcard .wval{font-family:var(--num); font-weight:700; font-size:22px; white-space:nowrap}
+.wcard .wedit{background:rgba(255,255,255,.25); border:none; color:#fff; border-radius:999px;
+  width:33px; height:33px; font-size:14px; cursor:pointer; flex:0 0 33px}
+.debtbox{background:var(--card); border:1.5px solid var(--line); border-top:none;
+  border-radius:0 0 16px 16px; padding:10px 21px 13px; margin-bottom:12px}
+.debtbox .drow{display:flex; justify-content:space-between; align-items:center;
+  font-size:12.5px; color:var(--exp); padding:3px 0}
 .debtbox .drow b{font-family:var(--num); font-weight:700}
 .debtbox .drow.approx{color:var(--muted); border-top:1px dashed var(--line); margin-top:2px; padding-top:6px}
 .debtbox .drow.approx b{color:var(--ink)}
-.swipepay{
-  position:relative; margin-top:10px; height:34px; border-radius:999px; overflow:hidden;
-  background:#F1E4C8; border:1px solid #E3D2A6; display:flex; align-items:center; justify-content:center;
-  cursor:pointer; touch-action:pan-y;
-}
-.swipepay .fill{position:absolute; left:0; top:0; bottom:0; width:0; background:#C9962A}
+.swipepay{position:relative; margin-top:9px; height:33px; border-radius:999px; overflow:hidden;
+  background:#F1E4C8; border:1px solid #E3D2A6; display:flex; align-items:center;
+  justify-content:center; cursor:pointer; touch-action:pan-y}
+.swipepay .fill{position:absolute; left:0; top:0; bottom:0; width:0; background:var(--coin)}
 .swipepay span{position:relative; z-index:1; font-size:11.5px; font-weight:700; color:#7A5C15}
 .swipepay.done{background:#E2EFE7; border-color:#CFE3D6; cursor:default}
-.swipepay.done span{color:#1E7A50}
-
-#bal-edit-input{
-  width:100%; min-height:56px; border:2px solid var(--person); border-radius:var(--radius);
-  padding:0 16px; font-family:var(--num); font-size:20px; font-weight:700;
-  background:var(--card); color:var(--ink); outline:none; margin-top:6px;
+.swipepay.done span{color:var(--inc)}
+.addbtn{
+  width:100%; min-height:52px; border:1.5px dashed var(--line); border-radius:16px;
+  background:var(--card); color:var(--muted); font-family:var(--disp); font-weight:700;
+  font-size:14px; cursor:pointer; margin-top:6px;
 }
+
+/* ---------- state / overlays ---------- */
+.state{margin-top:26px; text-align:center; color:var(--muted); font-size:14px; padding:0 20px}
+.state button{margin-top:12px; min-height:44px; padding:0 20px; border:none; border-radius:12px;
+  background:var(--ink); color:#fff; font-family:var(--disp); font-weight:700; cursor:pointer}
+.state .raw{text-align:left; font-family:var(--num); font-size:11px; background:var(--card);
+  border:1px solid var(--line); border-radius:10px; padding:10px; word-break:break-all; margin-top:14px}
+
+.ovl{position:fixed; inset:0; background:rgba(23,37,29,.5); display:none;
+  align-items:flex-end; justify-content:center; z-index:30; backdrop-filter:blur(2px)}
+.ovl.show{display:flex}
+.sheet{
+  width:min(430px,100%); background:#fff; border-radius:22px 22px 0 0;
+  padding:24px 22px calc(20px + env(safe-area-inset-bottom));
+  max-height:88vh; overflow-y:auto; animation:up .28s ease-out;
+}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.sheet h2{font-family:var(--disp); font-weight:800; font-size:21px; margin-bottom:4px}
+.sheet .sd{font-size:13px; color:var(--muted); margin-bottom:16px}
+.fld{margin-bottom:14px}
+.fld label{display:block; font-size:12px; font-weight:700; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--muted); margin-bottom:6px}
+.fld input, .fld select{
+  width:100%; min-height:52px; border:1.5px solid var(--line); border-radius:14px;
+  padding:0 14px; font-family:var(--body); font-size:16px; font-weight:600;
+  background:var(--card); color:var(--ink); outline:none;
+}
+.fld input.num{font-family:var(--num); font-weight:700}
+.fld input:focus, .fld select:focus{border-color:var(--person)}
+.emojis{display:flex; flex-wrap:wrap; gap:7px}
+.emojis button{
+  width:44px; height:44px; border-radius:12px; border:1.5px solid var(--line);
+  background:var(--card); font-size:20px; cursor:pointer;
+}
+.emojis button.sel{border-color:var(--person); background:var(--person-tint); border-width:2.5px}
+.seg{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.seg button{
+  min-height:46px; border:1.5px solid var(--line); border-radius:12px; background:var(--card);
+  font-family:var(--disp); font-weight:700; font-size:14px; color:var(--ink); cursor:pointer;
+}
+.seg button.sel{background:var(--ink); border-color:var(--ink); color:#fff}
+.sheet .go{
+  width:100%; min-height:54px; margin-top:8px; border:none; border-radius:16px;
+  background:var(--person); color:#fff; font-family:var(--disp); font-weight:800; font-size:16px; cursor:pointer;
+}
+.sheet .go:disabled{background:#C6CDC5}
+.sheet .ghost{
+  width:100%; min-height:44px; margin-top:8px; border:none; border-radius:14px;
+  background:none; color:var(--muted); font-family:var(--disp); font-weight:700; font-size:14px; cursor:pointer;
+}
+.sheet .danger{color:var(--exp)}
+.manage-list{display:flex; flex-direction:column; gap:8px; margin-bottom:14px}
+.mrow{
+  display:flex; align-items:center; gap:11px; padding:11px 13px;
+  border:1.5px solid var(--line); border-radius:13px; background:var(--card);
+}
+.mrow .dot{width:30px; height:30px; border-radius:999px; flex:0 0 30px; display:flex;
+  align-items:center; justify-content:center; color:#fff; font-family:var(--disp);
+  font-weight:800; font-size:13px}
+.mrow .t{flex:1; min-width:0}
+.mrow .t b{font-size:14.5px; display:block}
+.mrow .t small{font-size:11.5px; color:var(--muted)}
+.mrow .x{background:none; border:none; color:var(--exp); font-size:17px; cursor:pointer; padding:4px 6px}
+
+/* receipt */
+.slip .perf{height:12px; margin:-24px -22px 16px;
+  background:radial-gradient(circle at 10px -4px, transparent 8px, #fff 8.5px); background-size:20px 12px}
+.slip .row{display:flex; justify-content:space-between; padding:9px 0;
+  border-bottom:1px dashed var(--line); font-size:15px}
+.slip .row b{font-family:var(--num)}
+.slip .amt{font-family:var(--num); font-weight:700; font-size:33px; margin:10px 0 6px}
+
+@media (prefers-reduced-motion: reduce){ .sheet{animation:none} *{transition:none!important} }
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--coin); outline-offset:2px}
 </style>
 </head>
-<body>
+<body data-view="home">
 
 <header>
   <h1>Duit Kita<span class="dot">.</span></h1>
-  <div class="hdr-right">
-    <div class="today" id="hdr-date"></div>
-  </div>
+  <div class="today" id="hdr-date"></div>
 </header>
 
-<!-- ============ HOME (logger) ============ -->
-<main id="home">
+<!-- ==================== HOME ==================== -->
+<main id="v-home">
+  <div class="periods">
+    <button data-p="day" type="button">Daily</button>
+    <button data-p="week" type="button">Weekly</button>
+    <button data-p="month" class="sel" type="button">Monthly</button>
+  </div>
+
+  <div class="mfilter" id="home-members"></div>
+
+  <div class="sumcard">
+    <div class="cap" id="sum-cap">This Month</div>
+    <div class="dt" id="sum-range"></div>
+    <div class="big" id="sum-exp">Rp0</div>
+    <div class="split">
+      <div class="sr"><span>Income</span><b class="inc" id="sum-inc">Rp0</b></div>
+      <div class="sr"><span>Net</span><b id="sum-net">Rp0</b></div>
+    </div>
+  </div>
+
+  <section id="budget-sec">
+    <div class="label">Budgets <span style="font-weight:600;letter-spacing:0;text-transform:none;font-size:11px" id="bud-note"></span></div>
+    <div id="budget-list"></div>
+  </section>
+
+  <section>
+    <div class="label">Transaction History</div>
+    <div id="tx-list"></div>
+    <div class="lm-wrap" id="lm-wrap" style="display:none"><button id="loadmore" type="button">Load More</button></div>
+  </section>
+
+  <div class="state" id="home-state"></div>
+  <footer class="foot">duitkita_v2 · 2026</footer>
+  <div class="nav-spacer" aria-hidden="true"></div>
+</main>
+
+<!-- ==================== ADD ==================== -->
+<main id="v-add">
   <div class="type">
-    <button id="t-exp" type="button" class="sel">Expense</button>
+    <button id="t-exp" class="sel" type="button">Expense</button>
     <button id="t-inc" type="button">Income</button>
   </div>
 
   <section>
     <div class="label">Who's logging</div>
-    <div class="who">
-      <button id="btn-andre" type="button"><span class="ava" id="ava-andre">A</span><span class="nm">Andre</span></button>
-      <button id="btn-dinda" type="button"><span class="ava" id="ava-dinda">D</span><span class="nm">Dinda</span></button>
-    </div>
+    <div class="who" id="members"></div>
   </section>
 
   <section>
-    <div class="label">Category</div>
-    <div class="catrow" id="cats"></div>
-    <div class="reveal" id="cat-reveal">
-      <input id="cat-input" type="text" placeholder="Type category name" autocomplete="off" maxlength="30">
-      <div class="hint">e.g. School fee, Gift, Medicine</div>
+    <div class="label">
+      <span>Category</span>
+      <button class="mini" id="mng-cat" type="button">Manage</button>
     </div>
+    <div class="catrow" id="cats"></div>
   </section>
 
-  <section id="amt-section">
-    <div class="label" id="amt-label">Amount</div>
+  <section>
+    <div class="label">Amount</div>
     <div class="grid g-amt" id="amts"></div>
     <div class="reveal" id="amt-reveal">
       <input id="amt-input" inputmode="numeric" placeholder="e.g. 35.000" autocomplete="off">
@@ -408,8 +426,11 @@ body[data-view="report"], body[data-view="balance"]{padding-bottom:calc(96px + e
   </section>
 
   <section>
-    <div class="label"><span id="src-label">Source</span> <span class="auto" id="src-auto">auto</span></div>
-    <div class="grid g-src" id="srcs"></div>
+    <div class="label">
+      <span id="wal-label">Wallet</span>
+      <button class="mini" id="mng-wal" type="button">Manage</button>
+    </div>
+    <div class="grid g-wal" id="wallets"></div>
   </section>
 
   <section>
@@ -421,741 +442,904 @@ body[data-view="report"], body[data-view="balance"]{padding-bottom:calc(96px + e
     </div>
   </section>
 
-  <div class="scroll-spacer" aria-hidden="true"></div>
-  <footer class="foot">duitkita_version11 · 2026</footer>
+  <div class="scroll-spacer"></div>
+  <footer class="foot">duitkita_v2 · 2026</footer>
 </main>
 
-<!-- ============ REPORT ============ -->
-<main id="report">
-  <div class="pfilter pfilter2">
-    <button data-p="Andre" class="sel" type="button">Andre</button>
-    <button data-p="Dinda" type="button">Dinda</button>
-  </div>
-
-  <div class="sumbig" id="sumbig">
-    <div class="cap">Today's Expenses</div>
-    <div class="dt" id="sb-date"></div>
-    <div class="big" id="sb-today">Rp0</div>
-    <div class="sb-sub">
-      <div class="sb-row"><span>Yesterday</span><b id="sb-yesterday">Rp0</b></div>
-      <div class="sb-row"><span>Avg Daily (this week)</span><b id="sb-avg">Rp0</b></div>
-    </div>
-  </div>
-
-  <div class="stat2">
-    <div class="stat"><div class="cap">This Week</div><div class="val" id="stat-week">–</div></div>
-    <div class="stat"><div class="cap">This Month</div><div class="val" id="stat-month">–</div></div>
-  </div>
-
-  <div id="rlist"></div>
-  <div class="lm-wrap" id="lm-wrap" style="display:none"><button id="loadmore" type="button">Load More</button></div>
-  <div id="rstate" class="rstate"></div>
-  <footer class="foot">duitkita_version11 · 2026</footer>
+<!-- ==================== WALLET ==================== -->
+<main id="v-wallet">
+  <div id="wallet-list"></div>
+  <button class="addbtn" id="add-wallet-btn" type="button">+ Add a wallet</button>
+  <div class="state" id="wallet-state"></div>
+  <footer class="foot">duitkita_v2 · 2026</footer>
+  <div class="nav-spacer" aria-hidden="true"></div>
 </main>
-
-<!-- ============ BALANCE ============ -->
-<main id="balance">
-  <div id="bal-list"></div>
-  <div id="bal-state" class="rstate"></div>
-  <footer class="foot">duitkita_version11 · 2026</footer>
-</main>
-
-<!-- ============ BOTTOM NAVBAR ============ -->
-<nav class="navbar">
-  <button class="navbtn sel" data-view="home" type="button"><span class="ic">📓</span>Journal</button>
-  <button class="navbtn" data-view="report" type="button"><span class="ic">📊</span>Report</button>
-  <button class="navbtn" data-view="balance" type="button"><span class="ic">💰</span>Balance</button>
-</nav>
 
 <div class="savebar">
   <div class="errbar" id="err"></div>
-  <button id="save" type="button" disabled>Pick a name to start</button>
+  <button id="save" type="button" disabled>Pick who's logging</button>
 </div>
 
-<div id="overlay">
-  <div class="slip">
-    <div class="perf"></div>
-    <h2 id="slip-title">Logged ✓</h2>
-    <div class="amt" id="slip-amt"></div>
-    <div class="row"><span>Type</span><b id="slip-type"></b></div>
-    <div class="row"><span>Category</span><b id="slip-cat"></b></div>
-    <div class="row"><span id="slip-src-label">Source</span><b id="slip-src"></b></div>
-    <div class="row"><span>Day</span><b id="slip-day"></b></div>
-    <div class="row"><span>By</span><b id="slip-who"></b></div>
-    <button id="again" type="button">Log another</button>
-    <button id="slip-delete" type="button" class="ghost">Delete this entry</button>
-  </div>
-</div>
+<nav class="navbar">
+  <button class="navbtn sel" data-view="home" type="button"><span class="ic">🏠</span>Home</button>
+  <button class="navbtn" data-view="add" type="button"><span class="ic">➕</span>Add</button>
+  <button class="navbtn" data-view="wallet" type="button"><span class="ic">👛</span>Wallet</button>
+</nav>
 
-<div id="baloverlay" class="ovl">
-  <div class="slip">
-    <div class="perf"></div>
-    <h2 id="bal-edit-title">Set starting balance</h2>
-    <div class="row" style="border:none"><span id="bal-edit-src"></span></div>
-    <input id="bal-edit-input" inputmode="numeric" placeholder="e.g. 1.500.000" autocomplete="off">
-    <div class="hint" style="font-size:12px;color:var(--muted);margin-top:6px">The balance you had in this account when you started tracking.</div>
-    <button id="bal-save" type="button">Save balance</button>
-    <button id="bal-cancel" type="button" class="ghost">Cancel</button>
-  </div>
-</div>
+<!-- generic bottom sheet -->
+<div class="ovl" id="sheet-ovl"><div class="sheet" id="sheet-body"></div></div>
 
 <script>
 /* ================= CONFIG ================= */
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby0k-IyHSOKKaYSmvhTdJdubpVHbQt1xaRawk312D41VAZSctuSEicXwATRrR-2GpyC1g/exec";
 /* ========================================== */
 
-/* Avatars: set a photo URL later to replace the initial, e.g. {img:"dinda.jpg"} */
-const AVATARS = { Andre:{img:null, initial:"A"}, Dinda:{img:null, initial:"D"} };
-
-const EXP_CATS = {
-  Andre: [
-    {k:"Food", em:"🍜"}, {k:"Transport", em:"🛵"}, {k:"Shopping", em:"🛍️"},
-    {k:"Bills", em:"🧾"}, {k:"Baby Stuff", em:"🍼"}, {k:"Cash", em:"💵"}, {k:"Other", em:"✨"}
-  ],
-  Dinda: [
-    {k:"Food", em:"🍜"}, {k:"Transport", em:"🛵"}, {k:"Shopping", em:"🛍️"},
-    {k:"Groceries", em:"🛒"}, {k:"Baby Stuff", em:"🍼"}, {k:"Cash", em:"💵"}, {k:"Other", em:"✨"}
-  ]
-};
-const INC_CATS = {
-  Andre: [
-    {k:"Salary", em:"💼"}, {k:"Transfer", em:"🔁"}, {k:"Reimbursement", em:"🧾"},
-    {k:"Bonus", em:"🎁"}, {k:"Other", em:"✨"}
-  ],
-  Dinda: [
-    {k:"Salary", em:"💼"}, {k:"Monthly Allowance", em:"📅"}, {k:"Household", em:"🏠"},
-    {k:"Transfer", em:"🔁"}, {k:"Reimbursement", em:"🧾"}, {k:"Bonus", em:"🎁"}, {k:"Other", em:"✨"}
-  ]
-};
+const $ = id => document.getElementById(id);
+const fmt = n => "Rp" + Math.round(Number(n)||0).toLocaleString("id-ID");
+const iso = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const esc = s => String(s??"").replace(/[<>&"]/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]));
+const JOINT = "joint";
+const PALETTE = ["#1E7A50","#B04A72","#2D6CDF","#C9962A","#8B5C8F","#0E7A6B","#B23A2E","#6B5CA5"];
+const EMOJI_SET = ["🍜","🛵","🛍️","🧾","🛒","🍼","💵","💼","🎁","🔁","🏠","📅","⛽","💊","🎬","📚","✈️","☕","🐱","✨"];
 const AMTS = [50000, 100000];
-const EXP_SRCS = {
-  Andre: ["Seabank","BCA","Ewallet","Cash","Mandiri","CC","SPayLater"],
-  Dinda: ["Seabank","BCA","Ewallet","Cash"]
-};
-const INC_SRCS = {
-  Andre: ["Seabank","BCA","Ewallet","Cash","Mandiri"],
-  Dinda: ["Seabank","BCA","Ewallet","Cash"]
-};
-/* sources without a person suffix, since they're shared/joint by nature */
-const NO_SUFFIX_SRCS = ["Mandiri"];
 const DAYS = ["Today","Yesterday","Custom"];
 
-const S = { type:"Expense", name:null, category:null, customCat:null, amount:null, custom:false, source:null, day:"Today", customDate:null };
-
-const $ = id => document.getElementById(id);
-const fmt = n => "Rp" + Number(n).toLocaleString("id-ID");
-const iso = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+/* app data + ui state */
+const D = { members:[], wallets:[], categories:[] };
+const S = { type:"Expense", memberId:null, categoryId:null, amount:null, custom:true,
+            walletId:null, day:"Today", customDate:null };
+const TX = { all:[], shown:10, period:"month", member:"all" };
+const PAGE = 10;
+let BAL = { balances:{}, debts:{}, starting:{} };
+let BUD = [];
 
 const now = new Date();
 $("hdr-date").textContent = now.toLocaleDateString("id-ID",{weekday:"short", day:"numeric", month:"short"});
 
-/* ---------- chip helpers ---------- */
-function chips(el, items, render, onTap){
-  el.innerHTML = "";
-  items.forEach(it=>{
-    const b=document.createElement("button");
-    b.type="button"; b.className="chip"; render(b,it);
-    b.onclick=()=>onTap(it,b);
-    el.appendChild(b);
-  });
-}
-function selOnly(container, btn){ container.querySelectorAll(".chip").forEach(c=>c.classList.remove("sel")); btn.classList.add("sel"); }
-
-/* ---------- type toggle ---------- */
-$("t-exp").onclick = ()=>setType("Expense");
-$("t-inc").onclick = ()=>setType("Income");
-function setType(t){
-  if (S.type === t) return;
-  S.type = t;
-  $("t-exp").classList.toggle("sel", t==="Expense");
-  $("t-inc").classList.toggle("sel", t==="Income");
-  S.category = null; S.customCat = null;
-  $("cat-reveal").classList.remove("show"); $("cat-input").value = "";
-  buildCats();
-  /* source options differ by type too (CC/SPayLater are expense-only) — rebuild fresh */
-  S.source = "Seabank";
-  buildSrcs();
-  [... $("srcs").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.dataset.src==="Seabank"));
-  $("src-auto").classList.add("show");
-  /* amount: income skips tiers, goes straight to input */
-  if (t === "Income"){
-    $("amts").style.display = "none";
-    $("amt-reveal").classList.add("show");
-    S.custom = true;
-    S.amount = parseAmt($("amt-input").value);
-    $("src-label").textContent = "Destination";
-  } else {
-    $("amts").style.display = "";
-    presetCustomAmount();
-    $("src-label").textContent = "Source";
-  }
-  refresh();
+/* ================= api ================= */
+async function api(payload){
+  const res = await fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
+  const txt = await res.text();
+  let out;
+  try { out = JSON.parse(txt); }
+  catch(e){ throw new Error("Bad response: " + txt.slice(0,120)); }
+  if(!out.ok) throw new Error(out.error || "Request failed");
+  return out;
 }
 
-/* ---------- name ---------- */
-$("btn-andre").onclick = ()=>pickName("Andre");
-$("btn-dinda").onclick = ()=>pickName("Dinda");
-function pickName(n){
-  S.name=n;
-  document.body.classList.toggle("theme-dinda", n==="Dinda");
-  $("btn-andre").classList.toggle("sel", n==="Andre");
-  $("btn-dinda").classList.toggle("sel", n==="Dinda");
-  /* both income & expense categories differ per person — rebuild fresh, clear prior selection */
-  S.category=null; S.customCat=null; $("cat-reveal").classList.remove("show"); $("cat-input").value="";
-  buildCats();
-  /* source auto-defaults to this person's Seabank; rebuild since options differ per person */
-  S.source = "Seabank";
-  buildSrcs();
-  [... $("srcs").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.dataset.src==="Seabank"));
-  $("src-auto").classList.add("show");
-  refresh();
+/* ================= lookups ================= */
+const memberById = id => D.members.find(m=>m.id===id);
+const walletById = id => D.wallets.find(w=>w.id===id);
+const catById    = id => D.categories.find(c=>c.id===id);
+function memberName(id){ const m=memberById(id); return m?m.name:"?"; }
+function memberColor(id){ const m=memberById(id); return m?(m.color||"#1E7A50"):"#6B776F"; }
+function walletLabel(id){
+  const w=walletById(id); if(!w) return "?";
+  return w.ownerId===JOINT ? w.name : (w.name + " · " + memberName(w.ownerId));
 }
+function catLabel(id){ const c=catById(id); return c?c.name:"?"; }
+function catEmoji(id){ const c=catById(id); return c&&c.emoji?c.emoji:"✨"; }
+/* items visible to a member: their own + joint */
+const forMember = (arr, mid) => arr.filter(x => x.ownerId===mid || x.ownerId===JOINT);
 
-/* ---------- avatars (photo-ready) ---------- */
-["Andre","Dinda"].forEach(n=>{
-  const a = AVATARS[n], el = $("ava-"+n.toLowerCase());
-  el.innerHTML = a.img ? `<img src="${a.img}" alt="${n}">` : a.initial;
-});
-
-/* ---------- categories (circular, slideable) ---------- */
-function buildCats(){
-  const isInc = S.type==="Income";
-  /* both income and expense categories now depend on who's logging */
-  const table = isInc ? INC_CATS : EXP_CATS;
-  const list = S.name ? table[S.name] : table.Andre; /* placeholder until a name is picked */
-
-  const el = $("cats");
-  el.innerHTML = "";
-  list.forEach(it=>{
-    const b = document.createElement("button");
-    b.type = "button"; b.className = "chip-cat";
-    b.innerHTML = `<span class="circ">${it.em}</span><span class="lbl">${it.k}</span>`;
-    b.onclick = ()=>{
-      el.querySelectorAll(".chip-cat").forEach(c=>c.classList.remove("sel"));
-      b.classList.add("sel");
-      if (it.k === "Other"){
-        S.category = "Other"; S.customCat = parseCat($("cat-input").value);
-        $("cat-reveal").classList.add("show"); $("cat-input").focus();
-      } else {
-        S.category = it.k; S.customCat = null;
-        $("cat-reveal").classList.remove("show");
-      }
-      refresh();
-    };
-    el.appendChild(b);
-  });
-}
-buildCats();
-function parseCat(v){ const s=String(v).trim(); return s.length ? s : null; }
-$("cat-input").addEventListener("input", e=>{ S.customCat = parseCat(e.target.value); refresh(); });
-
-/* ---------- amounts (Custom preselected by default) ---------- */
-chips($("amts"), [...AMTS,"Custom"], (b,it)=>{
-    b.classList.add("num");
-    b.textContent = it==="Custom" ? "···" : (it/1000)+"k";
-    if(it==="Custom"){ b.title="Custom amount"; b.dataset.custom="1"; }
-  },
-  (it,b)=>{
-    selOnly($("amts"),b);
-    if(it==="Custom"){ S.custom=true; S.amount=parseAmt($("amt-input").value); $("amt-reveal").classList.add("show"); $("amt-input").focus(); }
-    else{ S.custom=false; S.amount=it; $("amt-reveal").classList.remove("show"); }
-    refresh();
-  });
-function presetCustomAmount(){
-  S.custom = true; S.amount = parseAmt($("amt-input").value);
-  [... $("amts").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.dataset.custom==="1"));
-  $("amt-reveal").classList.add("show");
-}
-presetCustomAmount();
-function parseAmt(v){ const n=Number(String(v).replace(/[^\d]/g,"")); return n>0?n:null; }
-$("amt-input").addEventListener("input", e=>{
-  const n=parseAmt(e.target.value);
-  e.target.value = n ? n.toLocaleString("id-ID") : "";
-  S.amount = n; refresh();
-});
-
-/* ---------- sources (person + type specific; person applied at save except Mandiri) ---------- */
-function buildSrcs(){
-  const table = S.type==="Income" ? INC_SRCS : EXP_SRCS;
-  const list = S.name ? table[S.name] : table.Andre; /* placeholder until a name is picked */
-  const el = $("srcs");
-  el.innerHTML = "";
-  list.forEach(it=>{
-    const b = document.createElement("button");
-    b.type = "button"; b.className = "chip src"; b.dataset.src = it;
-    const label = it==="Ewallet" ? "E-wallet" : it;
-    const isShared = NO_SUFFIX_SRCS.indexOf(it) !== -1;
-    b.innerHTML = `${label}<small>${isShared ? "joint account" : "auto-named"}</small>`;
-    b.onclick = ()=>{ S.source=it; selOnly(el,b); $("src-auto").classList.remove("show"); refresh(); };
-    el.appendChild(b);
-  });
-}
-buildSrcs();
-/* resolve the stored source string: no suffix for joint accounts like Mandiri */
-function resolvedSource(){ return NO_SUFFIX_SRCS.indexOf(S.source) !== -1 ? S.source : (S.source + " " + S.name); }
-
-/* ---------- days ---------- */
-const dayInput = $("day-input");
-{ const max=new Date(), min=new Date(); min.setDate(min.getDate()-30);
-  dayInput.max=iso(max); dayInput.min=iso(min); }
-chips($("days"), DAYS, (b,it)=>{ b.textContent=it; if(it==="Today") b.classList.add("sel"); },
-  (it,b)=>{
-    S.day=it; selOnly($("days"),b);
-    $("day-reveal").classList.toggle("show", it==="Custom");
-    if(it==="Custom" && !dayInput.value) dayInput.value=iso(new Date());
-    S.customDate = it==="Custom" ? dayInput.value : null;
-    if(it==="Custom"){
-      setTimeout(()=>$("day-reveal").scrollIntoView({behavior:"smooth", block:"center"}), 60);
+/* ================= boot ================= */
+async function boot(){
+  try{
+    let out = await api({action:"bootstrap"});
+    if(out.needsSetup){
+      /* first run on this sheet: migrate v1 data (or seed a starter household) */
+      await api({action:"migrate"});
+      out = await api({action:"bootstrap"});
     }
-    refresh();
-  });
-dayInput.addEventListener("change", ()=>{ S.customDate=dayInput.value; refresh(); });
-
-/* ---------- validation + save ---------- */
-function entryDate(){
-  if(S.day==="Today") return iso(new Date());
-  if(S.day==="Yesterday"){ const d=new Date(); d.setDate(d.getDate()-1); return iso(d); }
-  return S.customDate;
-}
-/* the category actually saved: custom text when "Other" is chosen */
-function effectiveCat(){ return S.category==="Other" ? S.customCat : S.category; }
-function ready(){ return S.name && effectiveCat() && S.amount>0 && S.source && entryDate(); }
-function refresh(){
-  const btn=$("save");
-  if(!S.name){ btn.disabled=true; btn.textContent="Pick a name to start"; return; }
-  if(!ready()){
-    btn.disabled=true;
-    if(!S.category) btn.textContent="Pick a category";
-    else if(S.category==="Other" && !S.customCat) btn.textContent="Type the category name";
-    else if(!S.amount) btn.textContent = S.custom ? "Type the amount" : "Pick an amount";
-    else btn.textContent="Pick a day";
-    return;
-  }
-  btn.disabled=false;
-  const verb = S.type==="Income" ? "Save +" : "Save ";
-  btn.innerHTML = `${verb}${fmt(S.amount)} <span class="sub">${S.type} · ${effectiveCat()} · ${resolvedSource()} · ${S.day==="Custom"?S.customDate:S.day}</span>`;
-}
-
-$("save").onclick = async ()=>{
-  const btn=$("save"), err=$("err");
-  err.classList.remove("show");
-  if(SCRIPT_URL.startsWith("PASTE")){ err.textContent="Setup needed: paste your Apps Script URL into index.html (SCRIPT_URL)."; err.classList.add("show"); return; }
-  btn.disabled=true; btn.textContent="Saving…";
-  const payload = { type:S.type, date:entryDate(), name:S.name, category:effectiveCat(), amount:S.amount, source:resolvedSource(), loggedVia:"pwa" };
-  try{
-    const res = await fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
-    const out = await res.json();
-    if(!out.ok) throw new Error(out.error || "Server rejected the entry");
-    payload.loggedAt = out.loggedAt;
-    showSlip(payload);
+    D.members = out.members; D.wallets = out.wallets; D.categories = out.categories;
+    if(D.members.length && !S.memberId) selectMember(D.members[0].id, true);
+    buildAdd();
+    loadHome();
   }catch(e){
-    err.textContent = "Couldn't save — check your connection and tap Save again. Nothing was lost.";
-    err.classList.add("show");
-    refresh();
+    $("home-state").innerHTML = "Couldn't reach the backend.<br><button id='b-retry' type='button'>Retry</button>"+
+      "<div class='raw'>"+esc(e.message)+"</div>";
+    $("b-retry").onclick = boot;
   }
-};
-
-/* ---------- receipt ---------- */
-let lastLoggedAt = null;
-function showSlip(p){
-  lastLoggedAt = p.loggedAt || null;
-  $("slip-delete").style.display = lastLoggedAt ? "block" : "none";
-  $("slip-delete").textContent = "Delete this entry";
-  $("slip-delete").disabled = false;
-  $("slip-title").textContent = p.type==="Income" ? "Income logged ✓" : "Logged ✓";
-  $("slip-amt").textContent = (p.type==="Income"?"+":"") + fmt(p.amount);
-  $("slip-type").textContent = p.type;
-  $("slip-cat").textContent = p.category;
-  $("slip-src-label").textContent = p.type==="Income" ? "Destination" : "Source";
-  $("slip-src").textContent = p.source;
-  $("slip-day").textContent = p.date;
-  $("slip-who").textContent = p.name;
-  $("overlay").classList.add("show");
 }
-$("slip-delete").onclick = async ()=>{
-  if(!lastLoggedAt) return;
-  const btn = $("slip-delete");
-  btn.disabled = true; btn.textContent = "Deleting…";
-  try{
-    const res = await fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"delete", loggedAt:lastLoggedAt }) });
-    const out = await res.json();
-    if(!out.ok) throw new Error(out.error || "Delete failed");
-    lastLoggedAt = null;
-    $("overlay").classList.remove("show");
-  }catch(e){
-    btn.textContent = "Couldn't delete — tap to retry";
-    btn.disabled = false;
-  }
-};
-$("again").onclick = ()=>{
-  $("overlay").classList.remove("show");
-  S.category=null; S.customCat=null; S.day="Today"; S.customDate=null;
-  S.source = "Seabank"; $("src-auto").classList.add("show");
-  $("amt-input").value=""; S.amount=null;
-  $("cat-input").value=""; $("cat-reveal").classList.remove("show");
-  if (S.type==="Expense") presetCustomAmount();
-  $("day-reveal").classList.remove("show");
-  document.querySelectorAll("#cats .chip-cat").forEach(c=>c.classList.remove("sel"));
-  [... $("srcs").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.dataset.src==="Seabank"));
-  [... $("days").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.textContent==="Today"));
-  refresh();
-};
 
-/* ============ REPORT ============ */
-const RPT = { entries: [], person: "Andre", shown: 10 };
-const PAGE = 10;
-
-/* category → emoji map, built from both people's lists; fallback ✨ */
-const CAT_EMOJI = {};
-[EXP_CATS.Andre, EXP_CATS.Dinda, INC_CATS.Andre, INC_CATS.Dinda].forEach(list=>{
-  list.forEach(it=>{ CAT_EMOJI[it.k] = it.em; });
-});
-const catIcon = c => CAT_EMOJI[c] || "✨";
-
-/* ============ NAVBAR / VIEW SWITCHING ============ */
-document.body.setAttribute("data-view","home");
+/* ================= navbar ================= */
 document.querySelectorAll(".navbtn").forEach(btn=>{
   btn.onclick = ()=>{
     const v = btn.dataset.view;
     document.body.setAttribute("data-view", v);
     document.querySelectorAll(".navbtn").forEach(b=>b.classList.toggle("sel", b===btn));
     window.scrollTo(0,0);
-    if(v==="report") loadReport();
-    if(v==="balance") loadBalances();
+    if(v==="home") loadHome();
+    if(v==="wallet") loadWallets();
   };
 });
 
-document.querySelectorAll(".pfilter2 button").forEach(b=>{
-  b.onclick = ()=>{
-    document.querySelectorAll(".pfilter2 button").forEach(x=>x.classList.remove("sel"));
-    b.classList.add("sel");
-    RPT.person = b.dataset.p;
-    RPT.shown = PAGE;
-    renderAll();
-  };
+/* ================= ADD page ================= */
+function buildAdd(){ buildMembers(); buildCats(); buildWallets(); refresh(); }
+
+function buildMembers(){
+  const el = $("members"); el.innerHTML = "";
+  D.members.forEach(m=>{
+    const b = document.createElement("button");
+    b.type="button"; b.className = m.id===S.memberId ? "sel" : "";
+    b.innerHTML = `<span class="ava" style="background:${esc(m.color||"#1E7A50")}">${esc(m.name[0]||"?").toUpperCase()}</span><span class="nm">${esc(m.name)}</span>`;
+    b.onclick = ()=>selectMember(m.id);
+    el.appendChild(b);
+  });
+  const add = document.createElement("button");
+  add.type="button";
+  add.innerHTML = `<span class="ava plus">+</span><span class="nm">Add</span>`;
+  add.onclick = openMembersSheet;
+  el.appendChild(add);
+}
+
+function selectMember(id, silent){
+  S.memberId = id;
+  const c = memberColor(id);
+  document.documentElement.style.setProperty("--person", c);
+  document.documentElement.style.setProperty("--person-deep", c);
+  document.documentElement.style.setProperty("--person-tint", c + "22");
+  S.categoryId = null; S.walletId = null;
+  if(!silent){ buildMembers(); buildCats(); buildWallets(); refresh(); }
+}
+
+function buildCats(){
+  const el = $("cats"); el.innerHTML = "";
+  const kind = S.type==="Income" ? "income" : "expense";
+  const list = S.memberId ? forMember(D.categories, S.memberId).filter(c=>c.kind===kind) : [];
+  list.forEach(c=>{
+    const b = document.createElement("button");
+    b.type="button"; b.className = "chip-cat" + (c.id===S.categoryId ? " sel" : "");
+    b.innerHTML = `<span class="circ">${esc(c.emoji||"✨")}</span><span class="lbl">${esc(c.name)}</span>`;
+    b.onclick = ()=>{ S.categoryId=c.id; buildCats(); refresh(); };
+    el.appendChild(b);
+  });
+  const add = document.createElement("button");
+  add.type="button"; add.className="chip-cat";
+  add.innerHTML = `<span class="circ plus">+</span><span class="lbl">New</span>`;
+  add.onclick = ()=>openCategorySheet(null);
+  el.appendChild(add);
+}
+
+function buildWallets(){
+  const el = $("wallets"); el.innerHTML = "";
+  $("wal-label").textContent = S.type==="Income" ? "Destination" : "Wallet";
+  let list = S.memberId ? forMember(D.wallets, S.memberId) : [];
+  /* debt wallets can only be spent from, never received into */
+  if(S.type==="Income") list = list.filter(w=>w.type!=="debt");
+  /* own wallets first, then joint, then credit lines last */
+  const rank = w => (w.type==="debt" ? 2 : (w.ownerId===JOINT ? 1 : 0));
+  list = list.slice().sort((a,b)=>rank(a)-rank(b));
+  list.forEach(w=>{
+    const b = document.createElement("button");
+    b.type="button"; b.className = "chip wal" + (w.id===S.walletId ? " sel" : "");
+    const tag = w.type==="debt" ? "credit / bill" : (w.ownerId===JOINT ? "joint" : "personal");
+    b.innerHTML = `${esc(w.name)}<small>${tag}</small>`;
+    b.onclick = ()=>{ S.walletId=w.id; buildWallets(); refresh(); };
+    el.appendChild(b);
+  });
+  const add = document.createElement("button");
+  add.type="button"; add.className="chip add";
+  add.textContent = "+ New wallet";
+  add.onclick = ()=>openWalletSheet(null);
+  el.appendChild(add);
+  /* default to first available wallet */
+  if(!S.walletId && list.length){ S.walletId = list[0].id; buildWallets(); }
+}
+
+/* type toggle */
+$("t-exp").onclick = ()=>setType("Expense");
+$("t-inc").onclick = ()=>setType("Income");
+function setType(t){
+  if(S.type===t) return;
+  S.type=t;
+  $("t-exp").classList.toggle("sel", t==="Expense");
+  $("t-inc").classList.toggle("sel", t==="Income");
+  S.categoryId=null; S.walletId=null;
+  buildCats(); buildWallets(); refresh();
+}
+
+/* amounts */
+function parseAmt(v){ const n=Number(String(v).replace(/[^\d]/g,"")); return n>0?n:null; }
+function buildAmts(){
+  const el = $("amts"); el.innerHTML="";
+  [...AMTS,"Custom"].forEach(it=>{
+    const b=document.createElement("button");
+    b.type="button"; b.className="chip num";
+    b.textContent = it==="Custom" ? "···" : (it/1000)+"k";
+    if(it==="Custom") b.dataset.custom="1";
+    b.onclick=()=>{
+      el.querySelectorAll(".chip").forEach(c=>c.classList.remove("sel"));
+      b.classList.add("sel");
+      if(it==="Custom"){ S.custom=true; S.amount=parseAmt($("amt-input").value);
+        $("amt-reveal").classList.add("show"); $("amt-input").focus(); }
+      else { S.custom=false; S.amount=it; $("amt-reveal").classList.remove("show"); }
+      refresh();
+    };
+    el.appendChild(b);
+  });
+  presetCustom();
+}
+function presetCustom(){
+  S.custom=true; S.amount=parseAmt($("amt-input").value);
+  [...$("amts").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.dataset.custom==="1"));
+  $("amt-reveal").classList.add("show");
+}
+$("amt-input").addEventListener("input", e=>{
+  const n=parseAmt(e.target.value);
+  e.target.value = n ? n.toLocaleString("id-ID") : "";
+  S.amount=n; refresh();
 });
+buildAmts();
 
-async function loadReport(){
-  $("rlist").innerHTML = "";
-  $("lm-wrap").style.display = "none";
-  $("rstate").innerHTML = "Loading…";
-  let raw = "";
-  try{
-    const res = await fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"list" }) });
-    raw = await res.text();
-    const out = JSON.parse(raw);
-    if(!out.ok) throw new Error(out.error || "load failed");
-    RPT.entries = out.entries || [];
-    RPT.shown = PAGE;
-    renderAll();
-  }catch(e){
-    $("rstate").innerHTML =
-      "Couldn't load the report — check your connection.<br><button id='r-retry' type='button'>Retry</button>" +
-      "<div class='raw'>" + String(raw || e).replace(/</g,"&lt;").slice(0,400) + "</div>";
-    $("r-retry").onclick = loadReport;
-  }
+/* days */
+const dayInput = $("day-input");
+{ const mx=new Date(), mn=new Date(); mn.setDate(mn.getDate()-30);
+  dayInput.max=iso(mx); dayInput.min=iso(mn); }
+(function buildDays(){
+  const el=$("days"); el.innerHTML="";
+  DAYS.forEach(it=>{
+    const b=document.createElement("button");
+    b.type="button"; b.className="chip"+(it==="Today"?" sel":"");
+    b.textContent=it;
+    b.onclick=()=>{
+      el.querySelectorAll(".chip").forEach(c=>c.classList.remove("sel"));
+      b.classList.add("sel");
+      S.day=it;
+      $("day-reveal").classList.toggle("show", it==="Custom");
+      if(it==="Custom"){
+        if(!dayInput.value) dayInput.value=iso(new Date());
+        S.customDate=dayInput.value;
+        setTimeout(()=>$("day-reveal").scrollIntoView({behavior:"smooth",block:"center"}),60);
+      } else S.customDate=null;
+      refresh();
+    };
+    el.appendChild(b);
+  });
+})();
+dayInput.addEventListener("change", ()=>{ S.customDate=dayInput.value; refresh(); });
+
+/* validate + save */
+function entryDate(){
+  if(S.day==="Today") return iso(new Date());
+  if(S.day==="Yesterday"){ const d=new Date(); d.setDate(d.getDate()-1); return iso(d); }
+  return S.customDate;
 }
-
-function filtered(){
-  return RPT.entries.filter(r=>r.name===RPT.person);
-}
-
-function renderAll(){
-  const rows = filtered();
-  renderSummary(rows);
-  renderList(rows);
-}
-
-/* ---- summary: Today card (with Yesterday + Avg Daily folded in) + week/month tiles ---- */
-function sumExpOn(rows, dateStr){
-  return rows.filter(r=>r.type!=="Income" && r.date===dateStr).reduce((a,r)=>a+r.amount,0);
-}
-function renderSummary(rows){
-  const today = new Date(); const tKey = iso(today);
-  const yest = new Date(today); yest.setDate(yest.getDate()-1); const yKey = iso(yest);
-
-  $("sb-date").textContent = today.toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"short"});
-  const todayTotal = sumExpOn(rows, tKey);
-  $("sb-today").textContent = todayTotal ? "−"+fmt(todayTotal) : "Rp0";
-  $("sb-today").classList.toggle("zero", !todayTotal);
-
-  const yestTotal = sumExpOn(rows, yKey);
-  $("sb-yesterday").textContent = yestTotal ? "−"+fmt(yestTotal) : "Rp0";
-
-  /* week: Monday → today; average daily = week total / days elapsed so far (min 1) */
-  const mon = new Date(today); mon.setDate(mon.getDate() - ((mon.getDay()+6)%7));
-  const monKey = iso(mon);
-  const daysElapsed = Math.max(1, Math.round((today - mon) / 86400000) + 1);
-  const monthPrefix = tKey.slice(0,7);
-  const wk = rows.filter(r=>r.type!=="Income" && r.date>=monKey && r.date<=tKey).reduce((a,r)=>a+r.amount,0);
-  const mo = rows.filter(r=>r.type!=="Income" && r.date.indexOf(monthPrefix)===0).reduce((a,r)=>a+r.amount,0);
-  const avgDaily = Math.round(wk / daysElapsed);
-  $("sb-avg").textContent = avgDaily ? fmt(avgDaily) : "Rp0";
-
-  $("stat-week").textContent = wk ? "−"+fmt(wk) : "Rp0";
-  $("stat-week").classList.toggle("zero", !wk);
-  $("stat-month").textContent = mo ? "−"+fmt(mo) : "Rp0";
-  $("stat-month").classList.toggle("zero", !mo);
-}
-
-/* ---- paginated grouped list ---- */
-function renderList(rows){
-  const list = $("rlist");
-  list.innerHTML = "";
-  if(!rows.length){
-    $("rstate").innerHTML = "No entries yet — log something in the Journal first.";
-    $("lm-wrap").style.display = "none";
+function ready(){ return S.memberId && S.categoryId && S.amount>0 && S.walletId && entryDate(); }
+function refresh(){
+  const btn=$("save");
+  if(!S.memberId){ btn.disabled=true; btn.textContent="Pick who's logging"; return; }
+  if(!ready()){
+    btn.disabled=true;
+    btn.textContent = !S.categoryId ? "Pick a category"
+      : (!S.amount ? "Type the amount" : (!S.walletId ? "Pick a wallet" : "Pick a day"));
     return;
   }
-  $("rstate").innerHTML = "";
-  const sorted = rows.slice().sort((a,b)=> b.date.localeCompare(a.date));
-  const slice = sorted.slice(0, RPT.shown);
-  let curMonth = "", curDay = "";
-  slice.forEach(r=>{
-    const d = new Date(r.date + "T00:00:00");
-    const valid = !isNaN(d.getTime());
-    const mKey = r.date.slice(0,7);
-    if (mKey !== curMonth){
-      curMonth = mKey; curDay = "";
-      const h = document.createElement("div");
-      h.className = "rmonth";
-      h.textContent = valid ? d.toLocaleDateString("id-ID",{month:"long", year:"numeric"}) : mKey;
-      list.appendChild(h);
-    }
-    if (r.date !== curDay){
-      curDay = r.date;
-      const h = document.createElement("div");
-      h.className = "rday";
-      h.textContent = valid ? d.toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"short"}) : r.date;
-      list.appendChild(h);
-    }
-    const isIn = r.type === "Income";
-    const wrap = document.createElement("div");
-    wrap.className = "rwrap";
-    wrap.innerHTML =
-      `<button class="rtrash" type="button" aria-label="Delete">🗑️</button>`+
-      `<div class="rcard ${isIn?"inc":"exp"}">`+
-        `<div class="cico">${catIcon(r.category)}<span class="badge ${r.name==="Andre"?"A":"D"}">${(r.name||"?")[0]}</span></div>`+
-        `<div class="mid"><div class="cat"></div><div class="sub"></div></div>`+
-        `<div class="amt">${isIn?"+":"−"}${fmt(r.amount)}</div>`+
-      `</div>`;
-    wrap.querySelector(".cat").textContent = r.category;
-    wrap.querySelector(".sub").textContent = r.source;
-    attachSwipeDelete(wrap, r);
-    list.appendChild(wrap);
-  });
-  $("lm-wrap").style.display = sorted.length > RPT.shown ? "flex" : "none";
-}
-$("loadmore").onclick = ()=>{ RPT.shown += PAGE; renderList(filtered()); };
-
-/* ---- swipe-left-to-reveal delete (instant delete on tap, no confirm) ---- */
-const TRASH_W = 76;
-function closeAllSwipes(except){
-  document.querySelectorAll(".rwrap .rcard").forEach(c=>{ if(c!==except) c.style.transform = "translateX(0)"; });
-}
-function attachSwipeDelete(wrap, entry){
-  const card = wrap.querySelector(".rcard");
-  const trash = wrap.querySelector(".rtrash");
-  let startX = 0, curX = 0, dragging = false;
-
-  card.addEventListener("touchstart", e=>{
-    startX = e.touches[0].clientX; dragging = true;
-    card.style.transition = "none";
-  }, {passive:true});
-  card.addEventListener("touchmove", e=>{
-    if(!dragging) return;
-    curX = e.touches[0].clientX - startX;
-    if(curX > 0) curX = 0; // no swipe right
-    if(curX < -TRASH_W) curX = -TRASH_W - (curX + TRASH_W) * 0.25; // slight resistance past reveal
-    card.style.transform = `translateX(${curX}px)`;
-  }, {passive:true});
-  card.addEventListener("touchend", ()=>{
-    dragging = false;
-    card.style.transition = "transform .18s ease-out";
-    if(curX < -TRASH_W/2){ closeAllSwipes(card); card.style.transform = `translateX(-${TRASH_W}px)`; }
-    else { card.style.transform = "translateX(0)"; }
-    curX = 0;
-  });
-  /* desktop testing convenience: click the card to toggle reveal */
-  card.addEventListener("click", ()=>{
-    const open = card.style.transform === `translateX(-${TRASH_W}px)`;
-    closeAllSwipes();
-    card.style.transition = "transform .18s ease-out";
-    card.style.transform = open ? "translateX(0)" : `translateX(-${TRASH_W}px)`;
-  });
-
-  trash.onclick = async (ev)=>{
-    ev.stopPropagation();
-    if(entry.loggedAt == null){ trash.textContent="⚠️"; return; } // old rows without a timestamp can't be targeted safely
-    trash.disabled = true; trash.textContent = "…";
-    try{
-      const res = await fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"delete", loggedAt: entry.loggedAt }) });
-      const out = await res.json();
-      if(!out.ok) throw new Error(out.error || "Delete failed");
-      RPT.entries = RPT.entries.filter(e2=>e2.loggedAt !== entry.loggedAt);
-      renderAll();
-    }catch(e){
-      trash.disabled = false; trash.textContent = "⚠️";
-    }
-  };
+  btn.disabled=false;
+  btn.innerHTML = `${S.type==="Income"?"Save +":"Save "}${fmt(S.amount)}`+
+    `<span class="sub">${esc(catLabel(S.categoryId))} · ${esc(walletLabel(S.walletId))} · ${S.day==="Custom"?S.customDate:S.day}</span>`;
 }
 
-/* ============ BALANCE ============ */
-const BAL_SOURCES = [
-  { key:"Mandiri", person:"Joint", label:"Mandiri", theme:"bc-mandiri", debtChild:null },
-  { key:"Seabank Andre", person:"Andre", label:"Seabank", theme:"bc-seabank", debtChild:"SPayLater Andre" },
-  { key:"BCA Andre",     person:"Andre", label:"BCA",     theme:"bc-bca",     debtChild:"CC Andre" },
-  { key:"Ewallet Andre", person:"Andre", label:"E-wallet",theme:"bc-ewallet", debtChild:null },
-  { key:"Cash Andre",    person:"Andre", label:"Cash",    theme:"bc-cash",    debtChild:null },
-  { key:"Seabank Dinda", person:"Dinda", label:"Seabank", theme:"bc-seabank", debtChild:null },
-  { key:"BCA Dinda",     person:"Dinda", label:"BCA",     theme:"bc-bca",     debtChild:null },
-  { key:"Ewallet Dinda", person:"Dinda", label:"E-wallet",theme:"bc-ewallet", debtChild:null },
-  { key:"Cash Dinda",    person:"Dinda", label:"Cash",    theme:"bc-cash",    debtChild:null },
-];
-const DEBT_LABEL = { "CC Andre":"CC Bills", "SPayLater Andre":"SPayLater Bills" };
-let BAL = { balances:{}, starting:{}, debts:{} };
-
-async function loadBalances(){
-  $("bal-list").innerHTML = "";
-  $("bal-state").innerHTML = "Loading…";
-  let raw = "";
+$("save").onclick = async ()=>{
+  const btn=$("save"), err=$("err");
+  err.classList.remove("show");
+  btn.disabled=true; btn.textContent="Saving…";
+  const payload = { type:S.type, date:entryDate(), memberId:S.memberId,
+                    categoryId:S.categoryId, amount:S.amount, walletId:S.walletId };
   try{
-    const res = await fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"balances" }) });
-    raw = await res.text();
-    const out = JSON.parse(raw);
-    if(!out.ok) throw new Error(out.error || "load failed");
-    BAL.balances = out.balances || {};
-    BAL.starting = out.starting || {};
-    BAL.debts = out.debts || {};
-    renderBalances();
+    const out = await api(payload);
+    showSlip(payload, out.loggedAt);
+    TX.all = []; /* force reload next time Home opens */
   }catch(e){
-    $("bal-state").innerHTML =
-      "Couldn't load balances — check your connection.<br><button id='b-retry' type='button'>Retry</button>" +
-      "<div class='raw'>" + String(raw || e).replace(/</g,"&lt;").slice(0,400) + "</div>";
-    $("b-retry").onclick = loadBalances;
-  }
-}
-
-function personGroupLabel(p){
-  if(p==="Joint") return "Joint Savings";
-  if(p==="Andre" || p==="Dinda") return p + "'s Accounts";
-  return p;
-}
-
-function renderBalances(){
-  const list = $("bal-list");
-  list.innerHTML = ""; $("bal-state").innerHTML = "";
-  let curPerson = "";
-  BAL_SOURCES.forEach(s=>{
-    if(s.person !== curPerson){
-      curPerson = s.person;
-      const h = document.createElement("div");
-      h.className = "bal-person";
-      h.textContent = personGroupLabel(s.person);
-      list.appendChild(h);
-    }
-    const val = BAL.balances[s.key] || 0;
-    const card = document.createElement("div");
-    card.className = "balcard " + s.theme + (s.debtChild ? " has-debt" : "");
-    card.innerHTML =
-      `<div class="bmeta"><div class="bsrc"></div><div class="bhint"></div></div>`+
-      `<div class="bright"><div class="bval"></div><button class="bedit" type="button" aria-label="Edit starting balance">✎</button></div>`;
-    card.querySelector(".bsrc").textContent = s.label + (s.person==="Joint" ? "" : " · " + s.person);
-    const start = BAL.starting[s.key];
-    card.querySelector(".bhint").textContent = start ? ("start " + fmt(start)) : "no starting balance set";
-    card.querySelector(".bval").textContent = fmt(val);
-    card.querySelector(".bedit").onclick = ()=>openBalEdit(s);
-    list.appendChild(card);
-
-    // linked debt (CC under BCA, SPayLater under Seabank): small bill line + approx balance + swipe-to-pay
-    if (s.debtChild){
-      const debtAmt = BAL.debts[s.debtChild] || 0;
-      const approx = val - debtAmt;
-      const debtBox = document.createElement("div");
-      debtBox.className = "debtbox";
-      debtBox.innerHTML =
-        `<div class="drow"><span>${DEBT_LABEL[s.debtChild]}</span><b>−${fmt(debtAmt)}</b></div>`+
-        `<div class="drow approx"><span>Approx. Balance</span><b>${fmt(approx)}</b></div>`+
-        (debtAmt>0
-          ? `<div class="swipepay"><div class="fill"></div><span>Swipe to confirm ${s.debtChild.split(" ")[0]} paid</span></div>`
-          : `<div class="swipepay done">All caught up ✓</div>`);
-      list.appendChild(debtBox);
-      if (debtAmt>0) attachSwipePay(debtBox.querySelector(".swipepay"), s.debtChild);
-    }
-  });
-}
-
-/* ---- swipe-to-confirm-paid (thin bar, full swipe = confirm, no typed confirmation) ---- */
-function attachSwipePay(bar, debtSource){
-  const fill = bar.querySelector(".fill");
-  const label = bar.querySelector("span");
-  let startX = 0, dragging = false, w = 0;
-  bar.addEventListener("touchstart", e=>{ startX=e.touches[0].clientX; w=bar.clientWidth; dragging=true; fill.style.transition="none"; }, {passive:true});
-  bar.addEventListener("touchmove", e=>{
-    if(!dragging) return;
-    let dx = e.touches[0].clientX - startX;
-    if(dx<0) dx=0; if(dx>w) dx=w;
-    fill.style.width = dx+"px";
-  }, {passive:true});
-  bar.addEventListener("touchend", e=>{
-    dragging = false;
-    const pct = fill.offsetWidth / w;
-    fill.style.transition = "width .18s ease-out";
-    if(pct > 0.85){
-      confirmPaid(debtSource, bar);
-    } else {
-      fill.style.width = "0px";
-    }
-  });
-  /* desktop testing convenience */
-  bar.addEventListener("click", ()=> confirmPaid(debtSource, bar));
-}
-async function confirmPaid(debtSource, bar){
-  bar.querySelector("span").textContent = "Confirming…";
-  try{
-    const res = await fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"markPaid", source:debtSource }) });
-    const out = await res.json();
-    if(!out.ok) throw new Error(out.error || "Failed");
-    loadBalances();
-  }catch(e){
-    bar.querySelector("span").textContent = "Couldn't confirm — tap to retry";
-    bar.querySelector(".fill").style.width = "0px";
-  }
-}
-
-/* ---- starting balance editor ---- */
-let balEditSource = null;
-function openBalEdit(s){
-  balEditSource = s.key;
-  $("bal-edit-src").textContent = s.label + (s.person==="Joint" ? " (joint)" : " · " + s.person);
-  const cur = BAL.starting[s.key];
-  $("bal-edit-input").value = cur ? Number(cur).toLocaleString("id-ID") : "";
-  $("bal-save").disabled = false; $("bal-save").textContent = "Save balance";
-  $("baloverlay").classList.add("show");
-  $("bal-edit-input").focus();
-}
-$("bal-edit-input").addEventListener("input", e=>{
-  const n = Number(String(e.target.value).replace(/[^\d]/g,""));
-  e.target.value = n ? n.toLocaleString("id-ID") : "";
-});
-$("bal-cancel").onclick = ()=>{ $("baloverlay").classList.remove("show"); balEditSource=null; };
-$("bal-save").onclick = async ()=>{
-  if(!balEditSource) return;
-  const val = Number(String($("bal-edit-input").value).replace(/[^\d]/g,"")) || 0;
-  const btn = $("bal-save"); btn.disabled = true; btn.textContent = "Saving…";
-  try{
-    const res = await fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"setBalance", source:balEditSource, value:val }) });
-    const out = await res.json();
-    if(!out.ok) throw new Error(out.error || "Save failed");
-    $("baloverlay").classList.remove("show");
-    balEditSource = null;
-    loadBalances(); // refresh with new starting balance folded in
-  }catch(e){
-    btn.disabled = false; btn.textContent = "Couldn't save — retry";
+    err.textContent = "Couldn't save — " + e.message;
+    err.classList.add("show");
+    refresh();
   }
 };
 
-refresh();
+/* receipt */
+let lastLoggedAt = null;
+function showSlip(p, loggedAt){
+  lastLoggedAt = loggedAt || null;
+  openSheet(`
+    <div class="perf"></div>
+    <h2 style="color:var(--person)">${p.type==="Income"?"Income logged ✓":"Logged ✓"}</h2>
+    <div class="amt">${p.type==="Income"?"+":""}${fmt(p.amount)}</div>
+    <div class="row"><span>Category</span><b>${esc(catLabel(p.categoryId))}</b></div>
+    <div class="row"><span>${p.type==="Income"?"Destination":"Wallet"}</span><b>${esc(walletLabel(p.walletId))}</b></div>
+    <div class="row"><span>Day</span><b>${esc(p.date)}</b></div>
+    <div class="row"><span>By</span><b>${esc(memberName(p.memberId))}</b></div>
+    <button class="go" id="slip-again" type="button">Log another</button>
+    <button class="ghost danger" id="slip-del" type="button">Delete this entry</button>
+  `, "slip");
+  $("slip-again").onclick = ()=>{ closeSheet(); resetForm(); };
+  $("slip-del").onclick = async ()=>{
+    if(!lastLoggedAt) return;
+    const b=$("slip-del"); b.disabled=true; b.textContent="Deleting…";
+    try{ await api({action:"deleteTx", loggedAt:lastLoggedAt}); closeSheet(); resetForm(); }
+    catch(e){ b.disabled=false; b.textContent="Couldn't delete — retry"; }
+  };
+}
+function resetForm(){
+  S.categoryId=null; S.amount=null; S.day="Today"; S.customDate=null;
+  $("amt-input").value=""; $("day-reveal").classList.remove("show");
+  [...$("days").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.textContent==="Today"));
+  buildCats(); presetCustom(); refresh();
+}
+
+/* ================= sheets (modals) ================= */
+function openSheet(html, cls){
+  const body=$("sheet-body");
+  body.className = "sheet" + (cls?" "+cls:"");
+  body.innerHTML = html;
+  $("sheet-ovl").classList.add("show");
+}
+function closeSheet(){ $("sheet-ovl").classList.remove("show"); }
+$("sheet-ovl").addEventListener("click", e=>{ if(e.target.id==="sheet-ovl") closeSheet(); });
+
+/* ---- members ---- */
+$("mng-cat").onclick = openCategoriesSheet;
+$("mng-wal").onclick = openWalletsSheet;
+
+function openMembersSheet(){
+  const rows = D.members.map(m=>`
+    <div class="mrow">
+      <span class="dot" style="background:${esc(m.color||"#1E7A50")}">${esc((m.name[0]||"?").toUpperCase())}</span>
+      <span class="t"><b>${esc(m.name)}</b><small>household member</small></span>
+      <button class="x" data-del="${esc(m.id)}" type="button">✕</button>
+    </div>`).join("");
+  openSheet(`
+    <h2>Household</h2>
+    <div class="sd">Everyone who logs in this household.</div>
+    <div class="manage-list">${rows || "<div class='sd'>No members yet.</div>"}</div>
+    <div class="fld"><label>Add someone</label>
+      <input id="nm-name" type="text" placeholder="e.g. Dinda" maxlength="30" autocomplete="off"></div>
+    <div class="fld"><label>Colour</label><div class="emojis" id="nm-colors"></div></div>
+    <button class="go" id="nm-save" type="button">Add member</button>
+    <button class="ghost" id="nm-close" type="button">Done</button>
+  `);
+  let color = PALETTE[D.members.length % PALETTE.length];
+  const cw=$("nm-colors");
+  PALETTE.forEach(c=>{
+    const b=document.createElement("button");
+    b.type="button"; b.style.background=c; b.style.borderColor=c;
+    if(c===color) b.classList.add("sel");
+    b.onclick=()=>{ color=c; [...cw.children].forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); };
+    cw.appendChild(b);
+  });
+  $("nm-close").onclick = closeSheet;
+  $("nm-save").onclick = async ()=>{
+    const name=$("nm-name").value.trim();
+    if(!name) return;
+    const b=$("nm-save"); b.disabled=true; b.textContent="Adding…";
+    try{
+      await api({action:"addMember", name, color});
+      await reloadData(); closeSheet(); openMembersSheet();
+    }catch(e){ b.disabled=false; b.textContent="Couldn't add — "+e.message; }
+  };
+  $("sheet-body").querySelectorAll("[data-del]").forEach(b=>{
+    b.onclick = async ()=>{
+      b.textContent="…";
+      try{ await api({action:"deleteMember", id:b.dataset.del}); await reloadData(); openMembersSheet(); }
+      catch(e){ b.textContent="✕"; alertSheet(e.message); }
+    };
+  });
+}
+
+/* ---- categories ---- */
+function openCategoriesSheet(){
+  const kind = S.type==="Income" ? "income" : "expense";
+  const list = S.memberId ? forMember(D.categories, S.memberId).filter(c=>c.kind===kind) : [];
+  const rows = list.map(c=>`
+    <div class="mrow">
+      <span class="dot" style="background:#EDF0EA;color:#17251D;font-size:16px">${esc(c.emoji||"✨")}</span>
+      <span class="t"><b>${esc(c.name)}</b><small>${c.budget?("budget "+fmt(c.budget)+"/mo"):"no budget"}${c.ownerId===JOINT?" · shared":""}</small></span>
+      <button class="x" data-edit="${esc(c.id)}" type="button" style="color:var(--muted)">✎</button>
+      <button class="x" data-del="${esc(c.id)}" type="button">✕</button>
+    </div>`).join("");
+  openSheet(`
+    <h2>${kind==="income"?"Income":"Expense"} categories</h2>
+    <div class="sd">For ${esc(memberName(S.memberId))}. Set a monthly ${kind==="income"?"target":"budget"} on any of them.</div>
+    <div class="manage-list">${rows || "<div class='sd'>None yet.</div>"}</div>
+    <button class="go" id="cs-new" type="button">+ New category</button>
+    <button class="ghost" id="cs-close" type="button">Done</button>
+  `);
+  $("cs-close").onclick = closeSheet;
+  $("cs-new").onclick = ()=>openCategorySheet(null);
+  $("sheet-body").querySelectorAll("[data-edit]").forEach(b=>{
+    b.onclick = ()=>openCategorySheet(b.dataset.edit);
+  });
+  $("sheet-body").querySelectorAll("[data-del]").forEach(b=>{
+    b.onclick = async ()=>{
+      b.textContent="…";
+      try{ await api({action:"deleteCategory", id:b.dataset.del}); await reloadData(); openCategoriesSheet(); }
+      catch(e){ b.textContent="✕"; alertSheet(e.message); }
+    };
+  });
+}
+
+function openCategorySheet(editId){
+  const existing = editId ? catById(editId) : null;
+  const kind = existing ? existing.kind : (S.type==="Income" ? "income" : "expense");
+  openSheet(`
+    <h2>${existing?"Edit":"New"} category</h2>
+    <div class="sd">${kind==="income"?"Income source":"Spending category"} for ${esc(memberName(S.memberId))}.</div>
+    <div class="fld"><label>Name</label>
+      <input id="cf-name" type="text" maxlength="30" placeholder="e.g. Groceries" value="${esc(existing?existing.name:"")}"></div>
+    <div class="fld"><label>Icon</label><div class="emojis" id="cf-emoji"></div></div>
+    <div class="fld"><label>Monthly ${kind==="income"?"target":"budget"} (optional)</label>
+      <input id="cf-budget" class="num" inputmode="numeric" placeholder="0 = none"
+             value="${existing&&existing.budget?Number(existing.budget).toLocaleString("id-ID"):""}"></div>
+    <div class="fld"><label>Shared with household?</label>
+      <div class="seg" id="cf-owner">
+        <button type="button" data-o="mine">Just me</button>
+        <button type="button" data-o="joint">Shared</button>
+      </div></div>
+    <button class="go" id="cf-save" type="button">${existing?"Save changes":"Add category"}</button>
+    <button class="ghost" id="cf-cancel" type="button">Cancel</button>
+  `);
+  let emoji = existing ? (existing.emoji||"✨") : "✨";
+  const ew=$("cf-emoji");
+  EMOJI_SET.forEach(e=>{
+    const b=document.createElement("button");
+    b.type="button"; b.textContent=e;
+    if(e===emoji) b.classList.add("sel");
+    b.onclick=()=>{ emoji=e; [...ew.children].forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); };
+    ew.appendChild(b);
+  });
+  let owner = existing ? (existing.ownerId===JOINT?"joint":"mine") : "mine";
+  const ow=$("cf-owner");
+  [...ow.children].forEach(b=>{
+    if(b.dataset.o===owner) b.classList.add("sel");
+    b.onclick=()=>{ owner=b.dataset.o; [...ow.children].forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); };
+  });
+  $("cf-budget").addEventListener("input", e=>{
+    const n=Number(String(e.target.value).replace(/[^\d]/g,""));
+    e.target.value = n ? n.toLocaleString("id-ID") : "";
+  });
+  $("cf-cancel").onclick = ()=>openCategoriesSheet();
+  $("cf-save").onclick = async ()=>{
+    const name=$("cf-name").value.trim();
+    if(!name) return;
+    const budget=Number(String($("cf-budget").value).replace(/[^\d]/g,""))||0;
+    const ownerId = owner==="joint" ? JOINT : S.memberId;
+    const b=$("cf-save"); b.disabled=true; b.textContent="Saving…";
+    try{
+      if(existing) await api({action:"updateCategory", id:existing.id, name, emoji, budget, ownerId, kind});
+      else await api({action:"addCategory", name, emoji, budget, ownerId, kind});
+      await reloadData(); openCategoriesSheet();
+    }catch(e){ b.disabled=false; b.textContent="Couldn't save — "+e.message; }
+  };
+}
+
+/* ---- wallets ---- */
+function openWalletsSheet(){
+  const list = S.memberId ? forMember(D.wallets, S.memberId) : D.wallets;
+  const rows = list.map(w=>`
+    <div class="mrow">
+      <span class="dot" style="background:${w.type==="debt"?"#B23A2E":"#1E7A50"}">${w.type==="debt"?"C":"W"}</span>
+      <span class="t"><b>${esc(w.name)}</b><small>${w.ownerId===JOINT?"joint":"personal"}${w.type==="debt"?" · credit / bill":""}</small></span>
+      <button class="x" data-edit="${esc(w.id)}" type="button" style="color:var(--muted)">✎</button>
+      <button class="x" data-del="${esc(w.id)}" type="button">✕</button>
+    </div>`).join("");
+  openSheet(`
+    <h2>Wallets</h2>
+    <div class="sd">Bank accounts, e-wallets, cash, and credit lines.</div>
+    <div class="manage-list">${rows || "<div class='sd'>None yet.</div>"}</div>
+    <button class="go" id="ws-new" type="button">+ New wallet</button>
+    <button class="ghost" id="ws-close" type="button">Done</button>
+  `);
+  $("ws-close").onclick = closeSheet;
+  $("ws-new").onclick = ()=>openWalletSheet(null);
+  $("sheet-body").querySelectorAll("[data-edit]").forEach(b=>{ b.onclick=()=>openWalletSheet(b.dataset.edit); });
+  $("sheet-body").querySelectorAll("[data-del]").forEach(b=>{
+    b.onclick = async ()=>{
+      b.textContent="…";
+      try{ await api({action:"deleteWallet", id:b.dataset.del}); await reloadData(); openWalletsSheet(); }
+      catch(e){ b.textContent="✕"; alertSheet(e.message); }
+    };
+  });
+}
+
+function openWalletSheet(editId){
+  const ex = editId ? walletById(editId) : null;
+  const normals = D.wallets.filter(w=>w.type!=="debt" && (!ex || w.id!==ex.id));
+  openSheet(`
+    <h2>${ex?"Edit":"New"} wallet</h2>
+    <div class="sd">A place money sits — or a credit line you pay off later.</div>
+    <div class="fld"><label>Name</label>
+      <input id="wf-name" type="text" maxlength="30" placeholder="e.g. BCA" value="${esc(ex?ex.name:"")}"></div>
+    <div class="fld"><label>Belongs to</label>
+      <select id="wf-owner">
+        ${D.members.map(m=>`<option value="${esc(m.id)}" ${ex? (ex.ownerId===m.id?"selected":"") : (m.id===S.memberId?"selected":"")}>${esc(m.name)}</option>`).join("")}
+        <option value="${JOINT}" ${ex&&ex.ownerId===JOINT?"selected":""}>Joint / household</option>
+      </select></div>
+    <div class="fld"><label>Type</label>
+      <div class="seg" id="wf-type">
+        <button type="button" data-t="normal">Normal account</button>
+        <button type="button" data-t="debt">Credit / paylater</button>
+      </div></div>
+    <div class="fld" id="wf-link-fld" style="display:none">
+      <label>Paid from which wallet?</label>
+      <select id="wf-link">
+        <option value="">— choose later —</option>
+        ${normals.map(w=>`<option value="${esc(w.id)}" ${ex&&ex.linkedWalletId===w.id?"selected":""}>${esc(walletLabel(w.id))}</option>`).join("")}
+      </select></div>
+    <button class="go" id="wf-save" type="button">${ex?"Save changes":"Add wallet"}</button>
+    <button class="ghost" id="wf-cancel" type="button">Cancel</button>
+  `);
+  let type = ex ? (ex.type==="debt"?"debt":"normal") : "normal";
+  const tw=$("wf-type");
+  function syncType(){
+    [...tw.children].forEach(x=>x.classList.toggle("sel", x.dataset.t===type));
+    $("wf-link-fld").style.display = type==="debt" ? "block" : "none";
+  }
+  [...tw.children].forEach(b=>{ b.onclick=()=>{ type=b.dataset.t; syncType(); }; });
+  syncType();
+  $("wf-cancel").onclick = ()=>openWalletsSheet();
+  $("wf-save").onclick = async ()=>{
+    const name=$("wf-name").value.trim();
+    if(!name) return;
+    const ownerId=$("wf-owner").value;
+    const linkedWalletId = type==="debt" ? $("wf-link").value : "";
+    const b=$("wf-save"); b.disabled=true; b.textContent="Saving…";
+    try{
+      if(ex) await api({action:"updateWallet", id:ex.id, name, ownerId, type, linkedWalletId});
+      else await api({action:"addWallet", name, ownerId, type, linkedWalletId});
+      await reloadData();
+      if(document.body.dataset.view==="wallet"){ closeSheet(); loadWallets(); }
+      else openWalletsSheet();
+    }catch(e){ b.disabled=false; b.textContent="Couldn't save — "+e.message; }
+  };
+}
+
+function alertSheet(msg){
+  const el=document.createElement("div");
+  el.className="sd"; el.style.color="var(--exp)"; el.style.marginTop="8px";
+  el.textContent=msg;
+  $("sheet-body").appendChild(el);
+}
+
+async function reloadData(){
+  const out = await api({action:"bootstrap"});
+  D.members=out.members; D.wallets=out.wallets; D.categories=out.categories;
+  if(S.memberId && !memberById(S.memberId)) S.memberId = D.members.length?D.members[0].id:null;
+  buildMembers(); buildCats(); buildWallets(); refresh();
+}
+
+/* ================= HOME ================= */
+document.querySelectorAll(".periods button").forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll(".periods button").forEach(x=>x.classList.remove("sel"));
+    b.classList.add("sel"); TX.period=b.dataset.p; TX.shown=PAGE; renderHome();
+  };
+});
+
+async function loadHome(){
+  if(!D.members.length) return;
+  buildHomeMembers();
+  $("home-state").innerHTML = TX.all.length ? "" : "Loading…";
+  try{
+    const [lst, bud] = await Promise.all([
+      api({action:"list"}),
+      api({action:"budgets", month: iso(new Date()).slice(0,7)})
+    ]);
+    TX.all = lst.entries || [];
+    BUD = bud.budgets || [];
+    $("home-state").innerHTML = "";
+    renderHome();
+  }catch(e){
+    $("home-state").innerHTML = "Couldn't load — <button id='h-retry' type='button'>Retry</button>"+
+      "<div class='raw'>"+esc(e.message)+"</div>";
+    $("h-retry").onclick = loadHome;
+  }
+}
+
+function buildHomeMembers(){
+  const el=$("home-members"); el.innerHTML="";
+  const mk=(id,label)=>{
+    const b=document.createElement("button");
+    b.type="button"; b.textContent=label;
+    if(TX.member===id) b.classList.add("sel");
+    b.onclick=()=>{ TX.member=id; TX.shown=PAGE; buildHomeMembers(); renderHome(); };
+    el.appendChild(b);
+  };
+  mk("all","Everyone");
+  D.members.forEach(m=>mk(m.id, m.name));
+}
+
+function periodRange(){
+  const t=new Date(), tk=iso(t);
+  if(TX.period==="day") return {from:tk, to:tk, cap:"Today",
+    label:t.toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"short"})};
+  if(TX.period==="week"){
+    const mon=new Date(t); mon.setDate(mon.getDate()-((mon.getDay()+6)%7));
+    return {from:iso(mon), to:tk, cap:"This Week",
+      label:mon.toLocaleDateString("id-ID",{day:"numeric",month:"short"})+" – "+t.toLocaleDateString("id-ID",{day:"numeric",month:"short"})};
+  }
+  const first=new Date(t.getFullYear(), t.getMonth(), 1);
+  return {from:iso(first), to:tk, cap:"This Month",
+    label:t.toLocaleDateString("id-ID",{month:"long", year:"numeric"})};
+}
+
+function homeRows(){
+  return TX.member==="all" ? TX.all : TX.all.filter(r=>r.memberId===TX.member);
+}
+
+function renderHome(){
+  const rows=homeRows();
+  const R=periodRange();
+  const inR = rows.filter(r=>r.date>=R.from && r.date<=R.to);
+  const exp = inR.filter(r=>r.type!=="Income").reduce((a,r)=>a+r.amount,0);
+  const inc = inR.filter(r=>r.type==="Income").reduce((a,r)=>a+r.amount,0);
+  const net = inc-exp;
+  $("sum-cap").textContent = R.cap + (TX.member==="all" ? "" : " · " + memberName(TX.member));
+  $("sum-range").textContent = R.label;
+  $("sum-exp").textContent = exp ? "−"+fmt(exp) : "Rp0";
+  $("sum-exp").classList.toggle("zero", !exp);
+  $("sum-inc").textContent = inc ? "+"+fmt(inc) : "Rp0";
+  $("sum-net").textContent = (net<0?"−":"")+fmt(Math.abs(net));
+  $("sum-net").style.color = net<0 ? "var(--exp)" : "var(--inc)";
+
+  renderBudgets();
+  renderTxList(rows);
+}
+
+function renderBudgets(){
+  const el=$("budget-list"); el.innerHTML="";
+  let list = BUD.filter(b=>b.budget>0);
+  if(TX.member!=="all") list = list.filter(b=>b.ownerId===TX.member || b.ownerId===JOINT);
+  $("bud-note").textContent = list.length ? "this month" : "";
+  if(!list.length){
+    el.innerHTML = "<div class='sd' style='color:var(--muted);font-size:13px;padding:2px 4px'>No budgets set yet — add one when creating or editing a category on the Add page.</div>";
+    return;
+  }
+  list.forEach(b=>{
+    const pct = b.budget ? Math.min(100, Math.round(b.used/b.budget*100)) : 0;
+    const over = b.used > b.budget;
+    const income = b.kind==="income";
+    const cls = income ? (b.used>=b.budget?"":"warn") : (over?"over":(pct>=80?"warn":""));
+    const remLabel = income
+      ? (b.used>=b.budget ? "target met" : fmt(b.budget-b.used)+" to go")
+      : (over ? fmt(b.used-b.budget)+" over" : fmt(b.remaining)+" left");
+    const d=document.createElement("div");
+    d.className="bud";
+    d.innerHTML=`
+      <div class="top"><span class="em">${esc(b.emoji||"✨")}</span>${esc(b.name)}
+        <span class="rem ${over&&!income?"over":"ok"}">${remLabel}</span></div>
+      <div class="bar"><i class="${cls}" style="width:${pct}%"></i></div>
+      <div class="sub">${fmt(b.used)} of ${fmt(b.budget)}${income?" target":""}</div>`;
+    el.appendChild(d);
+  });
+}
+
+function renderTxList(rows){
+  const list=$("tx-list"); list.innerHTML="";
+  if(!rows.length){
+    list.innerHTML="<div class='sd' style='color:var(--muted);font-size:13px;padding:2px 4px'>No transactions yet.</div>";
+    $("lm-wrap").style.display="none"; return;
+  }
+  const sorted = rows.slice().sort((a,b)=>{
+    if(b.date!==a.date) return b.date.localeCompare(a.date);
+    return (b.loggedAt||0)-(a.loggedAt||0);
+  });
+  const slice = sorted.slice(0, TX.shown);
+  let curM="", curD="";
+  slice.forEach(r=>{
+    const d=new Date(r.date+"T00:00:00");
+    const valid=!isNaN(d.getTime());
+    const mk=r.date.slice(0,7);
+    if(mk!==curM){
+      curM=mk; curD="";
+      const h=document.createElement("div"); h.className="rmonth";
+      h.textContent = valid ? d.toLocaleDateString("id-ID",{month:"long", year:"numeric"}) : mk;
+      list.appendChild(h);
+    }
+    if(r.date!==curD){
+      curD=r.date;
+      const h=document.createElement("div"); h.className="rday";
+      h.textContent = valid ? d.toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"short"}) : r.date;
+      list.appendChild(h);
+    }
+    const isIn=r.type==="Income";
+    const wrap=document.createElement("div"); wrap.className="rwrap";
+    wrap.innerHTML =
+      `<button class="rtrash" type="button" aria-label="Delete">🗑️</button>`+
+      `<div class="rcard ${isIn?"inc":"exp"}">`+
+        `<div class="cico">${esc(catEmoji(r.categoryId))}`+
+          `<span class="badge" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span></div>`+
+        `<div class="mid"><div class="cat">${esc(catLabel(r.categoryId))}</div>`+
+        `<div class="sub">${esc(walletLabel(r.walletId))}</div></div>`+
+        `<div class="amt">${isIn?"+":"−"}${fmt(r.amount)}</div>`+
+      `</div>`;
+    attachSwipeDelete(wrap, r);
+    list.appendChild(wrap);
+  });
+  $("lm-wrap").style.display = sorted.length > TX.shown ? "flex" : "none";
+}
+$("loadmore").onclick = ()=>{ TX.shown += PAGE; renderTxList(homeRows()); };
+
+const TRASH_W = 76;
+function attachSwipeDelete(wrap, entry){
+  const card=wrap.querySelector(".rcard"), trash=wrap.querySelector(".rtrash");
+  let sx=0, cx=0, drag=false;
+  card.addEventListener("touchstart", e=>{ sx=e.touches[0].clientX; drag=true; card.style.transition="none"; },{passive:true});
+  card.addEventListener("touchmove", e=>{
+    if(!drag) return;
+    cx=e.touches[0].clientX-sx;
+    if(cx>0) cx=0;
+    if(cx<-TRASH_W) cx=-TRASH_W-(cx+TRASH_W)*0.25;
+    card.style.transform=`translateX(${cx}px)`;
+  },{passive:true});
+  card.addEventListener("touchend", ()=>{
+    drag=false; card.style.transition="transform .18s ease-out";
+    card.style.transform = cx < -TRASH_W/2 ? `translateX(-${TRASH_W}px)` : "translateX(0)";
+    cx=0;
+  });
+  card.addEventListener("click", ()=>{
+    const open = card.style.transform === `translateX(-${TRASH_W}px)`;
+    document.querySelectorAll(".rwrap .rcard").forEach(c=>{ if(c!==card) c.style.transform="translateX(0)"; });
+    card.style.transition="transform .18s ease-out";
+    card.style.transform = open ? "translateX(0)" : `translateX(-${TRASH_W}px)`;
+  });
+  trash.onclick = async ev=>{
+    ev.stopPropagation();
+    if(entry.loggedAt==null){ trash.textContent="⚠️"; return; }
+    trash.disabled=true; trash.textContent="…";
+    try{
+      await api({action:"deleteTx", loggedAt:entry.loggedAt});
+      TX.all = TX.all.filter(x=>x.loggedAt!==entry.loggedAt);
+      const b = await api({action:"budgets", month: iso(new Date()).slice(0,7)});
+      BUD = b.budgets || [];
+      renderHome();
+    }catch(e){ trash.disabled=false; trash.textContent="⚠️"; }
+  };
+}
+
+/* ================= WALLET ================= */
+$("add-wallet-btn").onclick = ()=>openWalletSheet(null);
+
+async function loadWallets(){
+  if(!D.wallets.length && !D.members.length) return;
+  $("wallet-state").innerHTML="Loading…";
+  try{
+    const out = await api({action:"balances"});
+    BAL.balances=out.balances||{}; BAL.debts=out.debts||{}; BAL.starting=out.starting||{};
+    $("wallet-state").innerHTML="";
+    renderWallets();
+  }catch(e){
+    $("wallet-state").innerHTML="Couldn't load — <button id='w-retry' type='button'>Retry</button>"+
+      "<div class='raw'>"+esc(e.message)+"</div>";
+    $("w-retry").onclick=loadWallets;
+  }
+}
+
+const WALLET_THEMES = ["#1E7A50","#2D6CDF","#8B5C8F","#C9962A","#0E7A6B","#B04A72","#6B5CA5","#A5603A"];
+function walletTheme(w, i){ return WALLET_THEMES[i % WALLET_THEMES.length]; }
+
+function renderWallets(){
+  const el=$("wallet-list"); el.innerHTML="";
+  const debts = D.wallets.filter(w=>w.type==="debt");
+  const normals = D.wallets.filter(w=>w.type!=="debt");
+  /* group: joint first, then each member */
+  const groups = [{key:JOINT, label:"Joint / Household"}]
+    .concat(D.members.map(m=>({key:m.id, label:m.name+"'s Wallets"})));
+
+  let idx=0;
+  groups.forEach(g=>{
+    const mine = normals.filter(w=>w.ownerId===g.key);
+    const orphanDebts = debts.filter(w=>w.ownerId===g.key && !normals.some(n=>n.id===w.linkedWalletId));
+    if(!mine.length && !orphanDebts.length) return;
+    const h=document.createElement("div"); h.className="wgroup"; h.textContent=g.label;
+    el.appendChild(h);
+
+    mine.forEach(w=>{
+      const val = BAL.balances[w.id] || 0;
+      const linked = debts.filter(dw=>dw.linkedWalletId===w.id);
+      const color = walletTheme(w, idx++);
+      const card=document.createElement("div");
+      card.className="wcard"+(linked.length?" has-debt":"");
+      card.style.background=color;
+      card.innerHTML=`
+        <div class="wmeta"><div class="wname">${esc(w.name)}</div>
+          <div class="whint">${BAL.starting[w.id]?("start "+fmt(BAL.starting[w.id])):"no starting balance set"}</div></div>
+        <div class="wval">${fmt(val)}</div>
+        <button class="wedit" type="button" aria-label="Options">✎</button>`;
+      card.querySelector(".wedit").onclick=()=>openBalanceSheet(w);
+      el.appendChild(card);
+
+      if(linked.length){
+        const box=document.createElement("div"); box.className="debtbox";
+        let total=0;
+        linked.forEach(dw=>{ total += (BAL.debts[dw.id]||0); });
+        box.innerHTML = linked.map(dw=>{
+          const amt=BAL.debts[dw.id]||0;
+          return `<div class="drow"><span>${esc(dw.name)} bill</span><b>−${fmt(amt)}</b></div>`;
+        }).join("")
+        + `<div class="drow approx"><span>Approx. Balance</span><b>${fmt(val-total)}</b></div>`
+        + linked.map(dw=>{
+            const amt=BAL.debts[dw.id]||0;
+            return amt>0
+              ? `<div class="swipepay" data-w="${esc(dw.id)}"><div class="fill"></div><span>Swipe to confirm ${esc(dw.name)} paid</span></div>`
+              : `<div class="swipepay done"><span>${esc(dw.name)} all caught up ✓</span></div>`;
+          }).join("");
+        el.appendChild(box);
+        box.querySelectorAll(".swipepay[data-w]").forEach(bar=>attachSwipePay(bar, bar.dataset.w));
+      }
+    });
+
+    /* debt wallets not linked to any account yet */
+    orphanDebts.forEach(dw=>{
+      const amt=BAL.debts[dw.id]||0;
+      const card=document.createElement("div");
+      card.className="wcard"; card.style.background="#B23A2E";
+      card.innerHTML=`
+        <div class="wmeta"><div class="wname">${esc(dw.name)}</div>
+          <div class="whint">credit / bill · not linked to a wallet yet</div></div>
+        <div class="wval">−${fmt(amt)}</div>
+        <button class="wedit" type="button" aria-label="Edit">✎</button>`;
+      card.querySelector(".wedit").onclick=()=>openWalletSheet(dw.id);
+      el.appendChild(card);
+    });
+  });
+
+  if(!el.children.length){
+    el.innerHTML="<div class='sd' style='color:var(--muted);font-size:13px;padding:14px 4px'>No wallets yet — add your first one below.</div>";
+  }
+}
+
+function openBalanceSheet(w){
+  const cur = BAL.starting[w.id];
+  openSheet(`
+    <h2>${esc(w.name)}</h2>
+    <div class="sd">${w.ownerId===JOINT?"Joint wallet":esc(memberName(w.ownerId))+"'s wallet"} · balance now ${fmt(BAL.balances[w.id]||0)}</div>
+    <div class="fld"><label>Starting balance</label>
+      <input id="bf-val" class="num" inputmode="numeric" placeholder="e.g. 1.500.000"
+             value="${cur?Number(cur).toLocaleString("id-ID"):""}">
+      <div class="hint" style="font-size:12px;color:var(--muted);margin-top:6px">What this wallet held when you started tracking.</div></div>
+    <button class="go" id="bf-save" type="button">Save balance</button>
+    <button class="ghost" id="bf-edit" type="button">Edit wallet details</button>
+    <button class="ghost" id="bf-cancel" type="button">Cancel</button>
+  `);
+  $("bf-val").addEventListener("input", e=>{
+    const n=Number(String(e.target.value).replace(/[^\d]/g,""));
+    e.target.value = n ? n.toLocaleString("id-ID") : "";
+  });
+  $("bf-cancel").onclick = closeSheet;
+  $("bf-edit").onclick = ()=>openWalletSheet(w.id);
+  $("bf-save").onclick = async ()=>{
+    const val=Number(String($("bf-val").value).replace(/[^\d]/g,""))||0;
+    const b=$("bf-save"); b.disabled=true; b.textContent="Saving…";
+    try{ await api({action:"setBalance", walletId:w.id, value:val}); closeSheet(); loadWallets(); }
+    catch(e){ b.disabled=false; b.textContent="Couldn't save — "+e.message; }
+  };
+}
+
+function attachSwipePay(bar, walletId){
+  const fill=bar.querySelector(".fill");
+  let sx=0, drag=false, w=0;
+  bar.addEventListener("touchstart", e=>{ sx=e.touches[0].clientX; w=bar.clientWidth; drag=true; fill.style.transition="none"; },{passive:true});
+  bar.addEventListener("touchmove", e=>{
+    if(!drag) return;
+    let dx=e.touches[0].clientX-sx;
+    if(dx<0) dx=0; if(dx>w) dx=w;
+    fill.style.width=dx+"px";
+  },{passive:true});
+  bar.addEventListener("touchend", ()=>{
+    drag=false; fill.style.transition="width .18s ease-out";
+    if(fill.offsetWidth/w > 0.85) confirmPaid(walletId, bar);
+    else fill.style.width="0px";
+  });
+  bar.addEventListener("click", ()=>confirmPaid(walletId, bar));
+}
+async function confirmPaid(walletId, bar){
+  bar.querySelector("span").textContent="Confirming…";
+  try{ await api({action:"markPaid", walletId}); loadWallets(); }
+  catch(e){ bar.querySelector("span").textContent="Couldn't confirm — tap to retry"; bar.querySelector(".fill").style.width="0px"; }
+}
+
+/* ================= go ================= */
+boot();
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 </body>
