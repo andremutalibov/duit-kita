@@ -230,6 +230,13 @@ body[data-view="add"] .savebar{display:block}
 .calcell .cd{font-family:var(--num); font-size:11px; font-weight:700; color:var(--ink)}
 .calcell .ce{font-family:var(--num); font-size:8.5px; font-weight:700; color:var(--exp); line-height:1.15; white-space:nowrap}
 .calcell .ci{font-family:var(--num); font-size:8.5px; font-weight:700; color:var(--inc); line-height:1.15; white-space:nowrap}
+.cal-toggle-wrap{display:flex; justify-content:center; margin-top:10px}
+.cal-toggle{
+  border:1.5px solid var(--line); background:var(--card); border-radius:999px;
+  font-family:var(--disp); font-weight:700; font-size:12px; color:var(--ink);
+  padding:8px 18px; cursor:pointer; min-height:38px;
+}
+.cal-toggle:active{background:var(--paper)}
 
 /* monthly report pie */
 .rep-month-label{font-family:var(--disp); font-weight:800; font-size:19px; color:var(--ink); margin-bottom:14px; text-align:center}
@@ -462,6 +469,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   <section id="cal-sec">
     <div class="calslider" id="calslider"></div>
     <div class="dots" id="caldots"></div>
+    <div class="cal-toggle-wrap"><button id="cal-toggle" type="button" class="cal-toggle">Expand to month ▾</button></div>
   </section>
 
   <div class="label" style="margin-top:2px">Transaction History</div>
@@ -1170,10 +1178,92 @@ async function loadTransactionPage(){
 }
 
 function renderTxPage(){ renderTxCalendar(); renderTxList(homeRows()); }
+$("cal-toggle").onclick = ()=>{ calMode = calMode==="week" ? "month" : "week"; renderTxCalendar(); };
 
-/* ---- monthly calendar (slides through months, respects member filter) ---- */
-const WEEKDAYS_ID = ["Sen","Sel","Rab","Kam","Jum","Sab","Min"]; // Monday-first
+/* ---- transaction calendar: collapsible week row / expandable full month ---- */
+const WEEKDAYS_ID = ["Sen","Sel","Rab","Kam","Jum","Sab","Min"]; // Monday-first (month mode)
+const MAX_WEEKS_BACK = 8;
+let calMode = "week"; // "week" (default, collapsed) | "month" (expanded)
+
+function dateMinus(n){ const d=new Date(); d.setDate(d.getDate()-n); return iso(d); }
+
+/* how many rolling 7-day windows back have data, capped at MAX_WEEKS_BACK */
+function weeksAvailable(){
+  if(!TX.all.length) return 1;
+  let earliest=TX.all[0].date; TX.all.forEach(r=>{ if(r.date<earliest) earliest=r.date; });
+  const today=new Date(); today.setHours(0,0,0,0);
+  const eDate=new Date(earliest+"T00:00:00");
+  const days=Math.floor((today - eDate)/86400000);
+  return Math.min(MAX_WEEKS_BACK, Math.max(0, Math.floor(days/7))) + 1;
+}
+
+function wireCalSlider(slider, dots){
+  slider.scrollLeft=0;
+  slider.onscroll = ()=>{
+    const idx = Math.round(slider.scrollLeft/(slider.clientWidth||1));
+    [...dots.children].forEach((s,j)=>s.classList.toggle("on", j===idx));
+  };
+  slider.querySelectorAll(".calcell[data-date]").forEach(c=>{
+    c.onclick = ()=>openDayHistory(c.dataset.date);
+  });
+}
+
 function renderTxCalendar(){
+  if(calMode==="week") renderCalWeek(); else renderCalMonth();
+  const btn=$("cal-toggle");
+  if(btn) btn.textContent = calMode==="week" ? "Expand to month ▾" : "Collapse to week ▴";
+}
+
+/* rolling 7-day windows ending today; each slide steps back one week */
+function renderCalWeek(){
+  const slider = $("calslider"), dots = $("caldots");
+  slider.innerHTML=""; dots.innerHTML="";
+  const rows = homeRows();
+  const todayStr = iso(new Date());
+  const count = weeksAvailable();
+
+  for(let i=0;i<count;i++){
+    const dates=[];
+    for(let j=0;j<7;j++) dates.push(dateMinus(7*i + (6-j))); // oldest→today, left→right
+    const map={};
+    rows.forEach(r=>{
+      if(dates.indexOf(r.date)<0) return;
+      const t = map[r.date] || (map[r.date]={e:0,i:0});
+      if(r.type==="Income") t.i+=r.amount; else t.e+=r.amount;
+    });
+
+    let heads="", cells="";
+    dates.forEach(ds=>{
+      const dObj=new Date(ds+"T00:00:00");
+      heads += `<div class="caldayhead">${esc(dObj.toLocaleDateString("id-ID",{weekday:"short"}))}</div>`;
+      const t=map[ds]||{e:0,i:0};
+      const has=t.e>0||t.i>0, today=ds===todayStr;
+      cells += `<div class="calcell${has?" has":""}${today?" today":""}"${has?` data-date="${esc(ds)}"`:""}>
+          <span class="cd">${dObj.getDate()}</span>
+          ${t.e>0?`<span class="ce">-${compactAmt(t.e)}</span>`:""}
+          ${t.i>0?`<span class="ci">+${compactAmt(t.i)}</span>`:""}
+        </div>`;
+    });
+
+    const L=new Date(dates[0]+"T00:00:00"), Rr=new Date(dates[6]+"T00:00:00");
+    const sameM = dates[0].slice(0,7)===dates[6].slice(0,7);
+    const rangeLabel = L.getDate()+(sameM?"":" "+L.toLocaleDateString("id-ID",{month:"short"}))
+      +" – "+Rr.getDate()+" "+Rr.toLocaleDateString("id-ID",{month:"short"})+" "+Rr.getFullYear();
+
+    const page=document.createElement("div"); page.className="calpage week";
+    page.innerHTML = `
+      <div class="cal-month">${esc(rangeLabel)}</div>
+      <div class="calgrid calhead">${heads}</div>
+      <div class="calgrid calbody">${cells}</div>`;
+    slider.appendChild(page);
+    const dot=document.createElement("span"); if(i===0) dot.className="on";
+    dots.appendChild(dot);
+  }
+  wireCalSlider(slider, dots);
+}
+
+/* full month grid; each slide steps back one month */
+function renderCalMonth(){
   const count = monthsAvailable();
   const slider = $("calslider"), dots = $("caldots");
   slider.innerHTML=""; dots.innerHTML="";
@@ -1219,15 +1309,7 @@ function renderTxCalendar(){
     const dot=document.createElement("span"); if(i===0) dot.className="on";
     dots.appendChild(dot);
   }
-
-  slider.scrollLeft=0;
-  slider.onscroll = ()=>{
-    const idx = Math.round(slider.scrollLeft/(slider.clientWidth||1));
-    [...dots.children].forEach((s,j)=>s.classList.toggle("on", j===idx));
-  };
-  slider.querySelectorAll(".calcell[data-date]").forEach(c=>{
-    c.onclick = ()=>openDayHistory(c.dataset.date);
-  });
+  wireCalSlider(slider, dots);
 }
 
 /* tap a calendar day → that day's transactions (respects member filter) */
