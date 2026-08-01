@@ -173,15 +173,15 @@ body[data-view="add"] .savebar{display:block}
 .errbar.show{display:block}
 
 /* ---------- HOME ---------- */
-.periods{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px}
-.periods button{
-  min-height:44px; border:1.5px solid var(--line); border-radius:999px; background:var(--card);
-  font-family:var(--disp); font-weight:700; font-size:13.5px; color:var(--ink); cursor:pointer;
+/* slideable month overview */
+.sumslider{
+  display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory;
+  margin-top:12px; -webkit-overflow-scrolling:touch; scrollbar-width:none;
 }
-.periods button.sel{background:var(--ink); border-color:var(--ink); color:#fff}
+.sumslider::-webkit-scrollbar{display:none}
 .sumcard{
-  margin-top:12px; background:var(--card); border:1.5px solid var(--line);
-  border-radius:20px; padding:20px 22px;
+  flex:0 0 100%; scroll-snap-align:start; background:var(--card);
+  border:1.5px solid var(--line); border-radius:20px; padding:20px 22px;
 }
 .sumcard .cap{font-family:var(--disp); font-weight:700; font-size:14px; color:var(--muted)}
 .sumcard .dt{font-family:var(--num); font-size:12px; color:var(--muted); margin-top:2px}
@@ -189,9 +189,23 @@ body[data-view="add"] .savebar{display:block}
 .sumcard .big.zero{color:var(--muted)}
 .sumcard .split{margin-top:14px; padding-top:12px; border-top:1px dashed var(--line);
   display:flex; flex-direction:column; gap:7px}
+.sumcard .sub2{margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);
+  display:flex; flex-direction:column; gap:7px}
 .sr{display:flex; justify-content:space-between; font-size:13px; color:var(--muted)}
 .sr b{font-family:var(--num); font-weight:700; color:var(--ink)}
 .sr b.inc{color:var(--inc)}
+
+.dots{display:flex; justify-content:center; gap:6px; margin-top:10px}
+.dots span{width:7px; height:7px; border-radius:50%; background:var(--line); transition:.2s}
+.dots span.on{background:var(--ink); transform:scale(1.2)}
+
+/* slideable budgets, synced with overview */
+.budgetslider{
+  display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch; scrollbar-width:none;
+}
+.budgetslider::-webkit-scrollbar{display:none}
+.budgetpage{flex:0 0 100%; scroll-snap-align:start; min-width:0}
 
 .mfilter{display:flex; gap:8px; overflow-x:auto; margin-top:12px; padding-bottom:2px; scrollbar-width:none}
 .mfilter::-webkit-scrollbar{display:none}
@@ -363,27 +377,15 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 
 <!-- ==================== HOME ==================== -->
 <main id="v-home">
-  <div class="periods">
-    <button data-p="day" type="button">Daily</button>
-    <button data-p="week" type="button">Weekly</button>
-    <button data-p="month" class="sel" type="button">Monthly</button>
-  </div>
-
   <div class="mfilter" id="home-members"></div>
 
-  <div class="sumcard">
-    <div class="cap" id="sum-cap">This Month</div>
-    <div class="dt" id="sum-range"></div>
-    <div class="big" id="sum-exp">Rp0</div>
-    <div class="split">
-      <div class="sr"><span>Income</span><b class="inc" id="sum-inc">Rp0</b></div>
-      <div class="sr"><span>Net</span><b id="sum-net">Rp0</b></div>
-    </div>
-  </div>
+  <div class="sumslider" id="sumslider"></div>
+  <div class="dots" id="sumdots"></div>
 
   <section id="budget-sec">
     <div class="label">Budgets <span style="font-weight:600;letter-spacing:0;text-transform:none;font-size:11px" id="bud-note"></span></div>
-    <div id="budget-list"></div>
+    <div class="budgetslider" id="budgetslider"></div>
+    <div class="dots" id="budgetdots"></div>
   </section>
 
   <section>
@@ -493,10 +495,9 @@ const DAYS = ["Today","Yesterday","Custom"];
 const D = { members:[], wallets:[], categories:[] };
 const S = { type:"Expense", memberId:null, categoryId:null, amount:null, custom:true,
             walletId:null, note:"", day:"Today", customDate:null };
-const TX = { all:[], shown:10, period:"month", member:"all" };
+const TX = { all:[], shown:10, member:"all" };
 const PAGE = 10;
 let BAL = { balances:{}, debts:{}, starting:{} };
-let BUD = [];
 
 const now = new Date();
 $("hdr-date").textContent = now.toLocaleDateString("id-ID",{weekday:"short", day:"numeric", month:"short"});
@@ -1020,24 +1021,16 @@ async function reloadData(){
 }
 
 /* ================= HOME ================= */
-document.querySelectorAll(".periods button").forEach(b=>{
-  b.onclick=()=>{
-    document.querySelectorAll(".periods button").forEach(x=>x.classList.remove("sel"));
-    b.classList.add("sel"); TX.period=b.dataset.p; TX.shown=PAGE; renderHome();
-  };
-});
+const MAX_MONTHS_BACK = 3; // slide up to 3 months into the past, capped by actual data
+let sliderSyncing = false; // guards against the two sliders fighting each other's scroll events
 
 async function loadHome(){
   if(!D.members.length) return;
   buildHomeMembers();
   $("home-state").innerHTML = TX.all.length ? "" : "Loading…";
   try{
-    const [lst, bud] = await Promise.all([
-      api({action:"list"}),
-      api({action:"budgets", month: iso(new Date()).slice(0,7)})
-    ]);
+    const lst = await api({action:"list"});
     TX.all = lst.entries || [];
-    BUD = bud.budgets || [];
     $("home-state").innerHTML = "";
     renderHome();
   }catch(e){
@@ -1060,90 +1053,187 @@ function buildHomeMembers(){
   D.members.forEach(m=>mk(m.id, m.name));
 }
 
-function periodRange(){
-  const t=new Date(), tk=iso(t);
-  if(TX.period==="day") return {from:tk, to:tk, cap:"Today",
-    label:t.toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"short"})};
-  if(TX.period==="week"){
-    const mon=new Date(t); mon.setDate(mon.getDate()-((mon.getDay()+6)%7));
-    return {from:iso(mon), to:tk, cap:"This Week",
-      label:mon.toLocaleDateString("id-ID",{day:"numeric",month:"short"})+" – "+t.toLocaleDateString("id-ID",{day:"numeric",month:"short"})};
-  }
-  const first=new Date(t.getFullYear(), t.getMonth(), 1);
-  return {from:iso(first), to:tk, cap:"This Month",
-    label:t.toLocaleDateString("id-ID",{month:"long", year:"numeric"})};
-}
-
 function homeRows(){
   return TX.member==="all" ? TX.all : TX.all.filter(r=>r.memberId===TX.member);
 }
 
-function renderHome(){
-  const rows=homeRows();
-  const R=periodRange();
-  const inR = rows.filter(r=>r.date>=R.from && r.date<=R.to);
-  const exp = inR.filter(r=>r.type!=="Income").reduce((a,r)=>a+r.amount,0);
-  const inc = inR.filter(r=>r.type==="Income").reduce((a,r)=>a+r.amount,0);
-  const net = inc-exp;
-  $("sum-cap").textContent = R.cap + (TX.member==="all" ? "" : " · " + memberName(TX.member));
-  $("sum-range").textContent = R.label;
-  $("sum-exp").textContent = exp ? "−"+fmt(exp) : "Rp0";
-  $("sum-exp").classList.toggle("zero", !exp);
-  $("sum-inc").textContent = inc ? "+"+fmt(inc) : "Rp0";
-  $("sum-net").textContent = (net<0?"−":"")+fmt(Math.abs(net));
-  $("sum-net").style.color = net<0 ? "var(--exp)" : "var(--inc)";
-
-  renderBudgets();
-  renderTxList(rows);
+/* month helpers */
+function monthKeyOffset(offset){
+  const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-offset);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+}
+function daysInMonthOffset(offset){
+  const d=new Date(); const y=d.getFullYear(), m=d.getMonth()-offset;
+  return new Date(y, m+1, 0).getDate();
+}
+/* how many month-slides we actually have data for (1..MAX_MONTHS_BACK+1) */
+function monthsAvailable(){
+  if(!TX.all.length) return 1;
+  let earliest = TX.all[0].date;
+  TX.all.forEach(r=>{ if(r.date<earliest) earliest=r.date; });
+  const earliestKey = earliest.slice(0,7);
+  let count=1;
+  for(let i=1;i<=MAX_MONTHS_BACK;i++){
+    if(monthKeyOffset(i) < earliestKey) break;
+    count++;
+  }
+  return count;
 }
 
-function renderBudgets(){
-  const el=$("budget-list"); el.innerHTML="";
-  let list = BUD.filter(b=>b.budget>0);
-  if(TX.member!=="all") list = list.filter(b=>b.ownerId===TX.member || b.ownerId===JOINT);
-  $("bud-note").textContent = list.length ? "this month" : "";
-  if(!list.length){
-    el.innerHTML = "<div class='sd' style='color:var(--muted);font-size:13px;padding:2px 4px'>No budgets set yet — add one when creating or editing a category on the Add page.</div>";
-    return;
+function renderHome(){
+  renderOverviewSlides();
+  renderBudgetSlides();
+  renderTxList(homeRows()); // transaction history stays independent of the month slide
+}
+
+/* ---- overview: slideable, one card per month, synced with budgets ---- */
+function renderOverviewSlides(){
+  const rows = homeRows();
+  const count = monthsAvailable();
+  const slider = $("sumslider"), dots = $("sumdots");
+  slider.innerHTML=""; dots.innerHTML="";
+  const today = new Date(), todayKey = iso(today);
+  const mon = new Date(today); mon.setDate(mon.getDate()-((mon.getDay()+6)%7));
+  const monKey = iso(mon);
+
+  for(let i=0;i<count;i++){
+    const key = monthKeyOffset(i);
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()-i);
+    const inMonth = rows.filter(r=>r.date.indexOf(key)===0);
+    const exp = inMonth.filter(r=>r.type!=="Income").reduce((a,r)=>a+r.amount,0);
+    const inc = inMonth.filter(r=>r.type==="Income").reduce((a,r)=>a+r.amount,0);
+    const net = inc-exp;
+
+    let sub2Label1, sub2Val1, sub2Label2, sub2Val2;
+    if(i===0){
+      const todayExp = rows.filter(r=>r.type!=="Income" && r.date===todayKey).reduce((a,r)=>a+r.amount,0);
+      const weekExp = rows.filter(r=>r.type!=="Income" && r.date>=monKey && r.date<=todayKey).reduce((a,r)=>a+r.amount,0);
+      sub2Label1="Today"; sub2Val1=todayExp;
+      sub2Label2="This Week"; sub2Val2=weekExp;
+    } else {
+      const dim = daysInMonthOffset(i);
+      const dailyAvg = Math.round(exp/dim);
+      sub2Label1="Daily Avg"; sub2Val1=dailyAvg;
+      sub2Label2="Weekly Avg"; sub2Val2=Math.round(dailyAvg*7);
+    }
+
+    const cap = (i===0?"This Month":d.toLocaleDateString("id-ID",{month:"long", year:"numeric"}))
+      + (TX.member==="all" ? "" : " · " + memberName(TX.member));
+    const range = d.toLocaleDateString("id-ID",{month:"long", year:"numeric"});
+
+    const card=document.createElement("div");
+    card.className="sumcard";
+    card.innerHTML=`
+      <div class="cap">${esc(cap)}</div>
+      <div class="dt">${esc(range)}</div>
+      <div class="big ${exp?"":"zero"}">${exp?"−"+fmt(exp):"Rp0"}</div>
+      <div class="split">
+        <div class="sr"><span>Income</span><b class="inc">${inc?"+"+fmt(inc):"Rp0"}</b></div>
+        <div class="sr"><span>Net</span><b style="color:${net<0?"var(--exp)":"var(--inc)"}">${net<0?"−":""}${fmt(Math.abs(net))}</b></div>
+      </div>
+      <div class="sub2">
+        <div class="sr"><span>${sub2Label1}</span><b>${sub2Val1?fmt(sub2Val1):"Rp0"}</b></div>
+        <div class="sr"><span>${sub2Label2}</span><b>${sub2Val2?fmt(sub2Val2):"Rp0"}</b></div>
+      </div>`;
+    slider.appendChild(card);
+    const dot=document.createElement("span"); if(i===0) dot.className="on";
+    dots.appendChild(dot);
   }
-  list.forEach(b=>{
-    const pct = b.budget ? Math.min(100, Math.round(b.used/b.budget*100)) : 0;
-    const over = b.used > b.budget;
-    const income = b.kind==="income";
-    const cls = income ? (b.used>=b.budget?"":"warn") : (over?"over":(pct>=80?"warn":""));
-    const remLabel = income
-      ? (b.used>=b.budget ? "target met" : fmt(b.budget-b.used)+" to go")
-      : (over ? fmt(b.used-b.budget)+" over" : fmt(b.remaining)+" left");
-    const d=document.createElement("div");
-    d.className="bud";
-    d.style.cursor="pointer";
-    d.innerHTML=`
-      <div class="top"><span class="em">${esc(b.emoji||"✨")}</span>${esc(b.name)}
-        <span class="rem ${over&&!income?"over":"ok"}">${remLabel}</span></div>
-      <div class="bar"><i class="${cls}" style="width:${pct}%"></i></div>
-      <div class="sub">${fmt(b.used)} of ${fmt(b.budget)}${income?" target":""}</div>`;
-    d.onclick = ()=>openBudgetHistory(b);
-    el.appendChild(d);
+
+  slider.scrollLeft=0;
+  slider.onscroll = ()=>syncSliders(slider, dots, "sum");
+}
+
+/* ---- budgets: slideable, one page per month, synced with overview ---- */
+function budgetsForMonth(key){
+  return D.categories.map(c=>{
+    const used = TX.all.filter(r=>r.categoryId===c.id && r.date.indexOf(key)===0).reduce((a,r)=>a+r.amount,0);
+    return { categoryId:c.id, name:c.name, kind:c.kind, ownerId:c.ownerId, emoji:c.emoji,
+             budget:Number(c.budget)||0, used, remaining:c.budget?c.budget-used:0 };
   });
 }
 
-/* tap a budget → see that category's transactions this month */
-function openBudgetHistory(b){
-  const month = iso(new Date()).slice(0,7);
-  const rows = TX.all.filter(r=>r.categoryId===b.categoryId && r.date.indexOf(month)===0)
+function renderBudgetSlides(){
+  const count = monthsAvailable();
+  const slider = $("budgetslider"), dots = $("budgetdots");
+  slider.innerHTML=""; dots.innerHTML="";
+  let anyBudgets=false;
+
+  for(let i=0;i<count;i++){
+    const key = monthKeyOffset(i);
+    let list = budgetsForMonth(key).filter(b=>b.budget>0);
+    if(TX.member!=="all") list = list.filter(b=>b.ownerId===TX.member || b.ownerId===JOINT);
+    if(list.length) anyBudgets=true;
+
+    const page=document.createElement("div"); page.className="budgetpage";
+    if(!list.length){
+      page.innerHTML = "<div class='sd' style='color:var(--muted);font-size:13px;padding:2px 4px'>"+
+        (i===0 ? "No budgets set yet — add one when creating or editing a category on the Add page."
+                : "No budgets tracked for this month.")+"</div>";
+    } else {
+      list.forEach(b=>{
+        const pct = b.budget ? Math.min(100, Math.round(b.used/b.budget*100)) : 0;
+        const over = b.used > b.budget;
+        const income = b.kind==="income";
+        const cls = income ? (b.used>=b.budget?"":"warn") : (over?"over":(pct>=80?"warn":""));
+        const remLabel = income
+          ? (b.used>=b.budget ? "target met" : fmt(b.budget-b.used)+" to go")
+          : (over ? fmt(b.used-b.budget)+" over" : fmt(b.remaining)+" left");
+        const d=document.createElement("div");
+        d.className="bud"; d.style.cursor="pointer";
+        d.innerHTML=`
+          <div class="top"><span class="em">${esc(b.emoji||"✨")}</span>${esc(b.name)}
+            <span class="rem ${over&&!income?"over":"ok"}">${remLabel}</span></div>
+          <div class="bar"><i class="${cls}" style="width:${pct}%"></i></div>
+          <div class="sub">${fmt(b.used)} of ${fmt(b.budget)}${income?" target":""}</div>`;
+        d.onclick = ()=>openBudgetHistory(b, key);
+        page.appendChild(d);
+      });
+    }
+    slider.appendChild(page);
+    const dot=document.createElement("span"); if(i===0) dot.className="on";
+    dots.appendChild(dot);
+  }
+  $("bud-note").textContent = anyBudgets ? "swipe for previous months" : "";
+  slider.scrollLeft=0;
+  slider.onscroll = ()=>syncSliders(slider, dots, "budget");
+}
+
+/* keep the overview and budgets sliders on the same month index */
+function syncSliders(source, sourceDots, which){
+  if(sliderSyncing) return;
+  const idx = Math.round(source.scrollLeft / source.clientWidth);
+  [...sourceDots.children].forEach((s,i)=>s.classList.toggle("on", i===idx));
+
+  const other = which==="sum" ? $("budgetslider") : $("sumslider");
+  const otherDots = which==="sum" ? $("budgetdots") : $("sumdots");
+  const otherIdx = Math.round(other.scrollLeft / (other.clientWidth||1));
+  if(otherIdx !== idx && other.children.length > idx){
+    sliderSyncing = true;
+    other.scrollTo({ left: idx*other.clientWidth, behavior:"auto" });
+    [...otherDots.children].forEach((s,i)=>s.classList.toggle("on", i===idx));
+    requestAnimationFrame(()=>{ sliderSyncing=false; });
+  }
+}
+
+/* tap a budget → see that category's transactions for the given month */
+function openBudgetHistory(b, monthKey){
+  const key = monthKey || iso(new Date()).slice(0,7);
+  const rows = TX.all.filter(r=>r.categoryId===b.categoryId && r.date.indexOf(key)===0)
     .sort((a,c)=>{ if(c.date!==a.date) return c.date.localeCompare(a.date); return (c.loggedAt||0)-(a.loggedAt||0); });
   const income = b.kind==="income";
   const total = rows.reduce((a,r)=>a+r.amount,0);
+  const monthLabel = new Date(key+"-01T00:00:00").toLocaleDateString("id-ID",{month:"long",year:"numeric"});
   const listHtml = rows.length ? rows.map(r=>`
       <div class="mrow" data-log="${esc(String(r.loggedAt))}" style="cursor:pointer">
         <span class="dot" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span>
         <span class="t"><b>${income?"+":"−"}${fmt(r.amount)}</b>
           <small>${esc(r.date)} · ${esc(walletLabel(r.walletId))}${r.note?" · "+esc(r.note):""}</small></span>
       </div>`).join("")
-    : "<div class='sd'>No transactions in this category this month.</div>";
+    : `<div class='sd'>No transactions in this category in ${esc(monthLabel)}.</div>`;
   openSheet(`
     <h2>${esc(b.emoji||"✨")} ${esc(b.name)}</h2>
-    <div class="sd">This month · ${fmt(total)} ${income?"received":"spent"}${b.budget?(" of "+fmt(b.budget)+(income?" target":" budget")):""}</div>
+    <div class="sd">${esc(monthLabel)} · ${fmt(total)} ${income?"received":"spent"}${b.budget?(" of "+fmt(b.budget)+(income?" target":" budget")):""}</div>
     <div class="manage-list">${listHtml}</div>
     <button class="ghost" id="bh-close" type="button">Close</button>
   `);
@@ -1240,8 +1330,6 @@ function attachSwipeDelete(wrap, entry){
     try{
       await api({action:"deleteTx", loggedAt:entry.loggedAt});
       TX.all = TX.all.filter(x=>x.loggedAt!==entry.loggedAt);
-      const b = await api({action:"budgets", month: iso(new Date()).slice(0,7)});
-      BUD = b.budgets || [];
       renderHome();
     }catch(e){ trash.disabled=false; trash.textContent="⚠️"; }
   };
@@ -1348,8 +1436,6 @@ function openTxEdit(entry){
       const i = TX.all.findIndex(x=>x.loggedAt===E.loggedAt);
       if(i>=0) TX.all[i] = { loggedAt:E.loggedAt, date:E.date, memberId:E.memberId,
         categoryId:E.categoryId, amount:E.amount, walletId:E.walletId, type:E.type, note:(E.note||"").trim() };
-      const bud = await api({action:"budgets", month: iso(new Date()).slice(0,7)});
-      BUD = bud.budgets || [];
       closeSheet(); renderHome();
     }catch(e){ b.disabled=false; b.textContent="Couldn't save — "+e.message; }
   }
