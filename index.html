@@ -110,6 +110,7 @@ body[data-view="add"] .savebar{display:block}
   background:var(--card); color:var(--ink); outline:none;
 }
 .reveal .hint{font-size:12px; color:var(--muted); margin-top:6px; padding-left:4px}
+#note-input{font-family:var(--body); font-size:16px; font-weight:600}
 
 /* ---------- type toggle ---------- */
 .type{display:grid; grid-template-columns:1fr 1fr; border:1.5px solid var(--line);
@@ -236,7 +237,7 @@ body[data-view="add"] .savebar{display:block}
 }
 .rcard .mid{flex:1; min-width:0}
 .rcard .cat{font-weight:700; font-size:14.5px}
-.rcard .sub{font-size:12px; color:var(--muted); margin-top:1px}
+.rcard .sub{font-size:12px; color:var(--muted); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .rcard .amt{font-family:var(--num); font-weight:700; font-size:15px; white-space:nowrap}
 .rcard.exp .amt{color:var(--exp)} .rcard.inc .amt{color:var(--inc)}
 .rtrash{position:absolute; top:0; right:0; bottom:0; width:76px; z-index:0;
@@ -414,6 +415,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
       <button class="mini" id="mng-cat" type="button">Manage</button>
     </div>
     <div class="catrow" id="cats"></div>
+    <div class="reveal" id="note-reveal">
+      <input id="note-input" type="text" maxlength="140" placeholder="Add a note (optional)" autocomplete="off">
+      <div class="hint">Optional — e.g. what it was for</div>
+    </div>
   </section>
 
   <section>
@@ -487,7 +492,7 @@ const DAYS = ["Today","Yesterday","Custom"];
 /* app data + ui state */
 const D = { members:[], wallets:[], categories:[] };
 const S = { type:"Expense", memberId:null, categoryId:null, amount:null, custom:true,
-            walletId:null, day:"Today", customDate:null };
+            walletId:null, note:"", day:"Today", customDate:null };
 const TX = { all:[], shown:10, period:"month", member:"all" };
 const PAGE = 10;
 let BAL = { balances:{}, debts:{}, starting:{} };
@@ -579,7 +584,9 @@ function selectMember(id, silent){
   document.documentElement.style.setProperty("--person", c);
   document.documentElement.style.setProperty("--person-deep", c);
   document.documentElement.style.setProperty("--person-tint", c + "22");
-  S.categoryId = null; S.walletId = null;
+  S.categoryId = null; S.walletId = null; S.note = "";
+  if($("note-input")) $("note-input").value = "";
+  if($("note-reveal")) $("note-reveal").classList.remove("show");
   if(!silent){ buildMembers(); buildCats(); buildWallets(); refresh(); }
 }
 
@@ -591,7 +598,7 @@ function buildCats(){
     const b = document.createElement("button");
     b.type="button"; b.className = "chip-cat" + (c.id===S.categoryId ? " sel" : "");
     b.innerHTML = `<span class="circ">${esc(c.emoji||"✨")}</span><span class="lbl">${esc(c.name)}</span>`;
-    b.onclick = ()=>{ S.categoryId=c.id; buildCats(); refresh(); };
+    b.onclick = ()=>{ S.categoryId=c.id; buildCats(); $("note-reveal").classList.add("show"); refresh(); };
     el.appendChild(b);
   });
   const add = document.createElement("button");
@@ -600,6 +607,7 @@ function buildCats(){
   add.onclick = ()=>openCategorySheet(null);
   el.appendChild(add);
 }
+$("note-input").addEventListener("input", e=>{ S.note = e.target.value; });
 
 function buildWallets(){
   const el = $("wallets"); el.innerHTML = "";
@@ -635,7 +643,8 @@ function setType(t){
   S.type=t;
   $("t-exp").classList.toggle("sel", t==="Expense");
   $("t-inc").classList.toggle("sel", t==="Income");
-  S.categoryId=null; S.walletId=null;
+  S.categoryId=null; S.walletId=null; S.note="";
+  $("note-input").value=""; $("note-reveal").classList.remove("show");
   buildCats(); buildWallets(); refresh();
 }
 
@@ -725,7 +734,8 @@ $("save").onclick = async ()=>{
   err.classList.remove("show");
   btn.disabled=true; btn.textContent="Saving…";
   const payload = { type:S.type, date:entryDate(), memberId:S.memberId,
-                    categoryId:S.categoryId, amount:S.amount, walletId:S.walletId };
+                    categoryId:S.categoryId, amount:S.amount, walletId:S.walletId,
+                    note:(S.note||"").trim() };
   try{
     const out = await api(payload);
     showSlip(payload, out.loggedAt);
@@ -749,6 +759,7 @@ function showSlip(p, loggedAt){
     <div class="row"><span>${p.type==="Income"?"Destination":"Wallet"}</span><b>${esc(walletLabel(p.walletId))}</b></div>
     <div class="row"><span>Day</span><b>${esc(p.date)}</b></div>
     <div class="row"><span>By</span><b>${esc(memberName(p.memberId))}</b></div>
+    ${p.note?`<div class="row"><span>Note</span><b>${esc(p.note)}</b></div>`:""}
     <button class="go" id="slip-again" type="button">Log another</button>
     <button class="ghost danger" id="slip-del" type="button">Delete this entry</button>
   `, "slip");
@@ -761,8 +772,9 @@ function showSlip(p, loggedAt){
   };
 }
 function resetForm(){
-  S.categoryId=null; S.amount=null; S.day="Today"; S.customDate=null;
+  S.categoryId=null; S.amount=null; S.day="Today"; S.customDate=null; S.note="";
   $("amt-input").value=""; $("day-reveal").classList.remove("show");
+  $("note-input").value=""; $("note-reveal").classList.remove("show");
   [...$("days").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.textContent==="Today"));
   buildCats(); presetCustom(); refresh();
 }
@@ -1149,7 +1161,7 @@ function renderTxList(rows){
         `<div class="cico">${esc(catEmoji(r.categoryId))}`+
           `<span class="badge" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span></div>`+
         `<div class="mid"><div class="cat">${esc(catLabel(r.categoryId))}</div>`+
-        `<div class="sub">${esc(walletLabel(r.walletId))}</div></div>`+
+        `<div class="sub">${esc(walletLabel(r.walletId))}${r.note?` · ${esc(r.note)}`:""}</div></div>`+
         `<div class="amt">${isIn?"+":"−"}${fmt(r.amount)}</div>`+
       `</div>`;
     attachSwipeDelete(wrap, r);
