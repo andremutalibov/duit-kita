@@ -208,12 +208,7 @@ body[data-view="add"] .savebar{display:block}
 .budgetpage{flex:0 0 100%; scroll-snap-align:start; min-width:0}
 
 /* monthly report pie */
-.rep-toggle{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:2px 0 12px}
-.rep-toggle button{
-  min-height:42px; border:1.5px solid var(--line); border-radius:999px; background:var(--card);
-  font-family:var(--disp); font-weight:700; font-size:13.5px; color:var(--ink); cursor:pointer;
-}
-.rep-toggle button.sel{background:var(--ink); border-color:var(--ink); color:#fff}
+.rep-month-label{font-family:var(--disp); font-weight:700; font-size:14px; color:var(--muted); margin-bottom:10px}
 .reportslider{display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory;
   -webkit-overflow-scrolling:touch; scrollbar-width:none}
 .reportslider::-webkit-scrollbar{display:none}
@@ -223,9 +218,12 @@ body[data-view="add"] .savebar{display:block}
 }
 .pie-wrap{display:flex; justify-content:center; align-items:center; position:relative}
 .pie-wrap svg{width:180px; height:180px}
-.pie-center{position:absolute; text-align:center; pointer-events:none}
-.pie-center .pt{font-family:var(--num); font-weight:700; font-size:19px}
-.pie-center .pl{font-size:11px; color:var(--muted); margin-top:1px}
+.rep-totals{margin-top:14px; padding-top:12px; border-top:1px dashed var(--line);
+  display:flex; flex-direction:column; gap:7px}
+.rep-totals .sr b.inc{color:var(--inc)}
+.legrow.other{cursor:default}
+.legrow.other:active{background:none}
+.legrow.other .em{font-size:13px; color:var(--muted)}
 .legend{margin-top:16px; display:flex; flex-direction:column; gap:2px}
 .legrow{
   display:flex; align-items:center; gap:10px; padding:8px 6px; border-radius:11px; cursor:pointer;
@@ -421,10 +419,6 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 
   <section id="report-sec">
     <div class="label">Monthly Report <span style="font-weight:600;letter-spacing:0;text-transform:none;font-size:11px" id="rep-month"></span></div>
-    <div class="rep-toggle">
-      <button id="rep-exp" class="sel" type="button">Expenses</button>
-      <button id="rep-inc" type="button">Income</button>
-    </div>
     <div class="reportslider" id="reportslider"></div>
     <div class="dots" id="reportdots"></div>
   </section>
@@ -537,7 +531,6 @@ const D = { members:[], wallets:[], categories:[] };
 const S = { type:"Expense", memberId:null, categoryId:null, amount:null, custom:true,
             walletId:null, note:"", day:"Today", customDate:null };
 const TX = { all:[], shown:10, member:"all" };
-let repKind = "expense"; // Monthly Report toggle: "expense" | "income"
 const PAGE = 10;
 let BAL = { balances:{}, debts:{}, starting:{} };
 
@@ -1246,21 +1239,6 @@ function renderBudgetSlides(){
 const PIE_COLORS = ["#1E7A50","#2D6CDF","#C9962A","#B04A72","#8B5C8F","#0E7A6B",
                     "#B23A2E","#6B5CA5","#A5603A","#3F8F6B","#D08A3E","#7A6CB5"];
 
-/* aggregate a month's transactions of the current kind, by category, largest first */
-function reportDataFor(key){
-  const wantIncome = repKind==="income";
-  const rows = homeRows().filter(r=>
-    r.date.indexOf(key)===0 &&
-    (wantIncome ? r.type==="Income" : r.type!=="Income"));
-  const byCat = {};
-  rows.forEach(r=>{ byCat[r.categoryId] = (byCat[r.categoryId]||0) + r.amount; });
-  const items = Object.keys(byCat).map(cid=>({
-    categoryId:cid, name:catLabel(cid), emoji:catEmoji(cid), value:byCat[cid]
-  })).sort((a,b)=>b.value-a.value);
-  const total = items.reduce((a,x)=>a+x.value,0);
-  return { items, total };
-}
-
 /* build an SVG donut from slices [{value,color}] */
 function pieSVG(items, total){
   if(!total) return "";
@@ -1274,7 +1252,7 @@ function pieSVG(items, total){
     const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
     const xi1=cx+rin*Math.cos(a1), yi1=cy+rin*Math.sin(a1);
     const xi0=cx+rin*Math.cos(a0), yi0=cy+rin*Math.sin(a0);
-    const color = PIE_COLORS[idx % PIE_COLORS.length];
+    const color = it.color;
     a0=a1;
     /* a full single slice (100%) needs a circle, not an arc, to render */
     if(frac >= 0.9999){
@@ -1285,23 +1263,44 @@ function pieSVG(items, total){
   return `<svg viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">${paths}</svg>`;
 }
 
+const OTHER_COLOR = "#9AA79C";
+
 function renderReportSlides(){
   const count = monthsAvailable();
   const slider = $("reportslider"), dots = $("reportdots");
   slider.innerHTML=""; dots.innerHTML="";
-  const kindLabel = repKind==="income" ? "received" : "spent";
+  const rows = homeRows();
 
   for(let i=0;i<count;i++){
     const key = monthKeyOffset(i);
-    const { items, total } = reportDataFor(key);
-    const page=document.createElement("div"); page.className="reportpage";
+    const inMonth = rows.filter(r=>r.date.indexOf(key)===0);
+    const expRows = inMonth.filter(r=>r.type!=="Income");
+    const totalExp = expRows.reduce((a,r)=>a+r.amount,0);
+    const totalInc = inMonth.filter(r=>r.type==="Income").reduce((a,r)=>a+r.amount,0);
+    const net = totalInc - totalExp;
 
+    const byCat = {};
+    expRows.forEach(r=>{ byCat[r.categoryId] = (byCat[r.categoryId]||0) + r.amount; });
+    const items = Object.keys(byCat).map(cid=>({
+      categoryId:cid, name:catLabel(cid), emoji:catEmoji(cid), value:byCat[cid]
+    })).sort((a,b)=>b.value-a.value);
+    const top3 = items.slice(0,3);
+    const otherSum = items.slice(3).reduce((a,x)=>a+x.value,0);
+
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()-i);
+    const monthLabel = i===0 ? "This Month" : d.toLocaleDateString("id-ID",{month:"long", year:"numeric"});
+
+    const page=document.createElement("div"); page.className="reportpage";
     if(!items.length){
-      page.innerHTML = `<div class="rep-empty">No ${repKind==="income"?"income":"expenses"} recorded this month.</div>`;
+      page.innerHTML = `<div class="rep-month-label">${esc(monthLabel)}</div>
+        <div class="rep-empty">No expenses recorded this month.</div>`;
     } else {
-      const legend = items.map((it,idx)=>{
+      const pieItems = top3.map((it,idx)=>({ value:it.value, color:PIE_COLORS[idx % PIE_COLORS.length] }))
+        .concat(otherSum>0 ? [{ value:otherSum, color:OTHER_COLOR }] : []);
+
+      const legend = top3.map((it,idx)=>{
         const color=PIE_COLORS[idx % PIE_COLORS.length];
-        const pct=Math.round(it.value/total*100);
+        const pct=Math.round(it.value/totalExp*100);
         return `<div class="legrow" data-cat="${esc(it.categoryId)}" data-month="${esc(key)}">
             <span class="sw" style="background:${color}"></span>
             <span class="em">${esc(it.emoji||"✨")}</span>
@@ -1309,14 +1308,23 @@ function renderReportSlides(){
             <span class="val">${fmt(it.value)}</span>
             <span class="pctv">${pct}%</span>
           </div>`;
-      }).join("");
+      }).join("") + (otherSum>0 ? `
+          <div class="legrow other">
+            <span class="sw" style="background:${OTHER_COLOR}"></span>
+            <span class="em">•••</span>
+            <span class="nm">Other categories</span>
+            <span class="val">${fmt(otherSum)}</span>
+            <span class="pctv">${Math.round(otherSum/totalExp*100)}%</span>
+          </div>` : "");
+
       page.innerHTML = `
-        <div class="pie-wrap">
-          ${pieSVG(items,total)}
-          <div class="pie-center">
-            <div class="pt">${fmt(total)}</div>
-            <div class="pl">total ${kindLabel}</div>
-          </div>
+        <div class="rep-month-label">${esc(monthLabel)}</div>
+        <div class="pie-wrap">${pieSVG(pieItems, totalExp)}</div>
+        <div class="rep-totals">
+          <div class="sr"><span>Total Spent</span><b>${fmt(totalExp)}</b></div>
+          <div class="sr"><span>Total Income</span><b class="inc">${fmt(totalInc)}</b></div>
+          <div class="sr"><span>${net>=0?"Surplus":"Deficit"}</span>
+            <b style="color:${net>=0?"var(--inc)":"var(--exp)"}">${fmt(Math.abs(net))}</b></div>
         </div>
         <div class="legend">${legend}</div>`;
     }
@@ -1325,13 +1333,11 @@ function renderReportSlides(){
     dots.appendChild(dot);
   }
 
-  const d0 = new Date(); d0.setDate(1);
-  $("rep-month").textContent = "";
   slider.scrollLeft=0;
   slider.onscroll = ()=>syncSliders(slider, dots);
 
-  /* tapping a legend row opens that category's history for that month */
-  slider.querySelectorAll(".legrow").forEach(row=>{
+  /* tapping a top-3 legend row opens that category's history for that month ("Other" isn't a single category, not clickable) */
+  slider.querySelectorAll(".legrow[data-cat]").forEach(row=>{
     row.onclick = ()=>{
       const cid=row.dataset.cat, key=row.dataset.month;
       const cat=catById(cid);
@@ -1339,22 +1345,6 @@ function renderReportSlides(){
         kind:cat.kind, budget:Number(cat.budget)||0, ownerId:cat.ownerId}, key);
     };
   });
-}
-
-$("rep-exp").onclick = ()=>{ if(repKind==="expense")return; repKind="expense";
-  $("rep-exp").classList.add("sel"); $("rep-inc").classList.remove("sel"); renderReportSlides(); syncReportToCurrent(); };
-$("rep-inc").onclick = ()=>{ if(repKind==="income")return; repKind="income";
-  $("rep-inc").classList.add("sel"); $("rep-exp").classList.remove("sel"); renderReportSlides(); syncReportToCurrent(); };
-
-/* after re-rendering the report (toggle), jump it to whatever month the others are on */
-function syncReportToCurrent(){
-  const sum=$("sumslider");
-  const idx = Math.round(sum.scrollLeft / (sum.clientWidth||1));
-  const rep=$("reportslider");
-  if(idx>0 && rep.children.length>idx){
-    rep.scrollLeft = idx*rep.clientWidth;
-    [...$("reportdots").children].forEach((s,i)=>s.classList.toggle("on", i===idx));
-  }
 }
 
 /* keep overview, budgets, and report sliders all on the same month index */
