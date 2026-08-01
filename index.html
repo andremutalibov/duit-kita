@@ -1116,12 +1116,45 @@ function renderBudgets(){
       : (over ? fmt(b.used-b.budget)+" over" : fmt(b.remaining)+" left");
     const d=document.createElement("div");
     d.className="bud";
+    d.style.cursor="pointer";
     d.innerHTML=`
       <div class="top"><span class="em">${esc(b.emoji||"✨")}</span>${esc(b.name)}
         <span class="rem ${over&&!income?"over":"ok"}">${remLabel}</span></div>
       <div class="bar"><i class="${cls}" style="width:${pct}%"></i></div>
       <div class="sub">${fmt(b.used)} of ${fmt(b.budget)}${income?" target":""}</div>`;
+    d.onclick = ()=>openBudgetHistory(b);
     el.appendChild(d);
+  });
+}
+
+/* tap a budget → see that category's transactions this month */
+function openBudgetHistory(b){
+  const month = iso(new Date()).slice(0,7);
+  const rows = TX.all.filter(r=>r.categoryId===b.categoryId && r.date.indexOf(month)===0)
+    .sort((a,c)=>{ if(c.date!==a.date) return c.date.localeCompare(a.date); return (c.loggedAt||0)-(a.loggedAt||0); });
+  const income = b.kind==="income";
+  const total = rows.reduce((a,r)=>a+r.amount,0);
+  const listHtml = rows.length ? rows.map(r=>`
+      <div class="mrow" data-log="${esc(String(r.loggedAt))}" style="cursor:pointer">
+        <span class="dot" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span>
+        <span class="t"><b>${income?"+":"−"}${fmt(r.amount)}</b>
+          <small>${esc(r.date)} · ${esc(walletLabel(r.walletId))}${r.note?" · "+esc(r.note):""}</small></span>
+      </div>`).join("")
+    : "<div class='sd'>No transactions in this category this month.</div>";
+  openSheet(`
+    <h2>${esc(b.emoji||"✨")} ${esc(b.name)}</h2>
+    <div class="sd">This month · ${fmt(total)} ${income?"received":"spent"}${b.budget?(" of "+fmt(b.budget)+(income?" target":" budget")):""}</div>
+    <div class="manage-list">${listHtml}</div>
+    <button class="ghost" id="bh-close" type="button">Close</button>
+  `);
+  $("bh-close").onclick = closeSheet;
+  /* tapping a row opens that transaction's detail/edit */
+  $("sheet-body").querySelectorAll("[data-log]").forEach(row=>{
+    row.onclick = ()=>{
+      const lg = Number(row.dataset.log);
+      const entry = TX.all.find(x=>x.loggedAt===lg);
+      if(entry) openTxDetail(entry);
+    };
   });
 }
 
@@ -1174,25 +1207,31 @@ $("loadmore").onclick = ()=>{ TX.shown += PAGE; renderTxList(homeRows()); };
 const TRASH_W = 76;
 function attachSwipeDelete(wrap, entry){
   const card=wrap.querySelector(".rcard"), trash=wrap.querySelector(".rtrash");
-  let sx=0, cx=0, drag=false;
-  card.addEventListener("touchstart", e=>{ sx=e.touches[0].clientX; drag=true; card.style.transition="none"; },{passive:true});
+  let sx=0, cx=0, drag=false, moved=false;
+  card.addEventListener("touchstart", e=>{ sx=e.touches[0].clientX; drag=true; moved=false; card.style.transition="none"; },{passive:true});
   card.addEventListener("touchmove", e=>{
     if(!drag) return;
     cx=e.touches[0].clientX-sx;
+    if(Math.abs(cx)>6) moved=true;
     if(cx>0) cx=0;
     if(cx<-TRASH_W) cx=-TRASH_W-(cx+TRASH_W)*0.25;
     card.style.transform=`translateX(${cx}px)`;
   },{passive:true});
-  card.addEventListener("touchend", ()=>{
+  card.addEventListener("touchend", (e)=>{
     drag=false; card.style.transition="transform .18s ease-out";
-    card.style.transform = cx < -TRASH_W/2 ? `translateX(-${TRASH_W}px)` : "translateX(0)";
+    const open = cx < -TRASH_W/2;
+    card.style.transform = open ? `translateX(-${TRASH_W}px)` : "translateX(0)";
+    /* a genuine tap (no meaningful drag) opens the detail sheet */
+    if(!moved && cx===0){
+      e.preventDefault(); // suppress the synthetic click that would hit the fresh overlay
+      openTxDetail(entry);
+    }
     cx=0;
-  });
-  card.addEventListener("click", ()=>{
-    const open = card.style.transform === `translateX(-${TRASH_W}px)`;
-    document.querySelectorAll(".rwrap .rcard").forEach(c=>{ if(c!==card) c.style.transform="translateX(0)"; });
-    card.style.transition="transform .18s ease-out";
-    card.style.transform = open ? "translateX(0)" : `translateX(-${TRASH_W}px)`;
+  }, {passive:false});
+  /* desktop / non-touch: plain click opens detail */
+  card.addEventListener("click", e=>{
+    if("ontouchstart" in window) return; // touch handled above
+    openTxDetail(entry);
   });
   trash.onclick = async ev=>{
     ev.stopPropagation();
@@ -1206,6 +1245,115 @@ function attachSwipeDelete(wrap, entry){
       renderHome();
     }catch(e){ trash.disabled=false; trash.textContent="⚠️"; }
   };
+}
+
+/* ---- transaction detail + edit ---- */
+function openTxDetail(entry){
+  const cat = catById(entry.categoryId), w = walletById(entry.walletId);
+  const isIn = entry.type==="Income";
+  openSheet(`
+    <h2 style="color:${esc(memberColor(entry.memberId))}">${isIn?"Income":"Expense"}</h2>
+    <div class="amt" style="color:${isIn?"var(--inc)":"var(--exp)"}">${isIn?"+":"−"}${fmt(entry.amount)}</div>
+    <div class="row"><span>Category</span><b>${esc(catEmoji(entry.categoryId))} ${esc(catLabel(entry.categoryId))}</b></div>
+    <div class="row"><span>${isIn?"Destination":"Wallet"}</span><b>${esc(walletLabel(entry.walletId))}</b></div>
+    <div class="row"><span>Person</span><b>${esc(memberName(entry.memberId))}</b></div>
+    <div class="row"><span>Date</span><b>${esc(entry.date)}</b></div>
+    ${entry.note?`<div class="row"><span>Note</span><b>${esc(entry.note)}</b></div>`:""}
+    <div class="seg" style="margin-top:16px">
+      <button type="button" id="td-close">Close</button>
+      <button type="button" id="td-edit" style="background:var(--person);border-color:var(--person);color:#fff">Edit</button>
+    </div>
+  `);
+  $("td-close").onclick = closeSheet;
+  $("td-edit").onclick = ()=>openTxEdit(entry);
+}
+
+function openTxEdit(entry){
+  /* working copy of the entry being edited */
+  const E = {
+    loggedAt: entry.loggedAt, type: entry.type, memberId: entry.memberId,
+    categoryId: entry.categoryId, amount: entry.amount, walletId: entry.walletId,
+    date: entry.date, note: entry.note || ""
+  };
+  function catsFor(){ const k=E.type==="Income"?"income":"expense";
+    return forMember(D.categories, E.memberId).filter(c=>c.kind===k); }
+  function walletsFor(){
+    let list=forMember(D.wallets, E.memberId);
+    if(E.type==="Income") list=list.filter(w=>w.type!=="debt");
+    const rank=w=>(w.type==="debt"?2:(w.ownerId===JOINT?1:0));
+    return list.slice().sort((a,b)=>rank(a)-rank(b));
+  }
+  function render(){
+    openSheet(`
+      <h2>Edit transaction</h2>
+      <div class="sd">Change any detail, then save.</div>
+      <div class="type" style="margin-top:0;margin-bottom:14px">
+        <button type="button" id="te-exp" class="${E.type==="Expense"?"sel":""}">Expense</button>
+        <button type="button" id="te-inc" class="${E.type==="Income"?"sel":""}">Income</button>
+      </div>
+      <div class="fld"><label>Person</label>
+        <select id="te-member">${D.members.map(m=>`<option value="${esc(m.id)}" ${m.id===E.memberId?"selected":""}>${esc(m.name)}</option>`).join("")}</select></div>
+      <div class="fld"><label>Category</label>
+        <select id="te-cat">${catsFor().map(c=>`<option value="${esc(c.id)}" ${c.id===E.categoryId?"selected":""}>${esc(c.emoji||"")} ${esc(c.name)}</option>`).join("")}</select></div>
+      <div class="fld"><label>Amount</label>
+        <input id="te-amt" class="num" inputmode="numeric" value="${E.amount?Number(E.amount).toLocaleString("id-ID"):""}"></div>
+      <div class="fld"><label>${E.type==="Income"?"Destination":"Wallet"}</label>
+        <select id="te-wal">${walletsFor().map(w=>`<option value="${esc(w.id)}" ${w.id===E.walletId?"selected":""}>${esc(walletLabel(w.id))}</option>`).join("")}</select></div>
+      <div class="fld"><label>Date</label>
+        <input id="te-date" type="date" value="${esc(E.date)}"></div>
+      <div class="fld"><label>Note (optional)</label>
+        <input id="te-note" type="text" maxlength="140" value="${esc(E.note)}" placeholder="Add a note"></div>
+      <button class="go" id="te-save" type="button">Save changes</button>
+      <button class="ghost" id="te-back" type="button">Cancel</button>
+    `);
+    { const mx=new Date(), mn=new Date(); mn.setDate(mn.getDate()-30);
+      $("te-date").max=iso(mx); $("te-date").min=iso(mn); }
+    $("te-amt").addEventListener("input", ev=>{
+      const n=Number(String(ev.target.value).replace(/[^\d]/g,""));
+      ev.target.value = n?n.toLocaleString("id-ID"):""; E.amount=n;
+    });
+    $("te-exp").onclick = ()=>{ if(E.type==="Expense")return; E.type="Expense";
+      E.categoryId=(catsFor()[0]||{}).id||null; E.walletId=(walletsFor()[0]||{}).id||null; syncFromInputs(); render(); };
+    $("te-inc").onclick = ()=>{ if(E.type==="Income")return; E.type="Income";
+      E.categoryId=(catsFor()[0]||{}).id||null; E.walletId=(walletsFor()[0]||{}).id||null; syncFromInputs(); render(); };
+    $("te-member").onchange = ()=>{ E.memberId=$("te-member").value;
+      /* keep category/wallet valid for the new member */
+      if(!catsFor().some(c=>c.id===E.categoryId)) E.categoryId=(catsFor()[0]||{}).id||null;
+      if(!walletsFor().some(w=>w.id===E.walletId)) E.walletId=(walletsFor()[0]||{}).id||null;
+      syncFromInputs(); render(); };
+    $("te-cat").onchange = ()=>{ E.categoryId=$("te-cat").value; };
+    $("te-wal").onchange = ()=>{ E.walletId=$("te-wal").value; };
+    $("te-date").onchange = ()=>{ E.date=$("te-date").value; };
+    $("te-note").addEventListener("input", ()=>{ E.note=$("te-note").value; });
+    $("te-back").onclick = ()=>openTxDetail(entry);
+    $("te-save").onclick = doSave;
+  }
+  function syncFromInputs(){
+    /* preserve amount/note the user may have typed before re-rendering on a toggle */
+    if($("te-amt")) E.amount = Number(String($("te-amt").value).replace(/[^\d]/g,""))||E.amount;
+    if($("te-note")) E.note = $("te-note").value;
+  }
+  async function doSave(){
+    syncFromInputs();
+    E.categoryId = $("te-cat").value; E.walletId = $("te-wal").value;
+    E.memberId = $("te-member").value; E.date = $("te-date").value;
+    if(!(E.amount>0)){ alertSheet("Amount must be more than 0"); return; }
+    if(!E.categoryId){ alertSheet("Pick a category"); return; }
+    if(!E.walletId){ alertSheet("Pick a wallet"); return; }
+    const b=$("te-save"); b.disabled=true; b.textContent="Saving…";
+    try{
+      await api({action:"updateTx", loggedAt:E.loggedAt, type:E.type, memberId:E.memberId,
+                 categoryId:E.categoryId, amount:E.amount, walletId:E.walletId, date:E.date, note:(E.note||"").trim()});
+      /* update local copy + refresh */
+      const i = TX.all.findIndex(x=>x.loggedAt===E.loggedAt);
+      if(i>=0) TX.all[i] = { loggedAt:E.loggedAt, date:E.date, memberId:E.memberId,
+        categoryId:E.categoryId, amount:E.amount, walletId:E.walletId, type:E.type, note:(E.note||"").trim() };
+      const bud = await api({action:"budgets", month: iso(new Date()).slice(0,7)});
+      BUD = bud.budgets || [];
+      closeSheet(); renderHome();
+    }catch(e){ b.disabled=false; b.textContent="Couldn't save — "+e.message; }
+  }
+  render();
 }
 
 /* ================= WALLET ================= */
