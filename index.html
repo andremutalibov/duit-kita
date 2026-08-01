@@ -208,6 +208,29 @@ body[data-view="add"] .savebar{display:block}
 .budgetslider::-webkit-scrollbar{display:none}
 .budgetpage{flex:0 0 100%; scroll-snap-align:start; min-width:0}
 
+/* transaction-page monthly calendar */
+.calslider{display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch; scrollbar-width:none; margin-top:12px}
+.calslider::-webkit-scrollbar{display:none}
+.calpage{flex:0 0 100%; scroll-snap-align:start; min-width:0;
+  background:var(--card); border:1.5px solid var(--line); border-radius:20px; padding:16px 12px 12px}
+.cal-month{font-family:var(--disp); font-weight:800; font-size:17px; text-align:center; margin-bottom:12px}
+.calgrid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px}
+.caldayhead{text-align:center; font-family:var(--disp); font-weight:700; font-size:10px; color:var(--muted); padding-bottom:2px}
+.calbody{margin-top:2px}
+.calcell{
+  min-height:46px; border-radius:8px; padding:3px 1px 2px; overflow:hidden;
+  display:flex; flex-direction:column; align-items:center; gap:1px;
+  background:var(--paper); border:1px solid transparent;
+}
+.calcell.empty{background:transparent}
+.calcell.has{cursor:pointer; border-color:var(--line)}
+.calcell.has:active{background:var(--person-tint)}
+.calcell.today{border-color:var(--ink); border-width:1.5px}
+.calcell .cd{font-family:var(--num); font-size:11px; font-weight:700; color:var(--ink)}
+.calcell .ce{font-family:var(--num); font-size:8.5px; font-weight:700; color:var(--exp); line-height:1.15; white-space:nowrap}
+.calcell .ci{font-family:var(--num); font-size:8.5px; font-weight:700; color:var(--inc); line-height:1.15; white-space:nowrap}
+
 /* monthly report pie */
 .rep-month-label{font-family:var(--disp); font-weight:800; font-size:19px; color:var(--ink); margin-bottom:14px; text-align:center}
 .reportslider{display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory;
@@ -435,6 +458,13 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 <!-- ==================== TRANSACTION ==================== -->
 <main id="v-transaction">
   <div class="mfilter" id="tx-members"></div>
+
+  <section id="cal-sec">
+    <div class="calslider" id="calslider"></div>
+    <div class="dots" id="caldots"></div>
+  </section>
+
+  <div class="label" style="margin-top:2px">Transaction History</div>
   <div id="tx-list"></div>
   <div class="lm-wrap" id="lm-wrap" style="display:none"><button id="loadmore" type="button">Load More</button></div>
   <div class="state" id="tx-state"></div>
@@ -527,6 +557,13 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby0k-IyHSOKKaYSmvhTd
 
 const $ = id => document.getElementById(id);
 const fmt = n => "Rp" + Math.round(Number(n)||0).toLocaleString("id-ID");
+/* compact form for tight spaces: 347000 -> 347k, 1500000 -> 1.5M */
+const compactAmt = n => {
+  const a = Math.abs(Number(n)||0);
+  if(a >= 1e6){ const v=a/1e6; return (v>=10?Math.round(v):Math.round(v*10)/10)+"M"; }
+  if(a >= 1e3){ return Math.round(a/1e3)+"k"; }
+  return String(Math.round(a));
+};
 const iso = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 const esc = s => String(s??"").replace(/[<>&"]/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]));
 const JOINT = "joint";
@@ -1132,7 +1169,98 @@ async function loadTransactionPage(){
   }
 }
 
-function renderTxPage(){ renderTxList(homeRows()); }
+function renderTxPage(){ renderTxCalendar(); renderTxList(homeRows()); }
+
+/* ---- monthly calendar (slides through months, respects member filter) ---- */
+const WEEKDAYS_ID = ["Sen","Sel","Rab","Kam","Jum","Sab","Min"]; // Monday-first
+function renderTxCalendar(){
+  const count = monthsAvailable();
+  const slider = $("calslider"), dots = $("caldots");
+  slider.innerHTML=""; dots.innerHTML="";
+  const rows = homeRows();
+  const todayStr = iso(new Date());
+
+  for(let i=0;i<count;i++){
+    const key = monthKeyOffset(i);
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()-i);
+    const year=d.getFullYear(), mon=d.getMonth();
+    const dim = new Date(year, mon+1, 0).getDate();
+    const offset = (new Date(year, mon, 1).getDay()+6)%7; // Monday-first leading blanks
+
+    const dayExp={}, dayInc={};
+    rows.forEach(r=>{
+      if(r.date.indexOf(key)!==0) return;
+      const dd = Number(r.date.slice(8,10));
+      if(r.type==="Income") dayInc[dd]=(dayInc[dd]||0)+r.amount;
+      else dayExp[dd]=(dayExp[dd]||0)+r.amount;
+    });
+
+    let cells="";
+    for(let k=0;k<offset;k++) cells+=`<div class="calcell empty"></div>`;
+    for(let day=1;day<=dim;day++){
+      const dateStr = key+"-"+String(day).padStart(2,"0");
+      const e=dayExp[day]||0, inc=dayInc[day]||0;
+      const has = e>0 || inc>0;
+      const today = dateStr===todayStr;
+      cells += `<div class="calcell${has?" has":""}${today?" today":""}"${has?` data-date="${esc(dateStr)}"`:""}>
+          <span class="cd">${day}</span>
+          ${e>0?`<span class="ce">-${compactAmt(e)}</span>`:""}
+          ${inc>0?`<span class="ci">+${compactAmt(inc)}</span>`:""}
+        </div>`;
+    }
+
+    const monthLabel = d.toLocaleDateString("id-ID",{month:"long", year:"numeric"});
+    const page=document.createElement("div"); page.className="calpage";
+    page.innerHTML = `
+      <div class="cal-month">${esc(monthLabel)}</div>
+      <div class="calgrid calhead">${WEEKDAYS_ID.map(w=>`<div class="caldayhead">${w}</div>`).join("")}</div>
+      <div class="calgrid calbody">${cells}</div>`;
+    slider.appendChild(page);
+    const dot=document.createElement("span"); if(i===0) dot.className="on";
+    dots.appendChild(dot);
+  }
+
+  slider.scrollLeft=0;
+  slider.onscroll = ()=>{
+    const idx = Math.round(slider.scrollLeft/(slider.clientWidth||1));
+    [...dots.children].forEach((s,j)=>s.classList.toggle("on", j===idx));
+  };
+  slider.querySelectorAll(".calcell[data-date]").forEach(c=>{
+    c.onclick = ()=>openDayHistory(c.dataset.date);
+  });
+}
+
+/* tap a calendar day → that day's transactions (respects member filter) */
+function openDayHistory(dateStr){
+  const rows = homeRows().filter(r=>r.date===dateStr)
+    .sort((a,c)=>(c.loggedAt||0)-(a.loggedAt||0));
+  const exp = rows.filter(r=>r.type!=="Income").reduce((a,r)=>a+r.amount,0);
+  const inc = rows.filter(r=>r.type==="Income").reduce((a,r)=>a+r.amount,0);
+  const label = new Date(dateStr+"T00:00:00").toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"long", year:"numeric"});
+  const sd = [ exp?("−"+fmt(exp)+" spent"):"", inc?("+"+fmt(inc)+" in"):"" ].filter(Boolean).join(" · ") || "No transactions";
+  const listHtml = rows.length ? rows.map(r=>{
+    const isIn=r.type==="Income";
+    return `<div class="mrow" data-log="${esc(String(r.loggedAt))}" style="cursor:pointer">
+        <span class="dot" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span>
+        <span class="t"><b>${isIn?"+":"−"}${fmt(r.amount)}</b>
+          <small>${esc(catEmoji(r.categoryId))} ${esc(catLabel(r.categoryId))} · ${esc(walletLabel(r.walletId))}${r.note?" · "+esc(r.note):""}</small></span>
+      </div>`;
+  }).join("") : "<div class='sd'>No transactions this day.</div>";
+  openSheet(`
+    <h2>${esc(label)}</h2>
+    <div class="sd">${sd}</div>
+    <div class="manage-list">${listHtml}</div>
+    <button class="ghost" id="dh-close" type="button">Close</button>
+  `);
+  $("dh-close").onclick = closeSheet;
+  $("sheet-body").querySelectorAll("[data-log]").forEach(row=>{
+    row.onclick = ()=>{
+      const lg=Number(row.dataset.log);
+      const e=TX.all.find(x=>x.loggedAt===lg);
+      if(e) openTxDetail(e);
+    };
+  });
+}
 
 /* month helpers */
 function monthKeyOffset(offset){
