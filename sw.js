@@ -1,5 +1,5 @@
 /* Duit Kita — minimal shell cache */
-const CACHE = 'duit-kita-v23';
+const CACHE = 'duit-kita-v24';
 const SHELL = ['./index.html', './manifest.json', './icon-180.png', './icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
