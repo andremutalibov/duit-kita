@@ -61,24 +61,25 @@ section{margin-top:18px}
 .nav-spacer{height:90px}
 
 /* ---------- view switching ---------- */
-#v-home,#v-add,#v-wallet{display:none}
+#v-home,#v-add,#v-wallet,#v-transaction{display:none}
 body[data-view="home"] #v-home{display:block}
 body[data-view="add"] #v-add{display:block}
 body[data-view="wallet"] #v-wallet{display:block}
+body[data-view="transaction"] #v-transaction{display:block}
 body[data-view="add"] .savebar{display:block}
 .savebar{display:none}
 
 /* ---------- navbar ---------- */
 .navbar{
   position:fixed; left:0; right:0; bottom:0; z-index:15;
-  display:grid; grid-template-columns:repeat(3,1fr);
+  display:grid; grid-template-columns:repeat(4,1fr);
   background:var(--card); border-top:1.5px solid var(--line);
-  padding:8px 8px calc(8px + env(safe-area-inset-bottom));
+  padding:8px 4px calc(8px + env(safe-area-inset-bottom));
 }
 .navbtn{
   background:none; border:none; cursor:pointer; display:flex; flex-direction:column;
   align-items:center; gap:3px; padding:6px 0; color:var(--muted);
-  font-family:var(--disp); font-weight:700; font-size:11px;
+  font-family:var(--disp); font-weight:700; font-size:10.5px;
 }
 .navbtn .ic{font-size:21px; line-height:1; filter:grayscale(1) opacity(.5); transition:.15s}
 .navbtn.sel{color:var(--ink)}
@@ -426,13 +427,17 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     <div class="dots" id="reportdots"></div>
   </section>
 
-  <section>
-    <div class="label">Transaction History</div>
-    <div id="tx-list"></div>
-    <div class="lm-wrap" id="lm-wrap" style="display:none"><button id="loadmore" type="button">Load More</button></div>
-  </section>
-
   <div class="state" id="home-state"></div>
+  <footer class="foot">duitkita_v2 · 2026</footer>
+  <div class="nav-spacer" aria-hidden="true"></div>
+</main>
+
+<!-- ==================== TRANSACTION ==================== -->
+<main id="v-transaction">
+  <div class="mfilter" id="tx-members"></div>
+  <div id="tx-list"></div>
+  <div class="lm-wrap" id="lm-wrap" style="display:none"><button id="loadmore" type="button">Load More</button></div>
+  <div class="state" id="tx-state"></div>
   <footer class="foot">duitkita_v2 · 2026</footer>
   <div class="nav-spacer" aria-hidden="true"></div>
 </main>
@@ -508,6 +513,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 <nav class="navbar">
   <button class="navbtn sel" data-view="home" type="button"><span class="ic">🏠</span>Home</button>
   <button class="navbtn" data-view="add" type="button"><span class="ic">➕</span>Add</button>
+  <button class="navbtn" data-view="transaction" type="button"><span class="ic">📋</span>Transaction</button>
   <button class="navbtn" data-view="wallet" type="button"><span class="ic">👛</span>Wallet</button>
 </nav>
 
@@ -595,6 +601,7 @@ document.querySelectorAll(".navbtn").forEach(btn=>{
     window.scrollTo(0,0);
     if(v==="home") loadHome();
     if(v==="wallet") loadWallets();
+    if(v==="transaction") loadTransactionPage();
   };
 });
 
@@ -1095,6 +1102,38 @@ function homeRows(){
   return TX.member==="all" ? TX.all : TX.all.filter(r=>r.memberId===TX.member);
 }
 
+/* ================= TRANSACTION (its own page, shares TX.member with Home) ================= */
+function buildTxMembers(){
+  const el=$("tx-members"); el.innerHTML="";
+  const mk=(id,label)=>{
+    const b=document.createElement("button");
+    b.type="button"; b.textContent=label;
+    if(TX.member===id) b.classList.add("sel");
+    b.onclick=()=>{ TX.member=id; TX.shown=PAGE; buildTxMembers(); renderTxPage(); };
+    el.appendChild(b);
+  };
+  mk("all","Everyone");
+  D.members.forEach(m=>mk(m.id, m.name));
+}
+
+async function loadTransactionPage(){
+  if(!D.members.length) return;
+  buildTxMembers();
+  $("tx-state").innerHTML = TX.all.length ? "" : "Loading…";
+  try{
+    const lst = await api({action:"list"});
+    TX.all = lst.entries || [];
+    $("tx-state").innerHTML = "";
+    renderTxPage();
+  }catch(e){
+    $("tx-state").innerHTML = "Couldn't load — <button id='t-retry' type='button'>Retry</button>"+
+      "<div class='raw'>"+esc(e.message)+"</div>";
+    $("t-retry").onclick = loadTransactionPage;
+  }
+}
+
+function renderTxPage(){ renderTxList(homeRows()); }
+
 /* month helpers */
 function monthKeyOffset(offset){
   const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-offset);
@@ -1122,7 +1161,6 @@ function renderHome(){
   renderOverviewSlides();
   renderBudgetSlides();
   renderReportSlides();
-  renderTxList(homeRows()); // transaction history stays independent of the month slide
 }
 
 /* ---- overview: slideable, one card per month, synced with budgets ---- */
@@ -1489,7 +1527,7 @@ function attachSwipeDelete(wrap, entry){
     try{
       await api({action:"deleteTx", loggedAt:entry.loggedAt});
       TX.all = TX.all.filter(x=>x.loggedAt!==entry.loggedAt);
-      renderHome();
+      renderTxPage();
     }catch(e){ trash.disabled=false; trash.textContent="⚠️"; }
   };
 }
@@ -1595,7 +1633,7 @@ function openTxEdit(entry){
       const i = TX.all.findIndex(x=>x.loggedAt===E.loggedAt);
       if(i>=0) TX.all[i] = { loggedAt:E.loggedAt, date:E.date, memberId:E.memberId,
         categoryId:E.categoryId, amount:E.amount, walletId:E.walletId, type:E.type, note:(E.note||"").trim() };
-      closeSheet(); renderHome();
+      closeSheet(); renderHome(); renderTxPage();
     }catch(e){ b.disabled=false; b.textContent="Couldn't save — "+e.message; }
   }
   render();
