@@ -8,10 +8,10 @@
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Duit Kita">
 <link rel="apple-touch-icon" href="icon-180.png">
-<meta name="theme-color" content="#F4F6F1">
+<meta name="theme-color" content="#0E1116">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,10 +19,11 @@
 
 <style>
 :root{
-  --paper:#F4F6F1; --card:#FFFFFF; --ink:#17251D; --muted:#6B776F;
-  --line:#DCE2DA; --coin:#F2C230;
-  --person:#1E7A50; --person-tint:#E2EFE7; --person-deep:#155C3B;
-  --exp:#B23A2E; --inc:#1E7A50;
+  --paper:#0E1116; --card:#191D24; --card-2:#232935; --ink:#F3F5F8; --muted:#8A929E;
+  --line:#2A2F3A; --coin:#CFA94D;
+  --accent:#2DD4BF; --accent-dim:#1E8578; --accent-tint:#2DD4BF1F;
+  --person:#22B378; --person-tint:#22B37826; --person-deep:#5FE0AE;
+  --exp:#E5573D; --inc:#22B378;
   --radius:16px;
   --disp:"Bricolage Grotesque", system-ui, sans-serif;
   --num:"Space Grotesk", ui-monospace, monospace;
@@ -82,7 +83,7 @@ body[data-view="add"] .savebar{display:block}
   font-family:var(--disp); font-weight:700; font-size:10.5px;
 }
 .navbtn .ic{font-size:21px; line-height:1; filter:grayscale(1) opacity(.5); transition:.15s}
-.navbtn.sel{color:var(--ink)}
+.navbtn.sel{color:var(--accent)}
 .navbtn.sel .ic{filter:none}
 
 /* ---------- generic chips ---------- */
@@ -96,17 +97,17 @@ body[data-view="add"] .savebar{display:block}
   font-family:var(--body); cursor:pointer; transition:.15s;
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:8px 4px;
 }
-.chip.sel{border-color:var(--person); background:var(--person-tint); color:var(--person-deep); border-width:2px}
+.chip.sel{border-color:var(--accent); background:var(--accent-tint); color:var(--ink); border-width:2px}
 .chip.num{font-family:var(--num); font-weight:700; font-size:16px}
 .chip.wal{align-items:flex-start; padding-left:14px; text-align:left}
 .chip.wal small{font-size:11.5px; color:var(--muted); font-weight:600}
-.chip.sel.wal small{color:var(--person-deep); opacity:.75}
+.chip.sel.wal small{color:var(--accent); opacity:.85}
 .chip.add{border-style:dashed; color:var(--muted); font-weight:700}
 
 .reveal{display:none; margin-top:10px}
 .reveal.show{display:block}
 .reveal input{
-  width:100%; min-height:56px; border:2px solid var(--person); border-radius:var(--radius);
+  width:100%; min-height:56px; border:2px solid var(--accent); border-radius:var(--radius);
   padding:0 16px; font-family:var(--num); font-size:20px; font-weight:700;
   background:var(--card); color:var(--ink); outline:none;
 }
@@ -120,7 +121,7 @@ body[data-view="add"] .savebar{display:block}
   min-height:44px; border:none; border-radius:999px; background:transparent;
   font-family:var(--disp); font-weight:700; font-size:15px; color:var(--muted); cursor:pointer; transition:.15s;
 }
-.type button.sel{background:var(--ink); color:#fff}
+.type button.sel{background:var(--person); color:#06120C}
 
 /* ---------- member avatars ---------- */
 .who{display:flex; gap:22px; overflow-x:auto; padding:6px 2px 4px; scrollbar-width:none}
@@ -135,7 +136,7 @@ body[data-view="add"] .savebar{display:block}
   border:3px solid transparent; opacity:.45;
 }
 .who .nm{font-family:var(--disp); font-weight:700; font-size:13px; color:var(--muted)}
-.who button.sel .ava{opacity:1; transform:scale(1.07); box-shadow:0 6px 16px rgba(0,0,0,.18)}
+.who button.sel .ava{opacity:1; transform:scale(1.07); border-color:var(--person); box-shadow:0 0 16px -2px var(--person)}
 .who button.sel .nm{color:var(--ink)}
 .who .ava.plus{background:var(--card); border:2px dashed var(--line); color:var(--muted); opacity:1; font-size:26px}
 
@@ -152,8 +153,8 @@ body[data-view="add"] .savebar{display:block}
   font-size:25px; transition:.15s;
 }
 .chip-cat .lbl{font-size:11.5px; font-weight:600; color:var(--muted); white-space:nowrap; max-width:74px; overflow:hidden; text-overflow:ellipsis}
-.chip-cat.sel .circ{border:2.5px solid var(--person); background:var(--person-tint); transform:scale(1.06)}
-.chip-cat.sel .lbl{color:var(--person-deep); font-weight:700}
+.chip-cat.sel .circ{border:2.5px solid var(--accent); background:var(--accent-tint); transform:scale(1.06); box-shadow:0 0 14px -3px var(--accent)}
+.chip-cat.sel .lbl{color:var(--accent); font-weight:700}
 .chip-cat .circ.plus{border-style:dashed; color:var(--muted); font-size:24px}
 
 /* ---------- save bar ---------- */
@@ -167,10 +168,10 @@ body[data-view="add"] .savebar{display:block}
   background:var(--person); color:#fff; font-family:var(--disp); font-weight:800;
   font-size:18px; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.14);
 }
-#save:disabled{background:#C6CDC5; box-shadow:none}
+#save:disabled{background:#2A2F3A; color:var(--muted); box-shadow:none}
 #save .sub{display:block; font-family:var(--num); font-weight:500; font-size:12px; opacity:.85; margin-top:2px}
 .errbar{display:none; margin:0 0 10px; padding:12px 14px; border-radius:14px;
-  background:#FBEAE7; color:#8C2B1D; font-size:14px; font-weight:600}
+  background:#3A1E1A; color:#F0A79A; font-size:14px; font-weight:600}
 .errbar.show{display:block}
 
 /* ---------- HOME ---------- */
@@ -225,18 +226,26 @@ body[data-view="add"] .savebar{display:block}
 }
 .calcell.empty{background:transparent}
 .calcell.has{cursor:pointer; border-color:var(--line)}
-.calcell.has:active{background:var(--person-tint)}
-.calcell.today{border-color:var(--ink); border-width:1.5px}
+.calcell.has:active{background:var(--accent-tint)}
+.calcell.today{border-color:var(--accent); border-width:1.5px; box-shadow:0 0 10px -3px var(--accent)}
 .calcell .cd{font-family:var(--num); font-size:11px; font-weight:700; color:var(--ink)}
+.calcell.today .cd{color:var(--accent)}
 .calcell .ce{font-family:var(--num); font-size:8.5px; font-weight:700; color:var(--exp); line-height:1.15; white-space:nowrap}
 .calcell .ci{font-family:var(--num); font-size:8.5px; font-weight:700; color:var(--inc); line-height:1.15; white-space:nowrap}
 .cal-toggle-wrap{display:flex; justify-content:center; margin-top:10px}
+#caldots{display:none}
 .cal-toggle{
-  border:1.5px solid var(--line); background:var(--card); border-radius:999px;
-  font-family:var(--disp); font-weight:700; font-size:12px; color:var(--ink);
+  border:1.5px solid var(--accent); background:var(--accent-tint); border-radius:999px;
+  font-family:var(--disp); font-weight:700; font-size:12px; color:var(--accent);
   padding:8px 18px; cursor:pointer; min-height:38px;
 }
-.cal-toggle:active{background:var(--paper)}
+.cal-toggle:active{background:var(--accent);color:#06201C}
+/* calendar prev/next arrows */
+.cal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:8px}
+.cal-head .cal-month{margin-bottom:0; flex:1}
+.cal-arrow{flex:0 0 auto; width:30px; height:30px; border-radius:999px; border:none;
+  background:var(--card-2); color:var(--ink); font-size:16px; cursor:pointer; line-height:1}
+.cal-arrow:disabled{opacity:.3; cursor:default}
 
 /* monthly report pie */
 .rep-month-label{font-family:var(--disp); font-weight:800; font-size:19px; color:var(--ink); margin-bottom:14px; text-align:center}
@@ -256,18 +265,16 @@ body[data-view="add"] .savebar{display:block}
 .rep-totals .sr b.inc{color:var(--inc)}
 .legend{margin-top:16px; display:flex; flex-direction:column; gap:8px}
 .legrow{
-  display:flex; align-items:center; gap:10px; padding:10px 13px; border-radius:13px; cursor:pointer;
-  border:1.5px solid var(--line); background:var(--paper);
+  display:flex; align-items:center; gap:11px; padding:10px 13px; border-radius:13px; cursor:pointer;
+  border:1.5px solid var(--line); background:var(--card-2);
 }
-.legrow:active{background:var(--person-tint)}
-.legrow .sw{width:10px; height:10px; border-radius:3px; flex:0 0 10px}
-.legrow .em{font-size:15px}
+.legrow:active{background:var(--accent-tint)}
+.legdot{width:32px; height:32px; border-radius:999px; flex:0 0 32px; border:1.5px solid;
+  display:flex; align-items:center; justify-content:center; font-size:16px}
 .legrow .nm{flex:1; min-width:0; font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.legrow .val{font-family:var(--num); font-weight:700; font-size:12.5px; margin-right:2px}
+.legrow .val{font-family:var(--num); font-weight:700; font-size:12.5px; margin-right:2px; color:var(--ink)}
 .legrow .pctv{font-family:var(--num); font-size:11.5px; color:var(--muted); min-width:32px; text-align:right}
 .legrow .chev{color:var(--muted); font-size:16px; font-weight:700; opacity:.5}
-.legrow .val{display:block; font-family:var(--num); font-weight:700; font-size:11.5px; color:var(--muted)}
-.legrow .rr{display:flex; flex-direction:column; align-items:flex-end; gap:1px}
 .rep-empty{text-align:center; color:var(--muted); font-size:13px; padding:26px 10px}
 
 .mfilter{display:flex; gap:8px; overflow-x:auto; margin-top:12px; padding-bottom:2px; scrollbar-width:none}
@@ -277,16 +284,18 @@ body[data-view="add"] .savebar{display:block}
   border-radius:999px; background:var(--card); font-family:var(--disp);
   font-weight:700; font-size:13px; color:var(--ink); cursor:pointer;
 }
-.mfilter button.sel{background:var(--ink); border-color:var(--ink); color:#fff}
+.mfilter button.sel{background:var(--accent); border-color:var(--accent); color:#06201C}
 
 /* budgets */
 .bud{background:var(--card); border:1.5px solid var(--line); border-radius:14px;
   padding:12px 14px; margin-bottom:8px}
-.bud .top{display:flex; align-items:center; gap:9px; font-size:14px; font-weight:700}
+.bud .top{display:flex; align-items:center; gap:10px; font-size:14px; font-weight:700}
+.bud .top .budico{width:32px; height:32px; border-radius:999px; flex:0 0 32px; border:1.5px solid;
+  display:flex; align-items:center; justify-content:center; font-size:16px}
 .bud .top .em{font-size:17px}
 .bud .top .rem{margin-left:auto; font-family:var(--num); font-size:12.5px; font-weight:700}
 .bud .rem.ok{color:var(--inc)} .bud .rem.over{color:var(--exp)}
-.bar{height:7px; border-radius:999px; background:#EDF0EA; margin-top:9px; overflow:hidden}
+.bar{height:7px; border-radius:999px; background:var(--card-2); margin-top:9px; overflow:hidden}
 .bar i{display:block; height:100%; border-radius:999px; background:var(--inc); transition:width .3s}
 .bar i.warn{background:var(--coin)} .bar i.over{background:var(--exp)}
 .bud .sub{font-size:11.5px; color:var(--muted); margin-top:6px; font-family:var(--num)}
@@ -300,17 +309,19 @@ body[data-view="add"] .savebar{display:block}
   border:1.5px solid transparent; position:relative; z-index:1; background:var(--card);
   touch-action:pan-y; cursor:pointer;
 }
-.rcard.exp{background:#FBEDEB; border-color:#F3D9D4}
-.rcard.inc{background:#EAF3EC; border-color:#D5E7DA}
+.rcard.exp{background:var(--card); border-color:var(--line); border-left:3px solid var(--exp)}
+.rcard.inc{background:var(--card); border-color:var(--line); border-left:3px solid var(--inc)}
 .rcard .cico{
   width:40px; height:40px; border-radius:999px; flex:0 0 40px; position:relative;
-  background:#fff; border:1.5px solid var(--line);
+  background:var(--card-2); border:1.5px solid var(--line);
   display:flex; align-items:center; justify-content:center; font-size:19px;
 }
+.rcard.exp .cico{box-shadow:0 0 10px -2px var(--exp)}
+.rcard.inc .cico{box-shadow:0 0 10px -2px var(--inc)}
 .rcard .cico .badge{
   position:absolute; right:-4px; bottom:-4px; width:18px; height:18px; border-radius:50%;
   font-family:var(--disp); font-weight:800; font-size:9.5px; color:#fff;
-  display:flex; align-items:center; justify-content:center; border:1.5px solid #fff;
+  display:flex; align-items:center; justify-content:center; border:1.5px solid var(--card);
 }
 .rcard .mid{flex:1; min-width:0}
 .rcard .cat{font-weight:700; font-size:14.5px}
@@ -324,31 +335,34 @@ body[data-view="add"] .savebar{display:block}
   background:var(--card); color:var(--ink); font-family:var(--disp); font-weight:700; font-size:14px; cursor:pointer}
 
 /* ---------- WALLET ---------- */
-.wgroup{font-family:var(--disp); font-weight:800; font-size:17px; margin:22px 4px 10px}
+.wgroup{font-family:var(--disp); font-weight:800; font-size:17px; margin:22px 4px 10px; color:var(--ink)}
 .wcard{
-  border-radius:20px; padding:19px 21px; margin-bottom:12px; color:#fff;
-  display:flex; align-items:center; gap:12px; box-shadow:0 4px 14px rgba(0,0,0,.08);
+  border-radius:16px; padding:18px 20px; margin-bottom:12px; color:var(--ink);
+  background:var(--card); border:1.5px solid var(--line); border-left-width:4px;
+  display:flex; align-items:center; gap:12px;
 }
-.wcard.has-debt{border-radius:20px 20px 0 0; margin-bottom:0}
+.wcard.has-debt{border-radius:16px 16px 0 0; margin-bottom:0}
 .wcard .wmeta{flex:1; min-width:0}
+.wcard .wchip{width:38px; height:38px; border-radius:11px; flex:0 0 38px; display:flex;
+  align-items:center; justify-content:center; font-family:var(--disp); font-weight:800; font-size:16px}
 .wcard .wname{font-family:var(--disp); font-weight:700; font-size:16px}
-.wcard .whint{font-size:11.5px; opacity:.75; margin-top:3px}
+.wcard .whint{font-size:11.5px; color:var(--muted); margin-top:3px}
 .wcard .wval{font-family:var(--num); font-weight:700; font-size:22px; white-space:nowrap}
-.wcard .wedit{background:rgba(255,255,255,.25); border:none; color:#fff; border-radius:999px;
+.wcard .wedit{background:var(--card-2); border:none; color:var(--muted); border-radius:999px;
   width:33px; height:33px; font-size:14px; cursor:pointer; flex:0 0 33px}
 .debtbox{background:var(--card); border:1.5px solid var(--line); border-top:none;
-  border-radius:0 0 16px 16px; padding:10px 21px 13px; margin-bottom:12px}
+  border-radius:0 0 16px 16px; padding:10px 20px 13px; margin-bottom:12px}
 .debtbox .drow{display:flex; justify-content:space-between; align-items:center;
   font-size:12.5px; color:var(--exp); padding:3px 0}
 .debtbox .drow b{font-family:var(--num); font-weight:700}
 .debtbox .drow.approx{color:var(--muted); border-top:1px dashed var(--line); margin-top:2px; padding-top:6px}
 .debtbox .drow.approx b{color:var(--ink)}
 .swipepay{position:relative; margin-top:9px; height:33px; border-radius:999px; overflow:hidden;
-  background:#F1E4C8; border:1px solid #E3D2A6; display:flex; align-items:center;
+  background:var(--card-2); border:1px solid var(--line); display:flex; align-items:center;
   justify-content:center; cursor:pointer; touch-action:pan-y}
-.swipepay .fill{position:absolute; left:0; top:0; bottom:0; width:0; background:var(--coin)}
-.swipepay span{position:relative; z-index:1; font-size:11.5px; font-weight:700; color:#7A5C15}
-.swipepay.done{background:#E2EFE7; border-color:#CFE3D6; cursor:default}
+.swipepay .fill{position:absolute; left:0; top:0; bottom:0; width:0; background:var(--coin); opacity:.5}
+.swipepay span{position:relative; z-index:1; font-size:11.5px; font-weight:700; color:var(--coin)}
+.swipepay.done{background:var(--person-tint); border-color:transparent; cursor:default}
 .swipepay.done span{color:var(--inc)}
 .addbtn{
   width:100%; min-height:52px; border:1.5px dashed var(--line); border-radius:16px;
@@ -359,7 +373,7 @@ body[data-view="add"] .savebar{display:block}
 /* ---------- state / overlays ---------- */
 .state{margin-top:26px; text-align:center; color:var(--muted); font-size:14px; padding:0 20px}
 .state button{margin-top:12px; min-height:44px; padding:0 20px; border:none; border-radius:12px;
-  background:var(--ink); color:#fff; font-family:var(--disp); font-weight:700; cursor:pointer}
+  background:var(--accent); color:#06201C; font-family:var(--disp); font-weight:700; cursor:pointer}
 .state .raw{text-align:left; font-family:var(--num); font-size:11px; background:var(--card);
   border:1px solid var(--line); border-radius:10px; padding:10px; word-break:break-all; margin-top:14px}
 
@@ -367,7 +381,7 @@ body[data-view="add"] .savebar{display:block}
   align-items:flex-end; justify-content:center; z-index:30; backdrop-filter:blur(2px)}
 .ovl.show{display:flex}
 .sheet{
-  width:min(430px,100%); background:#fff; border-radius:22px 22px 0 0;
+  width:min(430px,100%); background:var(--card); border-radius:22px 22px 0 0;
   padding:24px 22px calc(20px + env(safe-area-inset-bottom));
   max-height:88vh; overflow-y:auto; animation:up .28s ease-out;
 }
@@ -380,27 +394,27 @@ body[data-view="add"] .savebar{display:block}
 .fld input, .fld select{
   width:100%; min-height:52px; border:1.5px solid var(--line); border-radius:14px;
   padding:0 14px; font-family:var(--body); font-size:16px; font-weight:600;
-  background:var(--card); color:var(--ink); outline:none;
+  background:var(--card-2); color:var(--ink); outline:none;
 }
 .fld input.num{font-family:var(--num); font-weight:700}
-.fld input:focus, .fld select:focus{border-color:var(--person)}
+.fld input:focus, .fld select:focus{border-color:var(--accent)}
 .emojis{display:flex; flex-wrap:wrap; gap:7px}
 .emojis button{
   width:44px; height:44px; border-radius:12px; border:1.5px solid var(--line);
-  background:var(--card); font-size:20px; cursor:pointer;
+  background:var(--card-2); font-size:20px; cursor:pointer;
 }
-.emojis button.sel{border-color:var(--person); background:var(--person-tint); border-width:2.5px}
+.emojis button.sel{border-color:var(--accent); background:var(--accent-tint); border-width:2.5px}
 .seg{display:grid; grid-template-columns:1fr 1fr; gap:8px}
 .seg button{
   min-height:46px; border:1.5px solid var(--line); border-radius:12px; background:var(--card);
   font-family:var(--disp); font-weight:700; font-size:14px; color:var(--ink); cursor:pointer;
 }
-.seg button.sel{background:var(--ink); border-color:var(--ink); color:#fff}
+.seg button.sel{background:var(--accent); border-color:var(--accent); color:#06201C}
 .sheet .go{
   width:100%; min-height:54px; margin-top:8px; border:none; border-radius:16px;
   background:var(--person); color:#fff; font-family:var(--disp); font-weight:800; font-size:16px; cursor:pointer;
 }
-.sheet .go:disabled{background:#C6CDC5}
+.sheet .go:disabled{background:#2A2F3A; color:var(--muted)}
 .sheet .ghost{
   width:100%; min-height:44px; margin-top:8px; border:none; border-radius:14px;
   background:none; color:var(--muted); font-family:var(--disp); font-weight:700; font-size:14px; cursor:pointer;
@@ -421,7 +435,7 @@ body[data-view="add"] .savebar{display:block}
 
 /* receipt */
 .slip .perf{height:12px; margin:-24px -22px 16px;
-  background:radial-gradient(circle at 10px -4px, transparent 8px, #fff 8.5px); background-size:20px 12px}
+  background:radial-gradient(circle at 10px -4px, transparent 8px, var(--card) 8.5px); background-size:20px 12px}
 .slip .row{display:flex; justify-content:space-between; padding:9px 0;
   border-bottom:1px dashed var(--line); font-size:15px}
 .slip .row b{font-family:var(--num)}
@@ -935,7 +949,7 @@ function openCategoriesSheet(){
   const list = S.memberId ? forMember(D.categories, S.memberId).filter(c=>c.kind===kind) : [];
   const rows = list.map(c=>`
     <div class="mrow">
-      <span class="dot" style="background:#EDF0EA;color:#17251D;font-size:16px">${esc(c.emoji||"✨")}</span>
+      <span class="dot" style="background:var(--card-2);color:var(--ink);font-size:16px">${esc(c.emoji||"✨")}</span>
       <span class="t"><b>${esc(c.name)}</b><small>${c.budget?("budget "+fmt(c.budget)+"/mo"):"no budget"}${c.ownerId===JOINT?" · shared":""}</small></span>
       <button class="x" data-edit="${esc(c.id)}" type="button" style="color:var(--muted)">✎</button>
       <button class="x" data-del="${esc(c.id)}" type="button">✕</button>
@@ -1199,13 +1213,26 @@ function weeksAvailable(){
 
 function wireCalSlider(slider, dots){
   slider.scrollLeft=0;
-  slider.onscroll = ()=>{
+  const total = slider.children.length;
+  const updateArrows = ()=>{
     const idx = Math.round(slider.scrollLeft/(slider.clientWidth||1));
     [...dots.children].forEach((s,j)=>s.classList.toggle("on", j===idx));
+    slider.querySelectorAll(".cal-arrow.prev").forEach(a=>a.disabled = idx>=total-1); // older
+    slider.querySelectorAll(".cal-arrow.next").forEach(a=>a.disabled = idx<=0);        // newer
   };
+  slider.onscroll = updateArrows;
   slider.querySelectorAll(".calcell[data-date]").forEach(c=>{
     c.onclick = ()=>openDayHistory(c.dataset.date);
   });
+  slider.querySelectorAll(".cal-arrow.prev").forEach(a=>a.onclick=()=>{
+    const idx = Math.round(slider.scrollLeft/(slider.clientWidth||1));
+    if(idx<total-1) slider.scrollTo({left:(idx+1)*slider.clientWidth, behavior:"smooth"});
+  });
+  slider.querySelectorAll(".cal-arrow.next").forEach(a=>a.onclick=()=>{
+    const idx = Math.round(slider.scrollLeft/(slider.clientWidth||1));
+    if(idx>0) slider.scrollTo({left:(idx-1)*slider.clientWidth, behavior:"smooth"});
+  });
+  updateArrows();
 }
 
 function renderTxCalendar(){
@@ -1252,7 +1279,11 @@ function renderCalWeek(){
 
     const page=document.createElement("div"); page.className="calpage week";
     page.innerHTML = `
-      <div class="cal-month">${esc(rangeLabel)}</div>
+      <div class="cal-head">
+        <button class="cal-arrow prev" type="button" aria-label="Previous">‹</button>
+        <div class="cal-month">${esc(rangeLabel)}</div>
+        <button class="cal-arrow next" type="button" aria-label="Next">›</button>
+      </div>
       <div class="calgrid calhead">${heads}</div>
       <div class="calgrid calbody">${cells}</div>`;
     slider.appendChild(page);
@@ -1302,7 +1333,11 @@ function renderCalMonth(){
     const monthLabel = d.toLocaleDateString("id-ID",{month:"long", year:"numeric"});
     const page=document.createElement("div"); page.className="calpage";
     page.innerHTML = `
-      <div class="cal-month">${esc(monthLabel)}</div>
+      <div class="cal-head">
+        <button class="cal-arrow prev" type="button" aria-label="Previous">‹</button>
+        <div class="cal-month">${esc(monthLabel)}</div>
+        <button class="cal-arrow next" type="button" aria-label="Next">›</button>
+      </div>
       <div class="calgrid calhead">${WEEKDAYS_ID.map(w=>`<div class="caldayhead">${w}</div>`).join("")}</div>
       <div class="calgrid calbody">${cells}</div>`;
     slider.appendChild(page);
@@ -1469,7 +1504,7 @@ function renderBudgetSlides(){
         const d=document.createElement("div");
         d.className="bud"; d.style.cursor="pointer";
         d.innerHTML=`
-          <div class="top"><span class="em">${esc(b.emoji||"✨")}</span>${esc(b.name)}
+          <div class="top"><span class="budico" style="background:${catColor(b.categoryId)}22;border-color:${catColor(b.categoryId)}">${esc(b.emoji||"✨")}</span>${esc(b.name)}
             <span class="rem ${over&&!income?"over":"ok"}">${remLabel}</span></div>
           <div class="bar"><i class="${cls}" style="width:${pct}%"></i></div>
           <div class="sub">${fmt(b.used)} of ${fmt(b.budget)}${income?" target":""}</div>`;
@@ -1487,8 +1522,14 @@ function renderBudgetSlides(){
 }
 
 /* ---- monthly report: slideable pie of expense/income by category ---- */
-const PIE_COLORS = ["#1E7A50","#2D6CDF","#C9962A","#B04A72","#8B5C8F","#0E7A6B",
-                    "#B23A2E","#6B5CA5","#A5603A","#3F8F6B","#D08A3E","#7A6CB5"];
+const PIE_COLORS = ["#3B4F9E","#1FA971","#9B2D52","#D9663F","#5A6270","#8A55C7",
+                    "#2DD4BF","#C79A3E","#3B82F6","#B23A6E","#4B9E8A","#6B7DE8"];
+/* stable color for a category id (used for budget + category icon chips) */
+function catColor(id){
+  let h=0; const s=String(id);
+  for(let i=0;i<s.length;i++){ h=(h*31 + s.charCodeAt(i))>>>0; }
+  return PIE_COLORS[h % PIE_COLORS.length];
+}
 
 /* build an SVG donut from slices [{value,color,emoji}]; labels big-enough slices */
 function pieSVG(items, total){
@@ -1560,8 +1601,7 @@ function renderReportSlides(){
       const legend = items.map(it=>{
         const pct=Math.round(it.value/totalExp*100);
         return `<div class="legrow" data-cat="${esc(it.categoryId)}" data-month="${esc(key)}">
-            <span class="sw" style="background:${it.color}"></span>
-            <span class="em">${esc(it.emoji||"✨")}</span>
+            <span class="legdot" style="background:${it.color}22;border-color:${it.color}">${esc(it.emoji||"✨")}</span>
             <span class="nm">${esc(it.name)}</span>
             <span class="val">${fmt(it.value)}</span>
             <span class="pctv">${pct}%</span>
@@ -1867,7 +1907,7 @@ async function loadWallets(){
   }
 }
 
-const WALLET_THEMES = ["#1E7A50","#2D6CDF","#8B5C8F","#C9962A","#0E7A6B","#B04A72","#6B5CA5","#A5603A"];
+const WALLET_THEMES = ["#22B378","#3B82F6","#A855C7","#CFA94D","#2DD4BF","#E5573D","#6B7DE8","#D08A3E"];
 function walletTheme(w, i){ return WALLET_THEMES[i % WALLET_THEMES.length]; }
 
 function renderWallets(){
@@ -1892,8 +1932,9 @@ function renderWallets(){
       const color = walletTheme(w, idx++);
       const card=document.createElement("div");
       card.className="wcard"+(linked.length?" has-debt":"");
-      card.style.background=color;
+      card.style.borderLeftColor=color;
       card.innerHTML=`
+        <div class="wchip" style="background:${color}22;color:${color}">${esc((w.name[0]||"?").toUpperCase())}</div>
         <div class="wmeta"><div class="wname">${esc(w.name)}</div>
           <div class="whint">${BAL.starting[w.id]?("start "+fmt(BAL.starting[w.id])):"no starting balance set"}</div></div>
         <div class="wval">${fmt(val)}</div>
@@ -1925,11 +1966,12 @@ function renderWallets(){
     orphanDebts.forEach(dw=>{
       const amt=BAL.debts[dw.id]||0;
       const card=document.createElement("div");
-      card.className="wcard"; card.style.background="#B23A2E";
+      card.className="wcard"; card.style.borderLeftColor="var(--exp)";
       card.innerHTML=`
+        <div class="wchip" style="background:#E5573D22;color:var(--exp)">${esc((dw.name[0]||"?").toUpperCase())}</div>
         <div class="wmeta"><div class="wname">${esc(dw.name)}</div>
           <div class="whint">credit / bill · not linked to a wallet yet</div></div>
-        <div class="wval">−${fmt(amt)}</div>
+        <div class="wval" style="color:var(--exp)">−${fmt(amt)}</div>
         <button class="wedit" type="button" aria-label="Edit">✎</button>`;
       card.querySelector(".wedit").onclick=()=>openWalletSheet(dw.id);
       el.appendChild(card);
