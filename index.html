@@ -130,6 +130,27 @@ body[data-view="add"] .savebar{display:block}
 .reveal .hint{font-size:12px; color:var(--muted); margin-top:6px; padding-left:4px}
 #note-input{font-family:var(--body); font-size:16px; font-weight:600}
 
+/* primary amount field + quick-fill pills */
+.amtbox{
+  display:flex; align-items:center; gap:8px; width:100%; min-height:62px; margin-top:2px;
+  border:2px solid var(--accent); border-radius:var(--radius); padding:0 16px; background:var(--card);
+}
+.amtbox .amtcur{font-family:var(--num); font-weight:700; font-size:18px; color:var(--muted)}
+.amtbox input{
+  flex:1; min-width:0; border:none; background:none; outline:none; padding:0;
+  font-family:var(--num); font-weight:700; font-size:25px; color:var(--ink);
+}
+.amtbox input::placeholder{color:var(--muted)}
+.quickfill{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px}
+.qf{
+  min-height:30px; padding:0 13px; border-radius:999px; border:1px solid var(--line);
+  background:var(--card); color:var(--ink); font-family:var(--num); font-weight:700; font-size:12px;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+}
+.qf:active{background:var(--accent-tint)}
+.qf.sel{border-color:var(--accent); background:var(--accent-tint); color:var(--accent)}
+.qf.edit{border-style:dashed; color:var(--muted); min-width:36px; font-size:13px}
+
 /* ---------- type toggle ---------- */
 .type{display:grid; grid-template-columns:1fr 1fr; border:1.5px solid var(--line);
   border-radius:999px; background:var(--card); padding:4px; margin-top:14px}
@@ -536,11 +557,11 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 
   <section>
     <div class="label">Amount</div>
-    <div class="grid g-amt" id="amts"></div>
-    <div class="reveal" id="amt-reveal">
-      <input id="amt-input" inputmode="numeric" placeholder="e.g. 35.000" autocomplete="off">
-      <div class="hint">Type the full amount in Rupiah</div>
+    <div class="amtbox">
+      <span class="amtcur">Rp</span>
+      <input id="amt-input" inputmode="numeric" placeholder="0" autocomplete="off">
     </div>
+    <div class="quickfill" id="quickfill"></div>
   </section>
 
   <section>
@@ -607,12 +628,11 @@ const esc = s => String(s??"").replace(/[<>&"]/g, c => ({"<":"&lt;",">":"&gt;","
 const JOINT = "joint";
 const PALETTE = ["#1E7A50","#B04A72","#2D6CDF","#C9962A","#8B5C8F","#0E7A6B","#B23A2E","#6B5CA5"];
 const EMOJI_SET = ["🍜","🛵","🛍️","🧾","🛒","🍼","💵","💼","🎁","🔁","🏠","📅","⛽","💊","🎬","📚","✈️","☕","🐱","✨"];
-const AMTS = [50000, 100000];
 const DAYS = ["Today","Yesterday","Custom"];
 
 /* app data + ui state */
 const D = { members:[], wallets:[], categories:[] };
-const S = { type:"Expense", memberId:null, categoryId:null, amount:null, custom:true,
+const S = { type:"Expense", memberId:null, categoryId:null, amount:null,
             walletId:null, note:"", day:"Today", customDate:null };
 const TX = { all:[], shown:10, member:"all" };
 const PAGE = 10;
@@ -790,36 +810,79 @@ function setType(t){
 
 /* amounts */
 function parseAmt(v){ const n=Number(String(v).replace(/[^\d]/g,"")); return n>0?n:null; }
-function buildAmts(){
-  const el = $("amts"); el.innerHTML="";
-  [...AMTS,"Custom"].forEach(it=>{
+
+/* quick-fill preset amounts (customizable, persisted) */
+const DEFAULT_QF = [50000, 100000];
+let QUICKFILL = (function(){
+  try{ const s=localStorage.getItem("duitkita-quickfill"); if(s){ const a=JSON.parse(s); if(Array.isArray(a)&&a.length) return a; } }catch(e){}
+  return DEFAULT_QF.slice();
+})();
+function saveQuickfill(){ try{ localStorage.setItem("duitkita-quickfill", JSON.stringify(QUICKFILL)); }catch(e){} }
+
+function buildQuickfill(){
+  const el = $("quickfill"); el.innerHTML="";
+  QUICKFILL.slice().sort((a,b)=>a-b).forEach(v=>{
     const b=document.createElement("button");
-    b.type="button"; b.className="chip num";
-    b.textContent = it==="Custom" ? "···" : (it/1000)+"k";
-    if(it==="Custom") b.dataset.custom="1";
+    b.type="button"; b.className="qf";
+    b.textContent = compactAmt(v);
     b.onclick=()=>{
-      el.querySelectorAll(".chip").forEach(c=>c.classList.remove("sel"));
-      b.classList.add("sel");
-      if(it==="Custom"){ S.custom=true; S.amount=parseAmt($("amt-input").value);
-        $("amt-reveal").classList.add("show"); $("amt-input").focus(); }
-      else { S.custom=false; S.amount=it; $("amt-reveal").classList.remove("show"); }
-      refresh();
+      S.amount=v; $("amt-input").value=v.toLocaleString("id-ID");
+      [...el.querySelectorAll(".qf")].forEach(x=>x.classList.remove("sel"));
+      b.classList.add("sel"); refresh();
     };
     el.appendChild(b);
   });
-  presetCustom();
+  const edit=document.createElement("button");
+  edit.type="button"; edit.className="qf edit"; edit.textContent="✎";
+  edit.setAttribute("aria-label","Edit quick amounts");
+  edit.onclick=openQuickfillSheet;
+  el.appendChild(edit);
 }
-function presetCustom(){
-  S.custom=true; S.amount=parseAmt($("amt-input").value);
-  [...$("amts").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.dataset.custom==="1"));
-  $("amt-reveal").classList.add("show");
+
+function openQuickfillSheet(){
+  const rows = QUICKFILL.slice().sort((a,b)=>a-b).map(v=>`
+    <div class="mrow">
+      <span class="dot" style="background:var(--accent-tint);color:var(--accent);font-family:var(--num);font-size:12px">${compactAmt(v)}</span>
+      <span class="t"><b>${fmt(v)}</b><small>quick-fill shortcut</small></span>
+      <button class="x" data-rm="${v}" type="button">✕</button>
+    </div>`).join("");
+  openSheet(`
+    <h2>Quick amounts</h2>
+    <div class="sd">Shortcuts shown under the amount field.</div>
+    <div class="manage-list">${rows || "<div class='sd'>None yet.</div>"}</div>
+    <div class="fld"><label>Add an amount</label>
+      <input id="qf-new" class="num" inputmode="numeric" placeholder="e.g. 25.000"></div>
+    <button class="go" id="qf-add" type="button">Add amount</button>
+    <button class="ghost" id="qf-close" type="button">Done</button>
+  `);
+  $("qf-new").addEventListener("input", e=>{
+    const n=Number(String(e.target.value).replace(/[^\d]/g,""));
+    e.target.value = n ? n.toLocaleString("id-ID") : "";
+  });
+  $("qf-close").onclick = closeSheet;
+  $("qf-add").onclick = ()=>{
+    const n=Number(String($("qf-new").value).replace(/[^\d]/g,""))||0;
+    if(!(n>0)) return;
+    if(!QUICKFILL.includes(n)) QUICKFILL.push(n);
+    saveQuickfill(); buildQuickfill(); openQuickfillSheet();
+  };
+  $("sheet-body").querySelectorAll("[data-rm]").forEach(bb=>{
+    bb.onclick=()=>{
+      const v=Number(bb.dataset.rm);
+      QUICKFILL = QUICKFILL.filter(x=>x!==v);
+      saveQuickfill(); buildQuickfill(); openQuickfillSheet();
+    };
+  });
 }
+
 $("amt-input").addEventListener("input", e=>{
   const n=parseAmt(e.target.value);
   e.target.value = n ? n.toLocaleString("id-ID") : "";
-  S.amount=n; refresh();
+  S.amount=n;
+  [...$("quickfill").querySelectorAll(".qf")].forEach(x=>x.classList.remove("sel"));
+  refresh();
 });
-buildAmts();
+buildQuickfill();
 
 /* days */
 const dayInput = $("day-input");
@@ -915,8 +978,9 @@ function resetForm(){
   S.categoryId=null; S.amount=null; S.day="Today"; S.customDate=null; S.note="";
   $("amt-input").value=""; $("day-reveal").classList.remove("show");
   $("note-input").value=""; $("note-reveal").classList.remove("show");
+  [...$("quickfill").querySelectorAll(".qf")].forEach(x=>x.classList.remove("sel"));
   [...$("days").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.textContent==="Today"));
-  buildCats(); presetCustom(); refresh();
+  buildCats(); refresh();
 }
 
 /* ================= sheets (modals) ================= */
