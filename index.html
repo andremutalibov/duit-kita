@@ -24,10 +24,21 @@
   --accent:#2DD4BF; --accent-dim:#1E8578; --accent-tint:#2DD4BF1F;
   --person:#22B378; --person-tint:#22B37826; --person-deep:#5FE0AE;
   --exp:#E5573D; --inc:#22B378;
+  --disabled-bg:#2A2F3A; --err-bg:#3A1E1A; --err-fg:#F0A79A;
+  --card-shadow:none;
   --radius:16px;
   --disp:"Bricolage Grotesque", system-ui, sans-serif;
   --num:"Space Grotesk", ui-monospace, monospace;
   --body:system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+:root[data-theme="light"]{
+  --paper:#EEF1F5; --card:#FFFFFF; --card-2:#F3F5F8; --ink:#1A222C; --muted:#6B7480;
+  --line:#E2E6EC; --coin:#B8912F;
+  --accent:#0FA896; --accent-dim:#0B7D70; --accent-tint:#0FA8961A;
+  --person:#1FA971; --person-tint:#1FA97122; --person-deep:#0F7A50;
+  --exp:#D9463A; --inc:#159C63;
+  --disabled-bg:#D8DCE2; --err-bg:#FBEAE7; --err-fg:#8C2B1D;
+  --card-shadow:0 1px 3px rgba(20,30,45,.06);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
@@ -43,7 +54,12 @@ header{
 }
 header h1{font-family:var(--disp); font-weight:800; font-size:25px; letter-spacing:-.02em}
 header h1 .dot{color:var(--person)}
-header .today{font-family:var(--num); font-size:13px; color:var(--muted)}
+.theme-toggle{
+  width:38px; height:38px; border-radius:999px; border:1.5px solid var(--line);
+  background:var(--card-2); font-size:17px; cursor:pointer; line-height:1;
+  display:flex; align-items:center; justify-content:center; flex:0 0 38px;
+}
+.theme-toggle:active{background:var(--accent-tint)}
 main{padding:0 16px}
 section{margin-top:18px}
 .label{
@@ -168,10 +184,10 @@ body[data-view="add"] .savebar{display:block}
   background:var(--person); color:#fff; font-family:var(--disp); font-weight:800;
   font-size:18px; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.14);
 }
-#save:disabled{background:#2A2F3A; color:var(--muted); box-shadow:none}
+#save:disabled{background:var(--disabled-bg); color:var(--muted); box-shadow:none}
 #save .sub{display:block; font-family:var(--num); font-weight:500; font-size:12px; opacity:.85; margin-top:2px}
 .errbar{display:none; margin:0 0 10px; padding:12px 14px; border-radius:14px;
-  background:#3A1E1A; color:#F0A79A; font-size:14px; font-weight:600}
+  background:var(--err-bg); color:var(--err-fg); font-size:14px; font-weight:600}
 .errbar.show{display:block}
 
 /* ---------- HOME ---------- */
@@ -183,7 +199,7 @@ body[data-view="add"] .savebar{display:block}
 .sumslider::-webkit-scrollbar{display:none}
 .sumcard{
   flex:0 0 100%; scroll-snap-align:start; background:var(--card);
-  border:1.5px solid var(--line); border-radius:20px; padding:20px 22px;
+  border:1.5px solid var(--line); border-radius:20px; padding:20px 22px; box-shadow:var(--card-shadow);
 }
 .sumcard .cap{font-family:var(--disp); font-weight:700; font-size:14px; color:var(--muted)}
 .sumcard .dt{font-family:var(--num); font-size:12px; color:var(--muted); margin-top:2px}
@@ -214,7 +230,7 @@ body[data-view="add"] .savebar{display:block}
   -webkit-overflow-scrolling:touch; scrollbar-width:none; margin-top:12px}
 .calslider::-webkit-scrollbar{display:none}
 .calpage{flex:0 0 100%; scroll-snap-align:start; min-width:0;
-  background:var(--card); border:1.5px solid var(--line); border-radius:20px; padding:16px 12px 12px}
+  background:var(--card); border:1.5px solid var(--line); border-radius:20px; padding:16px 12px 12px; box-shadow:var(--card-shadow)}
 .cal-month{font-family:var(--disp); font-weight:800; font-size:17px; text-align:center; margin-bottom:12px}
 .calgrid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px}
 .caldayhead{text-align:center; font-family:var(--disp); font-weight:700; font-size:10px; color:var(--muted); padding-bottom:2px}
@@ -254,7 +270,7 @@ body[data-view="add"] .savebar{display:block}
 .reportslider::-webkit-scrollbar{display:none}
 .reportpage{
   flex:0 0 100%; scroll-snap-align:start; min-width:0;
-  background:var(--card); border:1.5px solid var(--line); border-radius:20px; padding:20px 18px 16px;
+  background:var(--card); border:1.5px solid var(--line); border-radius:20px; padding:20px 18px 16px; box-shadow:var(--card-shadow);
 }
 .pie-wrap{display:flex; justify-content:center; align-items:center; position:relative}
 .pie-wrap svg{width:100%; max-width:190px; height:auto}
@@ -287,7 +303,7 @@ body[data-view="add"] .savebar{display:block}
 .mfilter button.sel{background:var(--accent); border-color:var(--accent); color:#06201C}
 
 /* budgets */
-.bud{background:var(--card); border:1.5px solid var(--line); border-radius:14px;
+.bud{background:var(--card); border:1.5px solid var(--line); border-radius:14px; box-shadow:var(--card-shadow);
   padding:12px 14px; margin-bottom:8px}
 .bud .top{display:flex; align-items:center; gap:10px; font-size:14px; font-weight:700}
 .bud .top .budico{width:32px; height:32px; border-radius:999px; flex:0 0 32px; border:1.5px solid;
@@ -414,7 +430,7 @@ body[data-view="add"] .savebar{display:block}
   width:100%; min-height:54px; margin-top:8px; border:none; border-radius:16px;
   background:var(--person); color:#fff; font-family:var(--disp); font-weight:800; font-size:16px; cursor:pointer;
 }
-.sheet .go:disabled{background:#2A2F3A; color:var(--muted)}
+.sheet .go:disabled{background:var(--disabled-bg); color:var(--muted)}
 .sheet .ghost{
   width:100%; min-height:44px; margin-top:8px; border:none; border-radius:14px;
   background:none; color:var(--muted); font-family:var(--disp); font-weight:700; font-size:14px; cursor:pointer;
@@ -449,7 +465,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 
 <header>
   <h1>Duit Kita<span class="dot">.</span></h1>
-  <div class="today" id="hdr-date"></div>
+  <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light/dark theme">☀️</button>
 </header>
 
 <!-- ==================== HOME ==================== -->
@@ -603,7 +619,26 @@ const PAGE = 10;
 let BAL = { balances:{}, debts:{}, starting:{} };
 
 const now = new Date();
-$("hdr-date").textContent = now.toLocaleDateString("id-ID",{weekday:"short", day:"numeric", month:"short"});
+
+/* ================= theme (dark default, light option) ================= */
+const THEME_KEY = "duitkita-theme";
+function applyTheme(t){
+  document.documentElement.setAttribute("data-theme", t);
+  const btn=$("theme-toggle"); if(btn) btn.textContent = (t==="light" ? "🌙" : "☀️");
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.content = (t==="light" ? "#EEF1F5" : "#0E1116");
+}
+(function initTheme(){
+  let t="dark";
+  try{ t = localStorage.getItem(THEME_KEY) || "dark"; }catch(e){}
+  applyTheme(t);
+})();
+$("theme-toggle").onclick = ()=>{
+  const cur = document.documentElement.getAttribute("data-theme")==="light" ? "light" : "dark";
+  const next = cur==="light" ? "dark" : "light";
+  try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
+  applyTheme(next);
+};
 
 /* ================= api ================= */
 async function api(payload){
