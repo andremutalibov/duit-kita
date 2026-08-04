@@ -2128,7 +2128,11 @@ function attachSwipePay(bar, walletId){
 }
 async function confirmPaid(walletId, bar){
   bar.querySelector("span").textContent="Confirming…";
-  try{ await api({action:"markPaid", walletId}); loadWallets(); }
+  try{
+    await api({action:"markPaid", walletId});
+    TX.all = []; // force reload so the auto-created Debt Payment transaction appears
+    loadWallets();
+  }
   catch(e){ bar.querySelector("span").textContent="Couldn't confirm — tap to retry"; bar.querySelector(".fill").style.width="0px"; }
 }
 
