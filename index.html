@@ -119,6 +119,7 @@ body[data-view="add"] .savebar{display:block}
 .chip.wal small{font-size:11.5px; color:var(--muted); font-weight:600}
 .chip.sel.wal small{color:var(--accent); opacity:.85}
 .chip.add{border-style:dashed; color:var(--muted); font-weight:700}
+.trf-disabled{opacity:.35; cursor:not-allowed}
 
 .reveal{display:none; margin-top:10px}
 .reveal.show{display:block}
@@ -152,7 +153,7 @@ body[data-view="add"] .savebar{display:block}
 .qf.edit{border-style:dashed; color:var(--muted); min-width:36px; font-size:13px}
 
 /* ---------- type toggle ---------- */
-.type{display:grid; grid-template-columns:1fr 1fr; border:1.5px solid var(--line);
+.type{display:grid; grid-template-columns:1fr 1fr 1fr; border:1.5px solid var(--line);
   border-radius:999px; background:var(--card); padding:4px; margin-top:14px}
 .type button{
   min-height:44px; border:none; border-radius:999px; background:transparent;
@@ -348,6 +349,8 @@ body[data-view="add"] .savebar{display:block}
 }
 .rcard.exp{background:var(--card); border-color:var(--line); border-left:3px solid var(--exp)}
 .rcard.inc{background:var(--card); border-color:var(--line); border-left:3px solid var(--inc)}
+.rcard.trf{background:var(--card); border-color:var(--line); border-left:3px solid var(--accent)}
+.rcard.trf .cico{box-shadow:0 0 10px -2px var(--accent)}
 .rcard .cico{
   width:40px; height:40px; border-radius:999px; flex:0 0 40px; position:relative;
   background:var(--card-2); border:1.5px solid var(--line);
@@ -536,6 +539,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   <div class="type">
     <button id="t-exp" class="sel" type="button">Expense</button>
     <button id="t-inc" type="button">Income</button>
+    <button id="t-trf" type="button">Transfer</button>
   </div>
 
   <section>
@@ -543,7 +547,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     <div class="who" id="members"></div>
   </section>
 
-  <section>
+  <section id="cat-sec">
     <div class="label">
       <span>Category</span>
       <button class="mini" id="mng-cat" type="button">Manage</button>
@@ -552,6 +556,17 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     <div class="reveal" id="note-reveal">
       <input id="note-input" type="text" maxlength="140" placeholder="Add a note (optional)" autocomplete="off">
       <div class="hint">Optional — e.g. what it was for</div>
+    </div>
+  </section>
+
+  <section id="transfer-sec" style="display:none">
+    <div class="label">From</div>
+    <div class="grid g-wal" id="from-wallets"></div>
+    <div class="label" style="margin-top:16px">To</div>
+    <div class="grid g-wal" id="to-wallets"></div>
+    <div style="margin-top:12px">
+      <input id="transfer-note" type="text" maxlength="140" placeholder="Note (optional)" autocomplete="off"
+        style="width:100%;min-height:52px;border:1.5px solid var(--line);border-radius:var(--radius);padding:0 16px;font-family:var(--body);font-size:16px;font-weight:600;background:var(--card);color:var(--ink);outline:none;">
     </div>
   </section>
 
@@ -633,7 +648,8 @@ const DAYS = ["Today","Yesterday","Custom"];
 /* app data + ui state */
 const D = { members:[], wallets:[], categories:[] };
 const S = { type:"Expense", memberId:null, categoryId:null, amount:null,
-            walletId:null, note:"", day:"Today", customDate:null };
+            walletId:null, fromWalletId:null, toWalletId:null,
+            note:"", day:"Today", customDate:null };
 const TX = { all:[], shown:10, member:"all" };
 const PAGE = 10;
 let BAL = { balances:{}, debts:{}, starting:{} };
@@ -720,7 +736,7 @@ document.querySelectorAll(".navbtn").forEach(btn=>{
 });
 
 /* ================= ADD page ================= */
-function buildAdd(){ buildMembers(); buildCats(); buildWallets(); refresh(); }
+function buildAdd(){ buildMembers(); buildCats(); buildWallets(); buildTransferWallets(); refresh(); }
 
 function buildMembers(){
   const el = $("members"); el.innerHTML = "";
@@ -744,10 +760,11 @@ function selectMember(id, silent){
   document.documentElement.style.setProperty("--person", c);
   document.documentElement.style.setProperty("--person-deep", c);
   document.documentElement.style.setProperty("--person-tint", c + "22");
-  S.categoryId = null; S.walletId = null; S.note = "";
+  S.categoryId = null; S.walletId = null; S.fromWalletId = null; S.toWalletId = null; S.note = "";
   if($("note-input")) $("note-input").value = "";
   if($("note-reveal")) $("note-reveal").classList.remove("show");
-  if(!silent){ buildMembers(); buildCats(); buildWallets(); refresh(); }
+  if($("transfer-note")) $("transfer-note").value = "";
+  if(!silent){ buildMembers(); buildCats(); buildWallets(); buildTransferWallets(); refresh(); }
 }
 
 function buildCats(){
@@ -795,17 +812,58 @@ function buildWallets(){
   if(!S.walletId && list.length){ S.walletId = list[0].id; buildWallets(); }
 }
 
+function buildTransferWallets(){
+  const fromEl=$("from-wallets"), toEl=$("to-wallets");
+  if(!fromEl||!toEl) return;
+  fromEl.innerHTML=""; toEl.innerHTML="";
+  if(!S.memberId) return;
+  /* only non-debt wallets that belong to this member or are joint */
+  const available = forMember(D.wallets, S.memberId).filter(w=>w.type!=="debt");
+  const rank = w => w.ownerId===JOINT ? 1 : 0;
+  const sorted = available.slice().sort((a,b)=>rank(a)-rank(b));
+
+  sorted.forEach(w=>{
+    const tag = w.ownerId===JOINT ? "joint" : "personal";
+    /* FROM */
+    const bf=document.createElement("button"); bf.type="button";
+    bf.className="chip wal"+(w.id===S.fromWalletId?" sel":"");
+    bf.innerHTML=`${esc(w.name)}<small>${tag}</small>`;
+    bf.onclick=()=>{
+      S.fromWalletId=w.id;
+      if(S.toWalletId===w.id) S.toWalletId=null;
+      buildTransferWallets(); refresh();
+    };
+    fromEl.appendChild(bf);
+    /* TO */
+    const bt=document.createElement("button"); bt.type="button";
+    const isFrom = w.id===S.fromWalletId;
+    bt.className="chip wal"+(w.id===S.toWalletId?" sel":"")+(isFrom?" trf-disabled":"");
+    bt.disabled=isFrom;
+    bt.innerHTML=`${esc(w.name)}<small>${tag}</small>`;
+    bt.onclick=()=>{ if(isFrom) return; S.toWalletId=w.id; buildTransferWallets(); refresh(); };
+    toEl.appendChild(bt);
+  });
+}
+
 /* type toggle */
 $("t-exp").onclick = ()=>setType("Expense");
 $("t-inc").onclick = ()=>setType("Income");
+$("t-trf").onclick = ()=>setType("Transfer");
 function setType(t){
   if(S.type===t) return;
   S.type=t;
   $("t-exp").classList.toggle("sel", t==="Expense");
   $("t-inc").classList.toggle("sel", t==="Income");
-  S.categoryId=null; S.walletId=null; S.note="";
+  $("t-trf").classList.toggle("sel", t==="Transfer");
+  S.categoryId=null; S.walletId=null; S.fromWalletId=null; S.toWalletId=null; S.note="";
   $("note-input").value=""; $("note-reveal").classList.remove("show");
-  buildCats(); buildWallets(); refresh();
+  $("transfer-note").value="";
+  /* show category OR transfer section */
+  $("cat-sec").style.display    = t==="Transfer" ? "none" : "";
+  $("transfer-sec").style.display = t==="Transfer" ? "block" : "none";
+  if(t!=="Transfer"){ buildCats(); buildWallets(); }
+  else buildTransferWallets();
+  refresh();
 }
 
 /* amounts */
@@ -917,10 +975,24 @@ function entryDate(){
   if(S.day==="Yesterday"){ const d=new Date(); d.setDate(d.getDate()-1); return iso(d); }
   return S.customDate;
 }
-function ready(){ return S.memberId && S.categoryId && S.amount>0 && S.walletId && entryDate(); }
+function ready(){
+  if(S.type==="Transfer") return S.memberId && S.fromWalletId && S.toWalletId &&
+    S.fromWalletId!==S.toWalletId && S.amount>0 && entryDate();
+  return S.memberId && S.categoryId && S.amount>0 && S.walletId && entryDate();
+}
 function refresh(){
   const btn=$("save");
   if(!S.memberId){ btn.disabled=true; btn.textContent="Pick who's logging"; return; }
+  if(S.type==="Transfer"){
+    if(!S.fromWalletId){ btn.disabled=true; btn.textContent="Pick source wallet"; return; }
+    if(!S.toWalletId){ btn.disabled=true; btn.textContent="Pick destination"; return; }
+    if(S.fromWalletId===S.toWalletId){ btn.disabled=true; btn.textContent="Pick a different destination"; return; }
+    if(!S.amount){ btn.disabled=true; btn.textContent="Type the amount"; return; }
+    btn.disabled=false;
+    btn.innerHTML=`Transfer ${fmt(S.amount)}`+
+      `<span class="sub">${esc(walletLabel(S.fromWalletId))} → ${esc(walletLabel(S.toWalletId))} · ${S.day==="Custom"?S.customDate:S.day}</span>`;
+    return;
+  }
   if(!ready()){
     btn.disabled=true;
     btn.textContent = !S.categoryId ? "Pick a category"
@@ -936,13 +1008,20 @@ $("save").onclick = async ()=>{
   const btn=$("save"), err=$("err");
   err.classList.remove("show");
   btn.disabled=true; btn.textContent="Saving…";
-  const payload = { type:S.type, date:entryDate(), memberId:S.memberId,
-                    categoryId:S.categoryId, amount:S.amount, walletId:S.walletId,
-                    note:(S.note||"").trim() };
+  let payload, out;
   try{
-    const out = await api(payload);
+    if(S.type==="Transfer"){
+      payload = { action:"saveTransfer", type:"Transfer", date:entryDate(), memberId:S.memberId,
+                  fromWalletId:S.fromWalletId, toWalletId:S.toWalletId,
+                  amount:S.amount, note:($("transfer-note").value||"").trim() };
+    } else {
+      payload = { type:S.type, date:entryDate(), memberId:S.memberId,
+                  categoryId:S.categoryId, amount:S.amount, walletId:S.walletId,
+                  note:(S.note||"").trim() };
+    }
+    out = await api(payload);
     showSlip(payload, out.loggedAt);
-    TX.all = []; /* force reload next time Home opens */
+    TX.all = [];
   }catch(e){
     err.textContent = "Couldn't save — " + e.message;
     err.classList.add("show");
@@ -952,14 +1031,24 @@ $("save").onclick = async ()=>{
 
 /* receipt */
 let lastLoggedAt = null;
+let lastIsTransfer = false;
 function showSlip(p, loggedAt){
   lastLoggedAt = loggedAt || null;
+  lastIsTransfer = p.type==="Transfer";
+  const isIn=p.type==="Income", isTrf=p.type==="Transfer";
+  const title = isTrf ? "Transfer done ✓" : (isIn ? "Income logged ✓" : "Logged ✓");
+  const amtColor = isTrf ? "var(--accent)" : (isIn ? "var(--inc)" : "var(--exp)");
+  const amtPrefix = isTrf ? "" : (isIn ? "+" : "");
+  const bodyRows = isTrf
+    ? `<div class="row"><span>From</span><b>${esc(walletLabel(p.fromWalletId))}</b></div>
+       <div class="row"><span>To</span><b>${esc(walletLabel(p.toWalletId))}</b></div>`
+    : `<div class="row"><span>Category</span><b>${esc(catLabel(p.categoryId))}</b></div>
+       <div class="row"><span>${isIn?"Destination":"Wallet"}</span><b>${esc(walletLabel(p.walletId))}</b></div>`;
   openSheet(`
     <div class="perf"></div>
-    <h2 style="color:var(--person)">${p.type==="Income"?"Income logged ✓":"Logged ✓"}</h2>
-    <div class="amt">${p.type==="Income"?"+":""}${fmt(p.amount)}</div>
-    <div class="row"><span>Category</span><b>${esc(catLabel(p.categoryId))}</b></div>
-    <div class="row"><span>${p.type==="Income"?"Destination":"Wallet"}</span><b>${esc(walletLabel(p.walletId))}</b></div>
+    <h2 style="color:var(--person)">${title}</h2>
+    <div class="amt" style="color:${amtColor}">${amtPrefix}${fmt(p.amount)}</div>
+    ${bodyRows}
     <div class="row"><span>Day</span><b>${esc(p.date)}</b></div>
     <div class="row"><span>By</span><b>${esc(memberName(p.memberId))}</b></div>
     ${p.note?`<div class="row"><span>Note</span><b>${esc(p.note)}</b></div>`:""}
@@ -970,17 +1059,22 @@ function showSlip(p, loggedAt){
   $("slip-del").onclick = async ()=>{
     if(!lastLoggedAt) return;
     const b=$("slip-del"); b.disabled=true; b.textContent="Deleting…";
-    try{ await api({action:"deleteTx", loggedAt:lastLoggedAt}); closeSheet(); resetForm(); }
+    const act = lastIsTransfer ? "deleteTransfer" : "deleteTx";
+    try{ await api({action:act, loggedAt:lastLoggedAt}); TX.all=[]; closeSheet(); resetForm(); }
     catch(e){ b.disabled=false; b.textContent="Couldn't delete — retry"; }
   };
 }
 function resetForm(){
   S.categoryId=null; S.amount=null; S.day="Today"; S.customDate=null; S.note="";
+  S.fromWalletId=null; S.toWalletId=null;
   $("amt-input").value=""; $("day-reveal").classList.remove("show");
   $("note-input").value=""; $("note-reveal").classList.remove("show");
+  $("transfer-note").value="";
   [...$("quickfill").querySelectorAll(".qf")].forEach(x=>x.classList.remove("sel"));
   [...$("days").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.textContent==="Today"));
-  buildCats(); refresh();
+  if(S.type!=="Transfer") buildCats();
+  else buildTransferWallets();
+  refresh();
 }
 
 /* ================= sheets (modals) ================= */
@@ -1353,6 +1447,7 @@ function renderCalWeek(){
     for(let j=0;j<7;j++) dates.push(dateMinus(7*i + (6-j))); // oldest→today, left→right
     const map={};
     rows.forEach(r=>{
+      if(r.type==="Transfer") return;
       if(dates.indexOf(r.date)<0) return;
       const t = map[r.date] || (map[r.date]={e:0,i:0});
       if(r.type==="Income") t.i+=r.amount; else t.e+=r.amount;
@@ -1409,6 +1504,7 @@ function renderCalMonth(){
 
     const dayExp={}, dayInc={};
     rows.forEach(r=>{
+      if(r.type==="Transfer") return;
       if(r.date.indexOf(key)!==0) return;
       const dd = Number(r.date.slice(8,10));
       if(r.type==="Income") dayInc[dd]=(dayInc[dd]||0)+r.amount;
@@ -1450,16 +1546,22 @@ function renderCalMonth(){
 function openDayHistory(dateStr){
   const rows = homeRows().filter(r=>r.date===dateStr)
     .sort((a,c)=>(c.loggedAt||0)-(a.loggedAt||0));
-  const exp = rows.filter(r=>r.type!=="Income").reduce((a,r)=>a+r.amount,0);
+  const exp = rows.filter(r=>r.type!=="Income"&&r.type!=="Transfer").reduce((a,r)=>a+r.amount,0);
   const inc = rows.filter(r=>r.type==="Income").reduce((a,r)=>a+r.amount,0);
   const label = new Date(dateStr+"T00:00:00").toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"long", year:"numeric"});
   const sd = [ exp?("−"+fmt(exp)+" spent"):"", inc?("+"+fmt(inc)+" in"):"" ].filter(Boolean).join(" · ") || "No transactions";
   const listHtml = rows.length ? rows.map(r=>{
-    const isIn=r.type==="Income";
+    const isIn=r.type==="Income", isTrf=r.type==="Transfer";
+    const icon = isTrf ? "↔" : (catEmoji(r.categoryId));
+    const label2 = isTrf
+      ? `${esc(walletLabel(r.fromWalletId))} → ${esc(walletLabel(r.toWalletId))}${r.note?" · "+esc(r.note):""}`
+      : `${esc(catEmoji(r.categoryId))} ${esc(catLabel(r.categoryId))} · ${esc(walletLabel(r.walletId))}${r.note?" · "+esc(r.note):""}`;
+    const amtColor = isTrf ? "var(--accent)" : (isIn ? "var(--inc)" : "var(--exp)");
+    const amtPfx = isTrf ? "" : (isIn ? "+" : "−");
     return `<div class="mrow" data-log="${esc(String(r.loggedAt))}" style="cursor:pointer">
-        <span class="dot" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span>
-        <span class="t"><b>${isIn?"+":"−"}${fmt(r.amount)}</b>
-          <small>${esc(catEmoji(r.categoryId))} ${esc(catLabel(r.categoryId))} · ${esc(walletLabel(r.walletId))}${r.note?" · "+esc(r.note):""}</small></span>
+        <span class="dot" style="background:${isTrf?"var(--accent-tint)":esc(memberColor(r.memberId))};color:${isTrf?"var(--accent)":"#fff"}">${isTrf?"↔":esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span>
+        <span class="t"><b style="color:${amtColor}">${amtPfx}${fmt(r.amount)}</b>
+          <small>${label2}</small></span>
       </div>`;
   }).join("") : "<div class='sd'>No transactions this day.</div>";
   openSheet(`
@@ -1521,14 +1623,14 @@ function renderOverviewSlides(){
     const key = monthKeyOffset(i);
     const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()-i);
     const inMonth = rows.filter(r=>r.date.indexOf(key)===0);
-    const exp = inMonth.filter(r=>r.type!=="Income").reduce((a,r)=>a+r.amount,0);
+    const exp = inMonth.filter(r=>r.type!=="Income"&&r.type!=="Transfer").reduce((a,r)=>a+r.amount,0);
     const inc = inMonth.filter(r=>r.type==="Income").reduce((a,r)=>a+r.amount,0);
     const net = inc-exp;
 
     let sub2Label1, sub2Val1, sub2Label2, sub2Val2;
     if(i===0){
-      const todayExp = rows.filter(r=>r.type!=="Income" && r.date===todayKey).reduce((a,r)=>a+r.amount,0);
-      const weekExp = rows.filter(r=>r.type!=="Income" && r.date>=monKey && r.date<=todayKey).reduce((a,r)=>a+r.amount,0);
+      const todayExp = rows.filter(r=>r.type!=="Income"&&r.type!=="Transfer"&&r.date===todayKey).reduce((a,r)=>a+r.amount,0);
+      const weekExp = rows.filter(r=>r.type!=="Income"&&r.type!=="Transfer"&&r.date>=monKey&&r.date<=todayKey).reduce((a,r)=>a+r.amount,0);
       sub2Label1="Today"; sub2Val1=todayExp;
       sub2Label2="This Week"; sub2Val2=weekExp;
     } else {
@@ -1677,7 +1779,7 @@ function renderReportSlides(){
   for(let i=0;i<count;i++){
     const key = monthKeyOffset(i);
     const inMonth = rows.filter(r=>r.date.indexOf(key)===0);
-    const expRows = inMonth.filter(r=>r.type!=="Income");
+    const expRows = inMonth.filter(r=>r.type!=="Income"&&r.type!=="Transfer");
     const totalExp = expRows.reduce((a,r)=>a+r.amount,0);
     const totalInc = inMonth.filter(r=>r.type==="Income").reduce((a,r)=>a+r.amount,0);
     const net = totalInc - totalExp;
@@ -1822,17 +1924,29 @@ function renderTxList(rows){
       h.textContent = valid ? d.toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"short"}) : r.date;
       list.appendChild(h);
     }
-    const isIn=r.type==="Income";
+    const isIn=r.type==="Income", isTrf=r.type==="Transfer";
     const wrap=document.createElement("div"); wrap.className="rwrap";
-    wrap.innerHTML =
-      `<button class="rtrash" type="button" aria-label="Delete">🗑️</button>`+
-      `<div class="rcard ${isIn?"inc":"exp"}">`+
-        `<div class="cico">${esc(catEmoji(r.categoryId))}`+
-          `<span class="badge" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span></div>`+
-        `<div class="mid"><div class="cat">${esc(catLabel(r.categoryId))}</div>`+
-        `<div class="sub">${esc(walletLabel(r.walletId))}${r.note?` · ${esc(r.note)}`:""}</div></div>`+
-        `<div class="amt">${isIn?"+":"−"}${fmt(r.amount)}</div>`+
-      `</div>`;
+    if(isTrf){
+      wrap.innerHTML =
+        `<button class="rtrash" type="button" aria-label="Delete">🗑️</button>`+
+        `<div class="rcard trf">`+
+          `<div class="cico">↔`+
+            `<span class="badge" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span></div>`+
+          `<div class="mid"><div class="cat">${esc(walletLabel(r.fromWalletId))} → ${esc(walletLabel(r.toWalletId))}</div>`+
+          `<div class="sub">${esc(memberName(r.memberId))}${r.note?` · ${esc(r.note)}`:""}</div></div>`+
+          `<div class="amt" style="color:var(--accent)">${fmt(r.amount)}</div>`+
+        `</div>`;
+    } else {
+      wrap.innerHTML =
+        `<button class="rtrash" type="button" aria-label="Delete">🗑️</button>`+
+        `<div class="rcard ${isIn?"inc":"exp"}">`+
+          `<div class="cico">${esc(catEmoji(r.categoryId))}`+
+            `<span class="badge" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span></div>`+
+          `<div class="mid"><div class="cat">${esc(catLabel(r.categoryId))}</div>`+
+          `<div class="sub">${esc(walletLabel(r.walletId))}${r.note?` · ${esc(r.note)}`:""}</div></div>`+
+          `<div class="amt">${isIn?"+":"−"}${fmt(r.amount)}</div>`+
+        `</div>`;
+    }
     attachSwipeDelete(wrap, r);
     list.appendChild(wrap);
   });
@@ -1874,7 +1988,8 @@ function attachSwipeDelete(wrap, entry){
     if(entry.loggedAt==null){ trash.textContent="⚠️"; return; }
     trash.disabled=true; trash.textContent="…";
     try{
-      await api({action:"deleteTx", loggedAt:entry.loggedAt});
+      const act = entry.type==="Transfer" ? "deleteTransfer" : "deleteTx";
+      await api({action:act, loggedAt:entry.loggedAt});
       TX.all = TX.all.filter(x=>x.loggedAt!==entry.loggedAt);
       renderTxPage();
     }catch(e){ trash.disabled=false; trash.textContent="⚠️"; }
@@ -1883,8 +1998,30 @@ function attachSwipeDelete(wrap, entry){
 
 /* ---- transaction detail + edit ---- */
 function openTxDetail(entry){
-  const cat = catById(entry.categoryId), w = walletById(entry.walletId);
-  const isIn = entry.type==="Income";
+  const isTrf=entry.type==="Transfer", isIn=entry.type==="Income";
+  if(isTrf){
+    openSheet(`
+      <h2 style="color:var(--accent)">Transfer</h2>
+      <div class="amt" style="color:var(--accent)">${fmt(entry.amount)}</div>
+      <div class="row"><span>From</span><b>${esc(walletLabel(entry.fromWalletId))}</b></div>
+      <div class="row"><span>To</span><b>${esc(walletLabel(entry.toWalletId))}</b></div>
+      <div class="row"><span>Person</span><b>${esc(memberName(entry.memberId))}</b></div>
+      <div class="row"><span>Date</span><b>${esc(entry.date)}</b></div>
+      ${entry.note?`<div class="row"><span>Note</span><b>${esc(entry.note)}</b></div>`:""}
+      <button class="go" type="button" id="td-close">Close</button>
+      <button class="ghost danger" type="button" id="td-del">Delete this transfer</button>
+    `);
+    $("td-close").onclick = closeSheet;
+    $("td-del").onclick = async ()=>{
+      const b=$("td-del"); b.disabled=true; b.textContent="Deleting…";
+      try{
+        await api({action:"deleteTransfer", loggedAt:entry.loggedAt});
+        TX.all=TX.all.filter(x=>x.loggedAt!==entry.loggedAt);
+        closeSheet(); renderTxPage();
+      }catch(e){ b.disabled=false; b.textContent="Couldn't delete — retry"; }
+    };
+    return;
+  }
   openSheet(`
     <h2 style="color:${esc(memberColor(entry.memberId))}">${isIn?"Income":"Expense"}</h2>
     <div class="amt" style="color:${isIn?"var(--inc)":"var(--exp)"}">${isIn?"+":"−"}${fmt(entry.amount)}</div>
