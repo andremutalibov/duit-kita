@@ -519,6 +519,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 <!-- ==================== TRANSACTION ==================== -->
 <main id="v-transaction">
   <div class="mfilter" id="tx-members"></div>
+  <div class="mfilter" id="tx-wallets"></div>
 
   <section id="cal-sec">
     <div class="calslider" id="calslider"></div>
@@ -579,7 +580,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     <div class="quickfill" id="quickfill"></div>
   </section>
 
-  <section>
+  <section id="wallet-sec">
     <div class="label">
       <span id="wal-label">Wallet</span>
       <button class="mini" id="mng-wal" type="button">Manage</button>
@@ -650,7 +651,7 @@ const D = { members:[], wallets:[], categories:[] };
 const S = { type:"Expense", memberId:null, categoryId:null, amount:null,
             walletId:null, fromWalletId:null, toWalletId:null,
             note:"", day:"Today", customDate:null };
-const TX = { all:[], shown:10, member:"all" };
+const TX = { all:[], shown:10, member:"all", wallet:"all" };
 const PAGE = 10;
 let BAL = { balances:{}, debts:{}, starting:{} };
 
@@ -858,8 +859,9 @@ function setType(t){
   S.categoryId=null; S.walletId=null; S.fromWalletId=null; S.toWalletId=null; S.note="";
   $("note-input").value=""; $("note-reveal").classList.remove("show");
   $("transfer-note").value="";
-  /* show category OR transfer section */
-  $("cat-sec").style.display    = t==="Transfer" ? "none" : "";
+  /* show category+wallet OR transfer section */
+  $("cat-sec").style.display      = t==="Transfer" ? "none" : "";
+  $("wallet-sec").style.display   = t==="Transfer" ? "none" : "";
   $("transfer-sec").style.display = t==="Transfer" ? "block" : "none";
   if(t!=="Transfer"){ buildCats(); buildWallets(); }
   else buildTransferWallets();
@@ -1353,6 +1355,15 @@ function buildHomeMembers(){
 function homeRows(){
   return TX.member==="all" ? TX.all : TX.all.filter(r=>r.memberId===TX.member);
 }
+/* Transaction page: member + wallet filter */
+function txRows(){
+  let rows = homeRows();
+  if(TX.wallet==="all") return rows;
+  const wid=TX.wallet;
+  return rows.filter(r=>r.type==="Transfer"
+    ? (r.fromWalletId===wid || r.toWalletId===wid)
+    : r.walletId===wid);
+}
 
 /* ================= TRANSACTION (its own page, shares TX.member with Home) ================= */
 function buildTxMembers(){
@@ -1361,16 +1372,42 @@ function buildTxMembers(){
     const b=document.createElement("button");
     b.type="button"; b.textContent=label;
     if(TX.member===id) b.classList.add("sel");
-    b.onclick=()=>{ TX.member=id; TX.shown=PAGE; buildTxMembers(); renderTxPage(); };
+    b.onclick=()=>{ TX.member=id; TX.wallet="all"; TX.shown=PAGE; buildTxMembers(); buildTxWallets(); renderTxPage(); };
     el.appendChild(b);
   };
   mk("all","Everyone");
   D.members.forEach(m=>mk(m.id, m.name));
 }
 
+function buildTxWallets(){
+  const el=$("tx-wallets"); if(!el) return;
+  el.innerHTML="";
+  /* show wallets relevant to the current member filter */
+  const wallets = TX.member==="all" ? D.wallets : forMember(D.wallets, TX.member);
+  if(!wallets.length) return;
+  const mk=(id,label)=>{
+    const b=document.createElement("button");
+    b.type="button"; b.textContent=label;
+    if(TX.wallet===id) b.classList.add("sel");
+    b.onclick=()=>{ TX.wallet=id; TX.shown=PAGE; buildTxWallets(); renderTxPage(); };
+    el.appendChild(b);
+  };
+  mk("all","All Wallets");
+  /* label wallets that share a name with the member's name to avoid confusion */
+  const nameCounts = {};
+  wallets.forEach(w=>{ nameCounts[w.name]=(nameCounts[w.name]||0)+1; });
+  wallets.forEach(w=>{
+    const label = nameCounts[w.name]>1
+      ? w.name+" ("+( w.ownerId==="joint" ? "joint" : memberName(w.ownerId) )+")"
+      : w.name+(w.ownerId==="joint"?" (joint)":"");
+    mk(w.id, label);
+  });
+}
+
 async function loadTransactionPage(){
   if(!D.members.length) return;
   buildTxMembers();
+  buildTxWallets();
   $("tx-state").innerHTML = TX.all.length ? "" : "Loading…";
   try{
     const lst = await api({action:"list"});
@@ -1384,7 +1421,7 @@ async function loadTransactionPage(){
   }
 }
 
-function renderTxPage(){ renderTxCalendar(); renderTxList(homeRows()); }
+function renderTxPage(){ renderTxCalendar(); renderTxList(txRows()); }
 $("cal-toggle").onclick = ()=>{ calMode = calMode==="week" ? "month" : "week"; renderTxCalendar(); };
 
 /* ---- transaction calendar: collapsible week row / expandable full month ---- */
@@ -1438,7 +1475,7 @@ function renderTxCalendar(){
 function renderCalWeek(){
   const slider = $("calslider"), dots = $("caldots");
   slider.innerHTML=""; dots.innerHTML="";
-  const rows = homeRows();
+  const rows = txRows();
   const todayStr = iso(new Date());
   const count = weeksAvailable();
 
@@ -1492,7 +1529,7 @@ function renderCalMonth(){
   const count = monthsAvailable();
   const slider = $("calslider"), dots = $("caldots");
   slider.innerHTML=""; dots.innerHTML="";
-  const rows = homeRows();
+  const rows = txRows();
   const todayStr = iso(new Date());
 
   for(let i=0;i<count;i++){
@@ -1544,7 +1581,7 @@ function renderCalMonth(){
 
 /* tap a calendar day → that day's transactions (respects member filter) */
 function openDayHistory(dateStr){
-  const rows = homeRows().filter(r=>r.date===dateStr)
+  const rows = txRows().filter(r=>r.date===dateStr)
     .sort((a,c)=>(c.loggedAt||0)-(a.loggedAt||0));
   const exp = rows.filter(r=>r.type!=="Income"&&r.type!=="Transfer").reduce((a,r)=>a+r.amount,0);
   const inc = rows.filter(r=>r.type==="Income").reduce((a,r)=>a+r.amount,0);
