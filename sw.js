@@ -1,4 +1,4 @@
-/* Duit Kita — minimal shell cache */
+/* Duit Kita — minimal shell cache reupload */
 const CACHE = 'duit-kita-v38';
 const SHELL = ['./index.html', './manifest.json', './icon-180.png', './icon-512.png'];
 self.addEventListener('install', e => {
