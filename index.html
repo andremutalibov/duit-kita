@@ -102,7 +102,7 @@ body[data-view="add"] .savebar{display:block}
 .navbtn.sel{color:var(--accent)}
 .navbtn.sel .ic{filter:none}
 
-/* ---------- generic chips reupload ---------- */
+/* ---------- generic chips ---------- */
 .grid{display:grid; gap:10px}
 .g-amt{grid-template-columns:repeat(3,1fr)}
 .g-wal{grid-template-columns:1fr 1fr}
@@ -224,10 +224,16 @@ body[data-view="add"] .savebar{display:block}
 }
 .sumslider::-webkit-scrollbar{display:none}
 .sumcard{
-  flex:0 0 100%; scroll-snap-align:start; background:var(--card);
+  flex:0 0 100%; scroll-snap-align:start; background:var(--card); position:relative;
   border:1.5px solid var(--line); border-radius:20px; padding:20px 22px; box-shadow:var(--card-shadow);
 }
-.sumcard .cap{font-family:var(--disp); font-weight:700; font-size:14px; color:var(--muted)}
+.cyc-gear{
+  position:absolute; top:14px; right:14px; width:34px; height:34px; border-radius:999px;
+  border:1.5px solid var(--line); background:var(--card-2); color:var(--muted);
+  font-size:15px; cursor:pointer; line-height:1; display:flex; align-items:center; justify-content:center;
+}
+.cyc-gear:active{background:var(--accent-tint); color:var(--accent)}
+.sumcard .cap{font-family:var(--disp); font-weight:700; font-size:14px; color:var(--muted); padding-right:40px}
 .sumcard .dt{font-family:var(--num); font-size:12px; color:var(--muted); margin-top:2px}
 .sumcard .big{font-family:var(--num); font-weight:700; font-size:34px; color:var(--exp); margin-top:10px}
 .sumcard .big.zero{color:var(--muted)}
@@ -1097,6 +1103,44 @@ $("sheet-ovl").addEventListener("click", e=>{ if(e.target.id==="sheet-ovl") clos
 $("mng-cat").onclick = openCategoriesSheet;
 $("mng-wal").onclick = openWalletsSheet;
 
+/* small focused sheet to set ONE person's cycle day (from the overview gear) */
+function openCycleSheet(memberId){
+  const m = D.members.find(x=>x.id===memberId);
+  if(!m){ openMembersSheet(); return; }
+  const cur = m.cycleDay || 1;
+  openSheet(`
+    <h2>${esc(m.name)}'s cycle</h2>
+    <div class="sd">The day ${esc(m.name)}'s salary lands (1–28). Budgets and totals for ${esc(m.name)} group from this day instead of the 1st.</div>
+    <div class="fld"><label>Cycle start day</label>
+      <input id="cyc-one" class="num" type="number" min="1" max="28" value="${esc(String(cur))}" inputmode="numeric"></div>
+    <div class="sd" id="cyc-preview" style="margin-top:-6px"></div>
+    <button class="go" id="cyc-save" type="button">Save</button>
+    <button class="ghost" id="cyc-close" type="button">Cancel</button>
+  `);
+  const preview = ()=>{
+    let v=parseInt($("cyc-one").value,10); if(!(v>=1&&v<=28)) v=1;
+    if(v===1){ $("cyc-preview").textContent="Same as the calendar month."; return; }
+    const today=new Date(); let y=today.getFullYear(), mo=today.getMonth();
+    if(today.getDate()<v){ mo-=1; if(mo<0){mo=11;y-=1;} }
+    const from=new Date(y,mo,v), to=new Date(y,mo+1,v); to.setDate(to.getDate()-1);
+    $("cyc-preview").textContent="This cycle: "+fmtShort(iso(from))+" – "+fmtShort(iso(to))
+      +" → "+to.toLocaleDateString("id-ID",{month:"long"})+" Cycle "+to.getFullYear();
+  };
+  $("cyc-one").addEventListener("input", preview); preview();
+  $("cyc-close").onclick = closeSheet;
+  $("cyc-save").onclick = async ()=>{
+    let v=parseInt($("cyc-one").value,10); if(!(v>=1&&v<=28)) v=1;
+    const b=$("cyc-save"); b.disabled=true; b.textContent="Saving…";
+    try{
+      await api({action:"updateMember", id:memberId, cycleDay:v});
+      await reloadData();
+      const mm=D.members.find(x=>x.id===memberId); if(mm) mm.cycleDay=v;
+      closeSheet();
+      if(document.body.dataset.view==="home") renderHome();
+    }catch(e){ b.disabled=false; b.textContent="Couldn't save — "+e.message; }
+  };
+}
+
 function openMembersSheet(){
   const rows = D.members.map(m=>`
     <div class="mrow">
@@ -1745,6 +1789,7 @@ function renderOverviewSlides(){
     const card=document.createElement("div");
     card.className="sumcard";
     card.innerHTML=`
+      <button class="cyc-gear" type="button" aria-label="Cycle settings">⚙︎</button>
       <div class="cap">${esc(cap)}</div>
       <div class="dt">${esc(range)}</div>
       <div class="big ${exp?"":"zero"}">${exp?"−"+fmt(exp):"Rp0"}</div>
@@ -1756,6 +1801,10 @@ function renderOverviewSlides(){
         <div class="sr"><span>${sub2Label1}</span><b>${sub2Val1?fmt(sub2Val1):"Rp0"}</b></div>
         <div class="sr"><span>${sub2Label2}</span><b>${sub2Val2?fmt(sub2Val2):"Rp0"}</b></div>
       </div>`;
+    card.querySelector(".cyc-gear").onclick = ()=>{
+      if(TX.member==="all") openMembersSheet();
+      else openCycleSheet(TX.member);
+    };
     slider.appendChild(card);
     const dot=document.createElement("span"); if(i===0) dot.className="on";
     dots.appendChild(dot);
