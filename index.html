@@ -577,10 +577,18 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   </section>
 
   <section id="transfer-sec" style="display:none">
+    <div class="type" id="trf-subtype" style="margin-bottom:16px">
+      <button id="trf-normal" class="sel" type="button">Normal movement</button>
+      <button id="trf-payto" type="button">Pay to</button>
+    </div>
     <div class="label">From</div>
     <div class="grid g-wal" id="from-wallets"></div>
     <div class="label" style="margin-top:16px">To</div>
     <div class="grid g-wal" id="to-wallets"></div>
+    <div id="payto-cat-sec" style="display:none;margin-top:16px">
+      <div class="label"><span>Category</span></div>
+      <div class="catrow" id="payto-cats"></div>
+    </div>
     <div style="margin-top:12px">
       <input id="transfer-note" type="text" maxlength="140" placeholder="Note (optional)" autocomplete="off"
         style="width:100%;min-height:52px;border:1.5px solid var(--line);border-radius:var(--radius);padding:0 16px;font-family:var(--body);font-size:16px;font-weight:600;background:var(--card);color:var(--ink);outline:none;">
@@ -666,6 +674,7 @@ const DAYS = ["Today","Yesterday","Custom"];
 const D = { members:[], wallets:[], categories:[] };
 const S = { type:"Expense", memberId:null, categoryId:null, amount:null,
             walletId:null, fromWalletId:null, toWalletId:null,
+            subtype:"normal", paytoCategoryId:null,
             note:"", day:"Today", customDate:null };
 const TX = { all:[], shown:10, member:"all", wallet:"all" };
 const PAGE = 10;
@@ -843,47 +852,98 @@ function buildTransferWallets(){
   if(!fromEl||!toEl) return;
   fromEl.innerHTML=""; toEl.innerHTML="";
   if(!S.memberId) return;
-  /* only non-debt wallets that belong to this member or are joint */
-  const available = forMember(D.wallets, S.memberId).filter(w=>w.type!=="debt");
-  const rank = w => w.ownerId===JOINT ? 1 : 0;
-  const sorted = available.slice().sort((a,b)=>rank(a)-rank(b));
 
-  sorted.forEach(w=>{
-    const tag = w.ownerId===JOINT ? "joint" : "personal";
-    /* FROM */
+  const isPay = S.subtype==="payto";
+
+  /* From wallets: for payto = sender's own wallets only; for normal = all household non-debt */
+  const fromList = isPay
+    ? D.wallets.filter(w=>w.ownerId===S.memberId && w.type!=="debt")
+    : D.wallets.filter(w=>w.type!=="debt" && (w.ownerId===S.memberId||w.ownerId===JOINT));
+
+  /* To wallets: for payto = OTHER person's non-debt wallets (not sender, not joint);
+     for normal = all household non-debt (same logic as before) */
+  const toList = isPay
+    ? D.wallets.filter(w=>w.type!=="debt" && w.ownerId!==S.memberId && w.ownerId!==JOINT)
+    : D.wallets.filter(w=>w.type!=="debt" && (w.ownerId===S.memberId||w.ownerId===JOINT||true));
+
+  const tag = w => w.ownerId===JOINT ? "joint" : memberName(w.ownerId);
+
+  fromList.forEach(w=>{
     const bf=document.createElement("button"); bf.type="button";
     bf.className="chip wal"+(w.id===S.fromWalletId?" sel":"");
-    bf.innerHTML=`${esc(w.name)}<small>${tag}</small>`;
+    bf.innerHTML=`${esc(w.name)}<small>${esc(tag(w))}</small>`;
     bf.onclick=()=>{
       S.fromWalletId=w.id;
       if(S.toWalletId===w.id) S.toWalletId=null;
       buildTransferWallets(); refresh();
     };
     fromEl.appendChild(bf);
-    /* TO */
-    const bt=document.createElement("button"); bt.type="button";
+  });
+
+  /* for normal mode, all household non-debt wallets on both sides */
+  const fullList = D.wallets.filter(w=>w.type!=="debt");
+  const actualToList = isPay ? toList : fullList;
+
+  actualToList.forEach(w=>{
     const isFrom = w.id===S.fromWalletId;
+    const bt=document.createElement("button"); bt.type="button";
     bt.className="chip wal"+(w.id===S.toWalletId?" sel":"")+(isFrom?" trf-disabled":"");
     bt.disabled=isFrom;
-    bt.innerHTML=`${esc(w.name)}<small>${tag}</small>`;
+    bt.innerHTML=`${esc(w.name)}<small>${esc(tag(w))}</small>`;
     bt.onclick=()=>{ if(isFrom) return; S.toWalletId=w.id; buildTransferWallets(); refresh(); };
     toEl.appendChild(bt);
   });
+}
+
+function buildPaytoCats(){
+  const el=$("payto-cats"); if(!el) return;
+  el.innerHTML="";
+  /* show expense categories belonging to the sender (S.memberId) + joint */
+  const cats = D.categories.filter(c=>c.kind==="expense"&&(c.ownerId===S.memberId||c.ownerId===JOINT));
+  cats.forEach(c=>{
+    const btn=document.createElement("button"); btn.type="button";
+    btn.className="chip-cat"+(c.id===S.paytoCategoryId?" sel":"");
+    btn.innerHTML=`<div class="circ">${esc(c.emoji||"✨")}</div><div class="lbl">${esc(c.name)}</div>`;
+    btn.onclick=()=>{ S.paytoCategoryId=c.id; buildPaytoCats(); refresh(); };
+    el.appendChild(btn);
+  });
+  if(!cats.length) el.innerHTML="<div style='color:var(--muted);font-size:13px'>No expense categories found. Add one first.</div>";
 }
 
 /* type toggle */
 $("t-exp").onclick = ()=>setType("Expense");
 $("t-inc").onclick = ()=>setType("Income");
 $("t-trf").onclick = ()=>setType("Transfer");
+
+/* transfer subtype toggle */
+$("trf-normal").onclick = ()=>{
+  if(S.subtype==="normal") return;
+  S.subtype="normal"; S.paytoCategoryId=null;
+  S.fromWalletId=null; S.toWalletId=null;
+  $("trf-normal").classList.add("sel"); $("trf-payto").classList.remove("sel");
+  $("payto-cat-sec").style.display="none";
+  buildTransferWallets(); refresh();
+};
+$("trf-payto").onclick = ()=>{
+  if(S.subtype==="payto") return;
+  S.subtype="payto"; S.paytoCategoryId=null;
+  S.fromWalletId=null; S.toWalletId=null;
+  $("trf-payto").classList.add("sel"); $("trf-normal").classList.remove("sel");
+  $("payto-cat-sec").style.display="block";
+  buildTransferWallets(); buildPaytoCats(); refresh();
+};
 function setType(t){
   if(S.type===t) return;
   S.type=t;
   $("t-exp").classList.toggle("sel", t==="Expense");
   $("t-inc").classList.toggle("sel", t==="Income");
   $("t-trf").classList.toggle("sel", t==="Transfer");
-  S.categoryId=null; S.walletId=null; S.fromWalletId=null; S.toWalletId=null; S.note="";
+  S.categoryId=null; S.walletId=null; S.fromWalletId=null; S.toWalletId=null;
+  S.subtype="normal"; S.paytoCategoryId=null; S.note="";
   $("note-input").value=""; $("note-reveal").classList.remove("show");
   $("transfer-note").value="";
+  $("trf-normal").classList.add("sel"); $("trf-payto").classList.remove("sel");
+  $("payto-cat-sec").style.display="none";
   /* show category+wallet OR transfer section */
   $("cat-sec").style.display      = t==="Transfer" ? "none" : "";
   $("wallet-sec").style.display   = t==="Transfer" ? "none" : "";
@@ -1003,8 +1063,11 @@ function entryDate(){
   return S.customDate;
 }
 function ready(){
-  if(S.type==="Transfer") return S.memberId && S.fromWalletId && S.toWalletId &&
-    S.fromWalletId!==S.toWalletId && S.amount>0 && entryDate();
+  if(S.type==="Transfer"){
+    const base = S.memberId && S.fromWalletId && S.toWalletId &&
+      S.fromWalletId!==S.toWalletId && S.amount>0 && entryDate();
+    return base && (S.subtype==="normal" || !!S.paytoCategoryId);
+  }
   return S.memberId && S.categoryId && S.amount>0 && S.walletId && entryDate();
 }
 function refresh(){
@@ -1014,10 +1077,13 @@ function refresh(){
     if(!S.fromWalletId){ btn.disabled=true; btn.textContent="Pick source wallet"; return; }
     if(!S.toWalletId){ btn.disabled=true; btn.textContent="Pick destination"; return; }
     if(S.fromWalletId===S.toWalletId){ btn.disabled=true; btn.textContent="Pick a different destination"; return; }
+    if(S.subtype==="payto" && !S.paytoCategoryId){ btn.disabled=true; btn.textContent="Pick a category"; return; }
     if(!S.amount){ btn.disabled=true; btn.textContent="Type the amount"; return; }
     btn.disabled=false;
-    btn.innerHTML=`Transfer ${fmt(S.amount)}`+
-      `<span class="sub">${esc(walletLabel(S.fromWalletId))} → ${esc(walletLabel(S.toWalletId))} · ${S.day==="Custom"?S.customDate:S.day}</span>`;
+    const typeLabel = S.subtype==="payto" ? "Pay "+fmt(S.amount) : "Transfer "+fmt(S.amount);
+    const catPart = S.subtype==="payto" ? " · "+catLabel(S.paytoCategoryId) : "";
+    btn.innerHTML=`${typeLabel}`+
+      `<span class="sub">${esc(walletLabel(S.fromWalletId))} → ${esc(walletLabel(S.toWalletId))}${catPart} · ${S.day==="Custom"?S.customDate:S.day}</span>`;
     return;
   }
   if(!ready()){
@@ -1040,6 +1106,7 @@ $("save").onclick = async ()=>{
     if(S.type==="Transfer"){
       payload = { action:"saveTransfer", type:"Transfer", date:entryDate(), memberId:S.memberId,
                   fromWalletId:S.fromWalletId, toWalletId:S.toWalletId,
+                  subtype:S.subtype, categoryId:S.subtype==="payto"?S.paytoCategoryId:"",
                   amount:S.amount, note:($("transfer-note").value||"").trim() };
     } else {
       payload = { type:S.type, date:entryDate(), memberId:S.memberId,
@@ -1093,10 +1160,12 @@ function showSlip(p, loggedAt){
 }
 function resetForm(){
   S.categoryId=null; S.amount=null; S.day="Today"; S.customDate=null; S.note="";
-  S.fromWalletId=null; S.toWalletId=null;
+  S.fromWalletId=null; S.toWalletId=null; S.paytoCategoryId=null; S.subtype="normal";
   $("amt-input").value=""; $("day-reveal").classList.remove("show");
   $("note-input").value=""; $("note-reveal").classList.remove("show");
   $("transfer-note").value="";
+  $("trf-normal").classList.add("sel"); $("trf-payto").classList.remove("sel");
+  $("payto-cat-sec").style.display="none";
   [...$("quickfill").querySelectorAll(".qf")].forEach(x=>x.classList.remove("sel"));
   [...$("days").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.textContent==="Today"));
   if(S.type!=="Transfer") buildCats();
@@ -1435,9 +1504,22 @@ function buildHomeMembers(){
 function homeRows(){
   return TX.member==="all" ? TX.all : TX.all.filter(r=>r.memberId===TX.member);
 }
-/* Transaction page: member + wallet filter */
+/* helpers: payto transfers count as expense for the sender */
+function isExpenseRow(r){ return (r.type==="Expense") || (r.type==="Transfer" && r.subtype==="payto"); }
+function isIncomeRow(r){ return r.type==="Income"; }
+/* Transaction page: member + wallet filter
+   Also includes payto transfers RECEIVED by the current member (they show for receiver too) */
 function txRows(){
   let rows = homeRows();
+  /* add payto transfers where current member is the receiver (toWallet belongs to them) */
+  if(TX.member!=="all"){
+    const receivedPayto = TX.all.filter(r=>
+      r.type==="Transfer" && r.subtype==="payto" &&
+      r.memberId!==TX.member && // not the sender (already in homeRows)
+      D.wallets.find(w=>w.id===r.toWalletId && w.ownerId===TX.member)
+    );
+    if(receivedPayto.length) rows = [...rows, ...receivedPayto];
+  }
   if(TX.wallet==="all") return rows;
   const wid=TX.wallet;
   return rows.filter(r=>r.type==="Transfer"
@@ -1567,7 +1649,7 @@ function renderCalWeek(){
       if(r.type==="Transfer") return;
       if(dates.indexOf(r.date)<0) return;
       const t = map[r.date] || (map[r.date]={e:0,i:0});
-      if(r.type==="Income") t.i+=r.amount; else t.e+=r.amount;
+      if(isIncomeRow(r)) t.i+=r.amount; else if(isExpenseRow(r)) t.e+=r.amount;
     });
 
     let heads="", cells="";
@@ -1624,8 +1706,8 @@ function renderCalMonth(){
       if(r.type==="Transfer") return;
       if(r.date.indexOf(key)!==0) return;
       const dd = Number(r.date.slice(8,10));
-      if(r.type==="Income") dayInc[dd]=(dayInc[dd]||0)+r.amount;
-      else dayExp[dd]=(dayExp[dd]||0)+r.amount;
+      if(isIncomeRow(r)) dayInc[dd]=(dayInc[dd]||0)+r.amount;
+      else if(isExpenseRow(r)) dayExp[dd]=(dayExp[dd]||0)+r.amount;
     });
 
     let cells="";
@@ -1663,8 +1745,8 @@ function renderCalMonth(){
 function openDayHistory(dateStr){
   const rows = txRows().filter(r=>r.date===dateStr)
     .sort((a,c)=>(c.loggedAt||0)-(a.loggedAt||0));
-  const exp = rows.filter(r=>r.type!=="Income"&&r.type!=="Transfer").reduce((a,r)=>a+r.amount,0);
-  const inc = rows.filter(r=>r.type==="Income").reduce((a,r)=>a+r.amount,0);
+  const exp = rows.filter(r=>isExpenseRow(r)).reduce((a,r)=>a+r.amount,0);
+  const inc = rows.filter(isIncomeRow).reduce((a,r)=>a+r.amount,0);
   const label = new Date(dateStr+"T00:00:00").toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"long", year:"numeric"});
   const sd = [ exp?("−"+fmt(exp)+" spent"):"", inc?("+"+fmt(inc)+" in"):"" ].filter(Boolean).join(" · ") || "No transactions";
   const listHtml = rows.length ? rows.map(r=>{
@@ -1781,14 +1863,14 @@ function renderOverviewSlides(){
   for(let i=0;i<count;i++){
     const p = periodFor(i);
     const inPeriod = rows.filter(r=>r.date>=p.fromStr && r.date<=p.toStr);
-    const exp = inPeriod.filter(r=>r.type!=="Income"&&r.type!=="Transfer").reduce((a,r)=>a+r.amount,0);
-    const inc = inPeriod.filter(r=>r.type==="Income").reduce((a,r)=>a+r.amount,0);
+    const exp = inPeriod.filter(r=>isExpenseRow(r)).reduce((a,r)=>a+r.amount,0);
+    const inc = inPeriod.filter(isIncomeRow).reduce((a,r)=>a+r.amount,0);
     const net = inc-exp;
 
     let sub2Label1, sub2Val1, sub2Label2, sub2Val2;
     if(i===0){
-      const todayExp = rows.filter(r=>r.type!=="Income"&&r.type!=="Transfer"&&r.date===todayKey).reduce((a,r)=>a+r.amount,0);
-      const weekExp = rows.filter(r=>r.type!=="Income"&&r.type!=="Transfer"&&r.date>=monKey&&r.date<=todayKey).reduce((a,r)=>a+r.amount,0);
+      const todayExp = rows.filter(r=>isExpenseRow(r)&&r.date===todayKey).reduce((a,r)=>a+r.amount,0);
+      const weekExp = rows.filter(r=>isExpenseRow(r)&&r.date>=monKey&&r.date<=todayKey).reduce((a,r)=>a+r.amount,0);
       sub2Label1="Today"; sub2Val1=todayExp;
       sub2Label2="This Week"; sub2Val2=weekExp;
     } else {
@@ -1942,9 +2024,9 @@ function renderReportSlides(){
   for(let i=0;i<count;i++){
     const p = periodFor(i);
     const inPeriod = rows.filter(r=>r.date>=p.fromStr && r.date<=p.toStr);
-    const expRows = inPeriod.filter(r=>r.type!=="Income"&&r.type!=="Transfer");
+    const expRows = inPeriod.filter(r=>isExpenseRow(r));
     const totalExp = expRows.reduce((a,r)=>a+r.amount,0);
-    const totalInc = inPeriod.filter(r=>r.type==="Income").reduce((a,r)=>a+r.amount,0);
+    const totalInc = inPeriod.filter(isIncomeRow).reduce((a,r)=>a+r.amount,0);
     const net = totalInc - totalExp;
 
     const byCat = {};
@@ -2120,8 +2202,10 @@ function renderTxList(rows){
       list.appendChild(h);
     }
     const isIn=r.type==="Income", isTrf=r.type==="Transfer";
+    const isPayto = isTrf && r.subtype==="payto";
     const wrap=document.createElement("div"); wrap.className="rwrap";
-    if(isTrf){
+    if(isTrf && !isPayto){
+      /* normal transfer — teal card */
       wrap.innerHTML =
         `<button class="rtrash" type="button" aria-label="Delete">🗑️</button>`+
         `<div class="rcard trf">`+
@@ -2130,6 +2214,17 @@ function renderTxList(rows){
           `<div class="mid"><div class="cat">${esc(walletLabel(r.fromWalletId))} → ${esc(walletLabel(r.toWalletId))}</div>`+
           `<div class="sub">${esc(memberName(r.memberId))}${r.note?` · ${esc(r.note)}`:""}</div></div>`+
           `<div class="amt" style="color:var(--accent)">${fmt(r.amount)}</div>`+
+        `</div>`;
+    } else if(isPayto){
+      /* pay to — red expense card showing the category */
+      wrap.innerHTML =
+        `<button class="rtrash" type="button" aria-label="Delete">🗑️</button>`+
+        `<div class="rcard exp">`+
+          `<div class="cico">${esc(catEmoji(r.categoryId))}`+
+            `<span class="badge" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span></div>`+
+          `<div class="mid"><div class="cat">${esc(catLabel(r.categoryId))}</div>`+
+          `<div class="sub">${esc(walletLabel(r.fromWalletId))} → ${esc(walletLabel(r.toWalletId))}${r.note?` · ${esc(r.note)}`:""}</div></div>`+
+          `<div class="amt">−${fmt(r.amount)}</div>`+
         `</div>`;
     } else {
       wrap.innerHTML =
