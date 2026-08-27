@@ -162,6 +162,7 @@ body[data-view="add"] .savebar{display:block}
 /* ---------- type toggle ---------- */
 .type{display:grid; grid-template-columns:1fr 1fr 1fr; border:1.5px solid var(--line);
   border-radius:999px; background:var(--card); padding:4px; margin-top:14px}
+.type.type-2{grid-template-columns:1fr 1fr}
 .type button{
   min-height:44px; border:none; border-radius:999px; background:transparent;
   font-family:var(--disp); font-weight:700; font-size:15px; color:var(--muted); cursor:pointer; transition:.15s;
@@ -577,14 +578,19 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   </section>
 
   <section id="transfer-sec" style="display:none">
-    <div class="type" id="trf-subtype" style="margin-bottom:16px">
+    <div class="type type-2" id="trf-subtype" style="margin-bottom:16px">
       <button id="trf-normal" class="sel" type="button">Normal movement</button>
       <button id="trf-payto" type="button">Pay to</button>
     </div>
     <div class="label">From</div>
     <div class="grid g-wal" id="from-wallets"></div>
-    <div class="label" style="margin-top:16px">To</div>
+
+    <div class="label" style="margin-top:16px" id="recipient-label">Send to</div>
+    <div class="who" id="trf-recipients"></div>
+
+    <div class="label" style="margin-top:16px">Destination wallet</div>
     <div class="grid g-wal" id="to-wallets"></div>
+
     <div id="payto-cat-sec" style="display:none;margin-top:16px">
       <div class="label"><span>Category</span></div>
       <div class="catrow" id="payto-cats"></div>
@@ -674,7 +680,7 @@ const DAYS = ["Today","Yesterday","Custom"];
 const D = { members:[], wallets:[], categories:[] };
 const S = { type:"Expense", memberId:null, categoryId:null, amount:null,
             walletId:null, fromWalletId:null, toWalletId:null,
-            subtype:"normal", paytoCategoryId:null,
+            subtype:"normal", paytoCategoryId:null, recipient:null,
             note:"", day:"Today", customDate:null };
 const TX = { all:[], shown:10, member:"all", wallet:"all" };
 const PAGE = 10;
@@ -771,7 +777,7 @@ document.querySelectorAll(".navbtn").forEach(btn=>{
 });
 
 /* ================= ADD page ================= */
-function buildAdd(){ buildMembers(); buildCats(); buildWallets(); buildTransferWallets(); refresh(); }
+function buildAdd(){ buildMembers(); buildCats(); buildWallets(); buildTrfRecipients(); buildTransferWallets(); refresh(); }
 
 function buildMembers(){
   const el = $("members"); el.innerHTML = "";
@@ -799,7 +805,7 @@ function selectMember(id, silent){
   if($("note-input")) $("note-input").value = "";
   if($("note-reveal")) $("note-reveal").classList.remove("show");
   if($("transfer-note")) $("transfer-note").value = "";
-  if(!silent){ buildMembers(); buildCats(); buildWallets(); buildTransferWallets(); refresh(); }
+  if(!silent){ buildMembers(); buildCats(); buildWallets(); buildTrfRecipients(); buildTransferWallets(); refresh(); }
 }
 
 function buildCats(){
@@ -847,6 +853,58 @@ function buildWallets(){
   if(!S.walletId && list.length){ S.walletId = list[0].id; buildWallets(); }
 }
 
+/* possible recipients (owners of destination wallets) for the current mode */
+function trfRecipientOwners(){
+  const isPay = S.subtype==="payto";
+  /* collect distinct owner ids that have a non-debt wallet eligible as destination */
+  const owners = [];
+  const seen = {};
+  D.wallets.forEach(w=>{
+    if(w.type==="debt") return;
+    let ok;
+    if(isPay){
+      /* pay to: only OTHER people (not sender, not joint) */
+      ok = w.ownerId!==S.memberId && w.ownerId!==JOINT;
+    } else {
+      /* normal: sender's own, joint, or other people */
+      ok = true;
+    }
+    if(ok && !seen[w.ownerId]){ seen[w.ownerId]=1; owners.push(w.ownerId); }
+  });
+  /* order: self first, then joint, then others (for normal) */
+  const rank = o => o===S.memberId ? 0 : (o===JOINT ? 1 : 2);
+  return owners.sort((a,b)=>rank(a)-rank(b));
+}
+
+function recipientLabel(ownerId){
+  if(ownerId===JOINT) return "Joint";
+  if(ownerId===S.memberId) return "Me";
+  return memberName(ownerId);
+}
+
+function buildTrfRecipients(){
+  const el=$("trf-recipients"); if(!el) return;
+  el.innerHTML="";
+  const lbl=$("recipient-label"); if(lbl) lbl.textContent = S.subtype==="payto" ? "Pay to" : "Send to";
+  if(!S.memberId) return;
+  const owners = trfRecipientOwners();
+  /* auto-select first recipient if none chosen or current is invalid */
+  if(!S.recipient || owners.indexOf(S.recipient)<0){
+    S.recipient = owners.length ? owners[0] : null;
+    S.toWalletId = null;
+  }
+  owners.forEach(o=>{
+    const btn=document.createElement("button"); btn.type="button";
+    if(o===S.recipient) btn.classList.add("sel");
+    const initial = o===JOINT ? "◆" : (memberName(o)[0]||"?").toUpperCase();
+    const color = o===JOINT ? "var(--accent)" : memberColor(o);
+    btn.innerHTML=`<span class="ava" style="background:${esc(color)}">${esc(initial)}</span>
+      <span class="nm">${esc(recipientLabel(o))}</span>`;
+    btn.onclick=()=>{ S.recipient=o; S.toWalletId=null; buildTrfRecipients(); buildTransferWallets(); refresh(); };
+    el.appendChild(btn);
+  });
+}
+
 function buildTransferWallets(){
   const fromEl=$("from-wallets"), toEl=$("to-wallets");
   if(!fromEl||!toEl) return;
@@ -854,19 +912,12 @@ function buildTransferWallets(){
   if(!S.memberId) return;
 
   const isPay = S.subtype==="payto";
+  const tag = w => w.ownerId===JOINT ? "joint" : memberName(w.ownerId);
 
-  /* From wallets: for payto = sender's own wallets only; for normal = all household non-debt */
+  /* From wallets: payto = sender's own only; normal = sender's own + joint */
   const fromList = isPay
     ? D.wallets.filter(w=>w.ownerId===S.memberId && w.type!=="debt")
     : D.wallets.filter(w=>w.type!=="debt" && (w.ownerId===S.memberId||w.ownerId===JOINT));
-
-  /* To wallets: for payto = OTHER person's non-debt wallets (not sender, not joint);
-     for normal = all household non-debt (same logic as before) */
-  const toList = isPay
-    ? D.wallets.filter(w=>w.type!=="debt" && w.ownerId!==S.memberId && w.ownerId!==JOINT)
-    : D.wallets.filter(w=>w.type!=="debt" && (w.ownerId===S.memberId||w.ownerId===JOINT||true));
-
-  const tag = w => w.ownerId===JOINT ? "joint" : memberName(w.ownerId);
 
   fromList.forEach(w=>{
     const bf=document.createElement("button"); bf.type="button";
@@ -880,11 +931,9 @@ function buildTransferWallets(){
     fromEl.appendChild(bf);
   });
 
-  /* for normal mode, all household non-debt wallets on both sides */
-  const fullList = D.wallets.filter(w=>w.type!=="debt");
-  const actualToList = isPay ? toList : fullList;
-
-  actualToList.forEach(w=>{
+  /* To wallets: only the SELECTED recipient's non-debt wallets */
+  const toList = D.wallets.filter(w=>w.type!=="debt" && w.ownerId===S.recipient);
+  toList.forEach(w=>{
     const isFrom = w.id===S.fromWalletId;
     const bt=document.createElement("button"); bt.type="button";
     bt.className="chip wal"+(w.id===S.toWalletId?" sel":"")+(isFrom?" trf-disabled":"");
@@ -893,6 +942,9 @@ function buildTransferWallets(){
     bt.onclick=()=>{ if(isFrom) return; S.toWalletId=w.id; buildTransferWallets(); refresh(); };
     toEl.appendChild(bt);
   });
+  if(!toList.length){
+    toEl.innerHTML="<div style='color:var(--muted);font-size:13px;padding:2px'>No wallets for this recipient.</div>";
+  }
 }
 
 function buildPaytoCats(){
@@ -919,18 +971,18 @@ $("t-trf").onclick = ()=>setType("Transfer");
 $("trf-normal").onclick = ()=>{
   if(S.subtype==="normal") return;
   S.subtype="normal"; S.paytoCategoryId=null;
-  S.fromWalletId=null; S.toWalletId=null;
+  S.fromWalletId=null; S.toWalletId=null; S.recipient=null;
   $("trf-normal").classList.add("sel"); $("trf-payto").classList.remove("sel");
   $("payto-cat-sec").style.display="none";
-  buildTransferWallets(); refresh();
+  buildTrfRecipients(); buildTransferWallets(); refresh();
 };
 $("trf-payto").onclick = ()=>{
   if(S.subtype==="payto") return;
   S.subtype="payto"; S.paytoCategoryId=null;
-  S.fromWalletId=null; S.toWalletId=null;
+  S.fromWalletId=null; S.toWalletId=null; S.recipient=null;
   $("trf-payto").classList.add("sel"); $("trf-normal").classList.remove("sel");
   $("payto-cat-sec").style.display="block";
-  buildTransferWallets(); buildPaytoCats(); refresh();
+  buildTrfRecipients(); buildTransferWallets(); buildPaytoCats(); refresh();
 };
 function setType(t){
   if(S.type===t) return;
@@ -944,12 +996,13 @@ function setType(t){
   $("transfer-note").value="";
   $("trf-normal").classList.add("sel"); $("trf-payto").classList.remove("sel");
   $("payto-cat-sec").style.display="none";
+  S.recipient=null;
   /* show category+wallet OR transfer section */
   $("cat-sec").style.display      = t==="Transfer" ? "none" : "";
   $("wallet-sec").style.display   = t==="Transfer" ? "none" : "";
   $("transfer-sec").style.display = t==="Transfer" ? "block" : "none";
   if(t!=="Transfer"){ buildCats(); buildWallets(); }
-  else buildTransferWallets();
+  else { buildTrfRecipients(); buildTransferWallets(); }
   refresh();
 }
 
@@ -1166,10 +1219,11 @@ function resetForm(){
   $("transfer-note").value="";
   $("trf-normal").classList.add("sel"); $("trf-payto").classList.remove("sel");
   $("payto-cat-sec").style.display="none";
+  S.recipient=null;
   [...$("quickfill").querySelectorAll(".qf")].forEach(x=>x.classList.remove("sel"));
   [...$("days").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.textContent==="Today"));
   if(S.type!=="Transfer") buildCats();
-  else buildTransferWallets();
+  else { buildTrfRecipients(); buildTransferWallets(); }
   refresh();
 }
 
