@@ -2147,7 +2147,7 @@ function renderTxList(rows){
   });
   $("lm-wrap").style.display = sorted.length > TX.shown ? "flex" : "none";
 }
-$("loadmore").onclick = ()=>{ TX.shown += PAGE; renderTxList(homeRows()); };
+$("loadmore").onclick = ()=>{ TX.shown += PAGE; renderTxList(txRows()); };
 
 const TRASH_W = 76;
 function attachSwipeDelete(wrap, entry){
