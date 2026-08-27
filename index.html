@@ -60,6 +60,9 @@ header h1 .dot{color:var(--person)}
   display:flex; align-items:center; justify-content:center; flex:0 0 38px;
 }
 .theme-toggle:active{background:var(--accent-tint)}
+/* hide-balance mode */
+body.hide-bal .bal-mask{filter:blur(7px); user-select:none; pointer-events:none; transition:filter .2s}
+#eye-toggle.hidden{opacity:.5}
 main{padding:0 16px}
 section{margin-top:18px}
 .label{
@@ -499,7 +502,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 
 <header>
   <h1>Duit Kita<span class="dot">.</span></h1>
-  <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light/dark theme">☀️</button>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="theme-toggle" id="eye-toggle" type="button" aria-label="Toggle balance visibility">👁</button>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light/dark theme">☀️</button>
+  </div>
 </header>
 
 <!-- ==================== HOME ==================== -->
@@ -685,6 +691,15 @@ $("theme-toggle").onclick = ()=>{
   const next = cur==="light" ? "dark" : "light";
   try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
   applyTheme(next);
+};
+
+/* ================= balance visibility toggle ================= */
+let balHidden = false;
+$("eye-toggle").onclick = ()=>{
+  balHidden = !balHidden;
+  document.body.classList.toggle("hide-bal", balHidden);
+  $("eye-toggle").textContent = balHidden ? "🙈" : "👁";
+  $("eye-toggle").classList.toggle("hidden", balHidden);
 };
 
 /* ================= api ================= */
@@ -1792,7 +1807,7 @@ function renderOverviewSlides(){
       <button class="cyc-gear" type="button" aria-label="Cycle settings">⚙︎</button>
       <div class="cap">${esc(cap)}</div>
       <div class="dt">${esc(range)}</div>
-      <div class="big ${exp?"":"zero"}">${exp?"−"+fmt(exp):"Rp0"}</div>
+      <div class="big ${exp?"":"zero"} bal-mask">${exp?"−"+fmt(exp):"Rp0"}</div>
       <div class="split">
         <div class="sr"><span>Income</span><b class="inc">${inc?"+"+fmt(inc):"Rp0"}</b></div>
         <div class="sr"><span>Net</span><b style="color:${net<0?"var(--exp)":"var(--inc)"}">${net<0?"−":""}${fmt(Math.abs(net))}</b></div>
@@ -2012,7 +2027,35 @@ function syncSliders(source, sourceDots){
   requestAnimationFrame(()=>{ sliderSyncing=false; });
 }
 
-/* tap a budget → see that category's transactions for the given month */
+/* direct budget limit edit from the Home budget bar */
+function openBudgetEdit(b){
+  openSheet(`
+    <h2>${esc(b.emoji||"✨")} ${esc(b.name)}</h2>
+    <div class="sd">${b.kind==="income"?"Monthly income target":"Monthly budget limit"}. Leave blank or 0 to remove.</div>
+    <div class="fld"><label>${b.kind==="income"?"Target (Rp)":"Budget limit (Rp)"}</label>
+      <input id="be-amt" class="num" inputmode="numeric" value="${esc(b.budget?b.budget.toLocaleString("id-ID"):"")}" placeholder="e.g. 1.500.000"></div>
+    <div id="be-err" class="err"></div>
+    <button class="go" id="be-save" type="button">Save budget</button>
+    <button class="ghost" id="be-cancel" type="button">Cancel</button>
+  `);
+  $("be-amt").addEventListener("input", e=>{
+    const n=Number(String(e.target.value).replace(/[^\d]/g,"")); e.target.value=n?n.toLocaleString("id-ID"):"";
+  });
+  $("be-cancel").onclick = closeSheet;
+  $("be-save").onclick = async ()=>{
+    const amt = Number(String($("be-amt").value).replace(/[^\d]/g,"")) || 0;
+    const btn=$("be-save"); btn.disabled=true; btn.textContent="Saving…";
+    try{
+      await api({action:"updateCategory", id:b.categoryId, budget:amt});
+      /* update local copy so Home re-renders immediately */
+      const cat = D.categories.find(c=>c.id===b.categoryId);
+      if(cat) cat.budget = amt;
+      closeSheet(); renderHome();
+    }catch(e){ btn.disabled=false; btn.textContent="Couldn't save — "+e.message; }
+  };
+}
+
+/* tap a budget bar → see that category's transactions for the period */
 function openBudgetHistory(b, period){
   const p = period && period.fromStr ? period : periodFor(0);
   const rows = TX.all.filter(r=>r.categoryId===b.categoryId && r.date>=p.fromStr && r.date<=p.toStr)
@@ -2031,9 +2074,13 @@ function openBudgetHistory(b, period){
     <h2>${esc(b.emoji||"✨")} ${esc(b.name)}</h2>
     <div class="sd">${esc(periodLabel)} · ${fmt(total)} ${income?"received":"spent"}${b.budget?(" of "+fmt(b.budget)+(income?" target":" budget")):""}</div>
     <div class="manage-list">${listHtml}</div>
-    <button class="ghost" id="bh-close" type="button">Close</button>
+    <div class="seg" style="margin-top:4px">
+      <button class="ghost" id="bh-close" type="button">Close</button>
+      <button type="button" id="bh-edit-bud" style="background:var(--card-2);border:1.5px solid var(--line);border-radius:var(--radius);padding:0 18px;font-family:var(--disp);font-weight:700;font-size:14px;min-height:50px;cursor:pointer;color:var(--ink)">✎ Budget</button>
+    </div>
   `);
   $("bh-close").onclick = closeSheet;
+  $("bh-edit-bud").onclick = ()=>openBudgetEdit(b);
   /* tapping a row opens that transaction's detail/edit */
   $("sheet-body").querySelectorAll("[data-log]").forEach(row=>{
     row.onclick = ()=>{
@@ -2156,7 +2203,10 @@ function openTxDetail(entry){
       <div class="row"><span>Person</span><b>${esc(memberName(entry.memberId))}</b></div>
       <div class="row"><span>Date</span><b>${esc(entry.date)}</b></div>
       ${entry.note?`<div class="row"><span>Note</span><b>${esc(entry.note)}</b></div>`:""}
-      <button class="go" type="button" id="td-close">Close</button>
+      <div class="seg" style="margin-top:16px">
+        <button class="go" type="button" id="td-close">Close</button>
+        <button type="button" id="td-edit" style="background:var(--accent);border-color:var(--accent);color:#06201C">Edit</button>
+      </div>
       <button class="ghost danger" type="button" id="td-del">Delete this transfer</button>
     `);
     $("td-close").onclick = closeSheet;
@@ -2168,6 +2218,7 @@ function openTxDetail(entry){
         closeSheet(); renderTxPage();
       }catch(e){ b.disabled=false; b.textContent="Couldn't delete — retry"; }
     };
+    $("td-edit").onclick = ()=>openTransferEdit(entry);
     return;
   }
   openSheet(`
@@ -2185,6 +2236,52 @@ function openTxDetail(entry){
   `);
   $("td-close").onclick = closeSheet;
   $("td-edit").onclick = ()=>openTxEdit(entry);
+}
+
+function openTransferEdit(entry){
+  /* build wallet options for From/To pickers: non-debt wallets for the member + joint */
+  const avail = forMember(D.wallets, entry.memberId).filter(w=>w.type!=="debt");
+  const walletOpts = (selId, excludeId) => avail.map(w=>`
+    <option value="${esc(w.id)}" ${w.id===selId?"selected":""} ${w.id===excludeId?"disabled":""}>
+      ${esc(w.name+(w.ownerId===JOINT?" (joint)":" (personal)"))}
+    </option>`).join("");
+  openSheet(`
+    <h2 style="color:var(--accent)">Edit Transfer</h2>
+    <div class="fld"><label>From wallet</label>
+      <select id="te-from">${walletOpts(entry.fromWalletId, entry.toWalletId)}</select></div>
+    <div class="fld"><label>To wallet</label>
+      <select id="te-to">${walletOpts(entry.toWalletId, entry.fromWalletId)}</select></div>
+    <div class="fld"><label>Amount</label>
+      <input id="te-amt" class="num" inputmode="numeric" value="${esc(String(entry.amount))}"></div>
+    <div class="fld"><label>Date</label>
+      <input id="te-date" type="date" value="${esc(entry.date)}" max="${iso(new Date())}"></div>
+    <div class="fld"><label>Note (optional)</label>
+      <input id="te-note" type="text" maxlength="140" value="${esc(entry.note||"")}"></div>
+    <div id="te-err" class="err"></div>
+    <button class="go" id="te-save" type="button">Save changes</button>
+    <button class="ghost" id="te-cancel" type="button">Cancel</button>
+  `);
+  $("te-amt").addEventListener("input", e=>{
+    const n=Number(String(e.target.value).replace(/[^\d]/g,"")); e.target.value=n?n.toLocaleString("id-ID"):"";
+  });
+  $("te-cancel").onclick = ()=>openTxDetail(entry);
+  $("te-save").onclick = async ()=>{
+    const from=$("te-from").value, to=$("te-to").value;
+    if(from===to){ $("te-err").textContent="From and To must be different"; return; }
+    const amt=Number(String($("te-amt").value).replace(/[^\d]/g,""));
+    if(!(amt>0)){ $("te-err").textContent="Enter a valid amount"; return; }
+    const date=$("te-date").value;
+    if(!date){ $("te-err").textContent="Pick a date"; return; }
+    const note=$("te-note").value.trim();
+    const b=$("te-save"); b.disabled=true; b.textContent="Saving…";
+    try{
+      await api({action:"updateTransfer", loggedAt:entry.loggedAt,
+        fromWalletId:from, toWalletId:to, amount:amt, date, note});
+      const i=TX.all.findIndex(x=>x.loggedAt===entry.loggedAt);
+      if(i>=0) TX.all[i]={...TX.all[i], fromWalletId:from, toWalletId:to, amount:amt, date, note};
+      closeSheet(); renderTxPage();
+    }catch(e){ b.disabled=false; b.textContent="Couldn't save — "+e.message; }
+  };
 }
 
 function openTxEdit(entry){
@@ -2321,7 +2418,7 @@ function renderWallets(){
         <div class="wchip" style="background:${color}22;color:${color}">${esc((w.name[0]||"?").toUpperCase())}</div>
         <div class="wmeta"><div class="wname">${esc(w.name)}</div>
           <div class="whint">${BAL.starting[w.id]?("start "+fmt(BAL.starting[w.id])):"no starting balance set"}</div></div>
-        <div class="wval">${fmt(val)}</div>
+        <div class="wval bal-mask">${fmt(val)}</div>
         <button class="wedit" type="button" aria-label="Options">✎</button>`;
       card.querySelector(".wedit").onclick=()=>openBalanceSheet(w);
       el.appendChild(card);
@@ -2332,9 +2429,9 @@ function renderWallets(){
         linked.forEach(dw=>{ total += (BAL.debts[dw.id]||0); });
         box.innerHTML = linked.map(dw=>{
           const amt=BAL.debts[dw.id]||0;
-          return `<div class="drow"><span>${esc(dw.name)} bill</span><b>−${fmt(amt)}</b></div>`;
+          return `<div class="drow"><span>${esc(dw.name)} bill</span><b class="bal-mask">−${fmt(amt)}</b></div>`;
         }).join("")
-        + `<div class="drow approx"><span>Approx. Balance</span><b>${fmt(val-total)}</b></div>`
+        + `<div class="drow approx"><span>Approx. Balance</span><b class="bal-mask">${fmt(val-total)}</b></div>`
         + linked.map(dw=>{
             const amt=BAL.debts[dw.id]||0;
             return amt>0
@@ -2355,7 +2452,7 @@ function renderWallets(){
         <div class="wchip" style="background:#E5573D22;color:var(--exp)">${esc((dw.name[0]||"?").toUpperCase())}</div>
         <div class="wmeta"><div class="wname">${esc(dw.name)}</div>
           <div class="whint">credit / bill · not linked to a wallet yet</div></div>
-        <div class="wval" style="color:var(--exp)">−${fmt(amt)}</div>
+        <div class="wval bal-mask" style="color:var(--exp)">−${fmt(amt)}</div>
         <button class="wedit" type="button" aria-label="Edit">✎</button>`;
       card.querySelector(".wedit").onclick=()=>openWalletSheet(dw.id);
       el.appendChild(card);
