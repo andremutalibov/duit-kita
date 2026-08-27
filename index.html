@@ -2344,9 +2344,11 @@ function attachSwipeDelete(wrap, entry){
 function openTxDetail(entry){
   const isTrf=entry.type==="Transfer", isIn=entry.type==="Income";
   if(isTrf){
+    const isPay = entry.subtype==="payto";
     openSheet(`
-      <h2 style="color:var(--accent)">Transfer</h2>
-      <div class="amt" style="color:var(--accent)">${fmt(entry.amount)}</div>
+      <h2 style="color:${isPay?"var(--exp)":"var(--accent)"}">${isPay?"Pay to":"Transfer"}</h2>
+      <div class="amt" style="color:${isPay?"var(--exp)":"var(--accent)"}">${isPay?"−":""}${fmt(entry.amount)}</div>
+      ${isPay?`<div class="row"><span>Category</span><b>${esc(catEmoji(entry.categoryId))} ${esc(catLabel(entry.categoryId))}</b></div>`:""}
       <div class="row"><span>From</span><b>${esc(walletLabel(entry.fromWalletId))}</b></div>
       <div class="row"><span>To</span><b>${esc(walletLabel(entry.toWalletId))}</b></div>
       <div class="row"><span>Person</span><b>${esc(memberName(entry.memberId))}</b></div>
@@ -2354,9 +2356,9 @@ function openTxDetail(entry){
       ${entry.note?`<div class="row"><span>Note</span><b>${esc(entry.note)}</b></div>`:""}
       <div class="seg" style="margin-top:16px">
         <button class="go" type="button" id="td-close">Close</button>
-        <button type="button" id="td-edit" style="background:var(--accent);border-color:var(--accent);color:#06201C">Edit</button>
+        <button type="button" id="td-edit" style="background:${isPay?"var(--exp)":"var(--accent)"};border-color:${isPay?"var(--exp)":"var(--accent)"};color:#fff">Edit</button>
       </div>
-      <button class="ghost danger" type="button" id="td-del">Delete this transfer</button>
+      <button class="ghost danger" type="button" id="td-del">Delete this ${isPay?"payment":"transfer"}</button>
     `);
     $("td-close").onclick = closeSheet;
     $("td-del").onclick = async ()=>{
@@ -2388,20 +2390,37 @@ function openTxDetail(entry){
 }
 
 function openTransferEdit(entry){
-  /* build wallet options for From/To pickers: non-debt wallets for the member + joint */
-  const avail = forMember(D.wallets, entry.memberId).filter(w=>w.type!=="debt");
-  const walletOpts = (selId, excludeId) => avail.map(w=>`
-    <option value="${esc(w.id)}" ${w.id===selId?"selected":""} ${w.id===excludeId?"disabled":""}>
-      ${esc(w.name+(w.ownerId===JOINT?" (joint)":" (personal)"))}
-    </option>`).join("");
+  const isPay = entry.subtype==="payto";
+  const mid = entry.memberId;
+
+  /* From options: payto = sender's own non-debt; normal = sender's own + joint */
+  const fromWallets = isPay
+    ? D.wallets.filter(w=>w.ownerId===mid && w.type!=="debt")
+    : D.wallets.filter(w=>w.type!=="debt" && (w.ownerId===mid||w.ownerId===JOINT));
+  /* To options: payto = anyone else's non-debt (not sender, not joint); normal = all non-debt */
+  const toWallets = isPay
+    ? D.wallets.filter(w=>w.type!=="debt" && w.ownerId!==mid && w.ownerId!==JOINT)
+    : D.wallets.filter(w=>w.type!=="debt");
+
+  const optTag = w => w.ownerId===JOINT ? "joint" : memberName(w.ownerId);
+  const opts = (list, selId) => list.map(w=>`
+    <option value="${esc(w.id)}" ${w.id===selId?"selected":""}>${esc(w.name+" ("+optTag(w)+")")}</option>`).join("");
+
+  /* payto category options: sender's expense categories + joint */
+  const payCats = D.categories.filter(c=>c.kind==="expense"&&(c.ownerId===mid||c.ownerId===JOINT));
+  const catOpts = payCats.map(c=>`
+    <option value="${esc(c.id)}" ${c.id===entry.categoryId?"selected":""}>${esc((c.emoji||"✨")+" "+c.name)}</option>`).join("");
+
   openSheet(`
-    <h2 style="color:var(--accent)">Edit Transfer</h2>
+    <h2 style="color:${isPay?"var(--exp)":"var(--accent)"}">Edit ${isPay?"Pay to":"Transfer"}</h2>
     <div class="fld"><label>From wallet</label>
-      <select id="te-from">${walletOpts(entry.fromWalletId, entry.toWalletId)}</select></div>
+      <select id="te-from">${opts(fromWallets, entry.fromWalletId)}</select></div>
     <div class="fld"><label>To wallet</label>
-      <select id="te-to">${walletOpts(entry.toWalletId, entry.fromWalletId)}</select></div>
+      <select id="te-to">${opts(toWallets, entry.toWalletId)}</select></div>
+    ${isPay?`<div class="fld"><label>Category</label>
+      <select id="te-cat">${catOpts}</select></div>`:""}
     <div class="fld"><label>Amount</label>
-      <input id="te-amt" class="num" inputmode="numeric" value="${esc(String(entry.amount))}"></div>
+      <input id="te-amt" class="num" inputmode="numeric" value="${esc(entry.amount.toLocaleString("id-ID"))}"></div>
     <div class="fld"><label>Date</label>
       <input id="te-date" type="date" value="${esc(entry.date)}" max="${iso(new Date())}"></div>
     <div class="fld"><label>Note (optional)</label>
@@ -2422,12 +2441,15 @@ function openTransferEdit(entry){
     const date=$("te-date").value;
     if(!date){ $("te-err").textContent="Pick a date"; return; }
     const note=$("te-note").value.trim();
+    const catId = isPay ? ($("te-cat")?$("te-cat").value:entry.categoryId) : "";
+    if(isPay && !catId){ $("te-err").textContent="Pick a category"; return; }
     const b=$("te-save"); b.disabled=true; b.textContent="Saving…";
     try{
       await api({action:"updateTransfer", loggedAt:entry.loggedAt,
-        fromWalletId:from, toWalletId:to, amount:amt, date, note});
+        fromWalletId:from, toWalletId:to, amount:amt, date, note,
+        subtype:entry.subtype||"normal", categoryId:catId});
       const i=TX.all.findIndex(x=>x.loggedAt===entry.loggedAt);
-      if(i>=0) TX.all[i]={...TX.all[i], fromWalletId:from, toWalletId:to, amount:amt, date, note};
+      if(i>=0) TX.all[i]={...TX.all[i], fromWalletId:from, toWalletId:to, amount:amt, date, note, categoryId:catId};
       closeSheet(); renderTxPage();
     }catch(e){ b.disabled=false; b.textContent="Couldn't save — "+e.message; }
   };
