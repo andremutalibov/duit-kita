@@ -253,6 +253,20 @@ body[data-view="add"] .savebar{display:block}
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; /* up to two lines */
 }
 .pickgrid .chip-cat .lbl.long{font-size:10px; letter-spacing:-.01em} /* a single word too wide for the column */
+/* categories: small rectangles (icon left, name beside it) like the quick amounts; left-aligned,
+   wrapping onto as many rows as needed, never scrolling */
+.pillgrid{display:flex; flex-wrap:wrap; justify-content:flex-start; gap:8px; padding:2px 0 6px}
+.chip-pill{
+  position:relative; display:inline-flex; align-items:center; gap:7px; max-width:100%;
+  min-height:36px; padding:0 12px 0 10px; border:1px solid var(--line); border-radius:8px;
+  background:var(--card); color:var(--ink); font-family:var(--disp); font-weight:600; font-size:13px; cursor:pointer;
+}
+.chip-pill span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.chip-pill .icon{flex:0 0 auto; color:var(--muted)}
+.chip-pill:hover{border-color:var(--muted)}
+.chip-pill.sel{border-color:var(--accent); background:var(--accent-tint); color:var(--accent)}
+.chip-pill.sel .icon{color:var(--accent)}
+.chip-pill::after{content:""; position:absolute; inset:-5px -3px} /* measured from inside the 1px border: 36px + 8px = 44px touch area, meets the 8px gap */
 .pickgrid .chip-cat .sub{margin-top:-2px}
 .pick-empty{font-size:13px; color:var(--muted); padding:6px 4px; text-align:center; line-height:1.45}
 /* wallets: same circles as categories, filled with the wallet's own colour */
@@ -661,7 +675,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,[role="button"]:fo
   <section id="cat-sec">
     <div class="label"><span class="lbl-grp">Category
       <button class="lbl-edit" id="mng-cat" type="button" aria-label="Edit categories"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" style="width:16px;height:16px"><path d="M4 20h4.5L19.5 9 15 4.5 4 15.5z"/><path d="M13 6.5l4.5 4.5"/></svg></button></span></div>
-    <div class="pickgrid" id="cats"></div>
+    <div class="pillgrid" id="cats"></div>
     <div class="reveal" id="note-reveal">
       <label class="label" for="note-input">Note (optional)</label>
       <input id="note-input" type="text" maxlength="140" placeholder="What it was for" autocomplete="off">
@@ -684,7 +698,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,[role="button"]:fo
 
     <div id="payto-cat-sec" style="display:none;margin-top:16px">
       <div class="label"><span>Category</span></div>
-      <div class="pickgrid" id="payto-cats"></div>
+      <div class="pillgrid" id="payto-cats"></div>
     </div>
     <div style="margin-top:16px">
       <label class="label" for="transfer-note">Note (optional)</label>
@@ -1064,12 +1078,13 @@ function refocusMove(id, dir){
   const t = want && !want.disabled ? want : other;
   if(t) t.focus({preventScroll:false});
 }
-/* one round picker button (category or wallet), used by the Add and Transfer grids */
-function catCircleBtn(c, selected, onPick){
+/* one category button: a small rectangle with the icon on the left and the name beside it,
+   same family as the quick-amount buttons (used on Add and in Pay to) */
+function catPillBtn(c, selected, onPick){
   const b=document.createElement("button");
-  b.type="button"; b.className="chip-cat"+(selected?" sel":"");
+  b.type="button"; b.className="chip-pill"+(selected?" sel":"");
   b.setAttribute("aria-pressed", String(!!selected));
-  b.innerHTML=`<span class="circ">${catIcon(c.emoji, 24)}</span><span class="lbl${longWord(c.name)?" long":""}">${esc(c.name)}</span>`;
+  b.innerHTML=`${catIcon(c.emoji, 16)}<span>${esc(c.name)}</span>`;
   b.onclick=onPick;
   return b;
 }
@@ -1215,7 +1230,7 @@ function buildCats(){
   const kind = S.type==="Income" ? "income" : "expense";
   const list = S.memberId ? byOrder(forMember(D.categories, S.memberId).filter(c=>c.kind===kind)) : [];
   list.forEach(c=>{
-    el.appendChild(catCircleBtn(c, c.id===S.categoryId, ()=>{ S.categoryId=c.id; buildCats(); $("note-reveal").classList.add("show"); refresh(); }));
+    el.appendChild(catPillBtn(c, c.id===S.categoryId, ()=>{ S.categoryId=c.id; buildCats(); $("note-reveal").classList.add("show"); refresh(); }));
   });
   /* adding categories lives behind the gear, then the pencil next to "Category" */
   if(!list.length && S.memberId) emptyPick(el, `No ${kind} categories yet. Tap the gear at the top, then the pencil next to Category to add one.`);
@@ -1334,7 +1349,7 @@ function buildPaytoCats(){
   /* show expense categories belonging to the sender (S.memberId) + joint */
   const cats = byOrder(D.categories.filter(c=>c.kind==="expense"&&(c.ownerId===S.memberId||c.ownerId===JOINT)));
   cats.forEach(c=>{
-    el.appendChild(catCircleBtn(c, c.id===S.paytoCategoryId, ()=>{ S.paytoCategoryId=c.id; buildPaytoCats(); refresh(); }));
+    el.appendChild(catPillBtn(c, c.id===S.paytoCategoryId, ()=>{ S.paytoCategoryId=c.id; buildPaytoCats(); refresh(); }));
   });
   if(!cats.length) emptyPick(el, "No expense categories yet. Add one from Expense, using the gear and the pencil next to Category.");
 }
