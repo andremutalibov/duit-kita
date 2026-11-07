@@ -60,6 +60,17 @@ header h1 .dot{color:var(--person)}
   display:flex; align-items:center; justify-content:center; flex:0 0 38px;
 }
 .theme-toggle:active{background:var(--accent-tint)}
+/* offline-queue banner */
+.syncbar{display:none; margin:8px 16px 0; padding:10px 12px; border-radius:14px;
+  background:var(--card); border:1.5px solid var(--coin); color:var(--ink);
+  font-size:13px; font-weight:600; align-items:center; gap:10px; flex-wrap:wrap}
+.syncbar.show{display:flex}
+.syncbar.bad{border-color:var(--exp); background:var(--err-bg); color:var(--err-fg)}
+.syncbar span{flex:1; min-width:180px}
+.syncbar button{border:none; border-radius:999px; padding:7px 14px; min-height:32px; cursor:pointer;
+  background:var(--coin); color:#1A1405; font-family:var(--disp); font-weight:700; font-size:12px}
+.syncbar.bad button{background:var(--exp); color:#fff}
+.err{color:var(--exp); font-size:13px; font-weight:600; margin:2px 0 6px}
 /* hide-balance mode */
 body.hide-bal .bal-mask{filter:blur(7px); user-select:none; pointer-events:none; transition:filter .2s}
 #eye-toggle.hidden{opacity:.5}
@@ -508,6 +519,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light/dark theme">☀️</button>
   </div>
 </header>
+<div class="syncbar" id="sync-bar" role="status" aria-live="polite"></div>
 
 <!-- ==================== HOME ==================== -->
 <main id="v-home">
@@ -718,15 +730,121 @@ $("eye-toggle").onclick = ()=>{
 };
 
 /* ================= api ================= */
-async function api(payload){
-  const res = await fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) });
-  const txt = await res.text();
+/* Reads are always safe to repeat. Saves are safe to repeat because each one carries a
+   clientId the backend de-duplicates on. Edits/deletes are NOT auto-retried. */
+const RETRY_ACTIONS = { bootstrap:1, list:1, balances:1, saveTx:1, saveTransfer:1 };
+const API_TIMEOUT_MS = 25000;
+const sleep = ms => new Promise(r=>setTimeout(r, ms));
+function newClientId(){
+  try{ if(crypto && crypto.randomUUID) return crypto.randomUUID(); }catch(e){}
+  return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
+}
+/* backend errors that mean "server busy, try again" rather than "your input is wrong" */
+const TRANSIENT_ERR = /lock|timed? ?out|too many|service unavailable|try again|server error|internal error/i;
+
+async function apiOnce(payload){
+  const ctl = (typeof AbortController!=="undefined") ? new AbortController() : null;
+  const timer = ctl ? setTimeout(()=>ctl.abort(), API_TIMEOUT_MS) : null;
+  let txt;
+  try{
+    const res = await fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify(payload), signal: ctl ? ctl.signal : undefined });
+    txt = await res.text();
+  }catch(e){
+    const err = new Error(e && e.name==="AbortError" ? "Timed out" : "Network error");
+    err.retryable = true; throw err;
+  }finally{ if(timer) clearTimeout(timer); }
   let out;
   try { out = JSON.parse(txt); }
-  catch(e){ throw new Error("Bad response: " + txt.slice(0,120)); }
-  if(!out.ok) throw new Error(out.error || "Request failed");
+  catch(e){ const err = new Error("Bad response: " + String(txt).slice(0,120)); err.retryable = true; throw err; }
+  if(!out.ok){
+    const err = new Error(out.error || "Request failed");
+    err.retryable = TRANSIENT_ERR.test(out.error || "");
+    throw err;
+  }
   return out;
 }
+
+/* opts.tries overrides the attempt count; opts.onRetry(attempt, total) lets the UI show progress */
+async function api(payload, opts){
+  opts = opts || {};
+  const action = payload.action || "saveTx";
+  const tries = opts.tries || (RETRY_ACTIONS[action] ? 4 : 1);
+  let lastErr;
+  for(let i=1;i<=tries;i++){
+    try{ return await apiOnce(payload); }
+    catch(e){
+      lastErr = e;
+      if(!e.retryable || i===tries) break;
+      if(opts.onRetry) opts.onRetry(i+1, tries);
+      await sleep(1000 * Math.pow(2, i-1)); // wait 1s, 2s, 4s between attempts
+    }
+  }
+  throw lastErr;
+}
+
+/* ================= offline outbox ================= */
+/* A save that still fails after all retries is kept on this phone and re-sent automatically
+   (on app open, when the network comes back, and every 30s). The clientId makes this safe:
+   if it actually landed the first time, the backend just returns the existing entry. */
+const OUTBOX_KEY = "duitkita-outbox";
+let outboxRejected = []; // entries the backend refused outright (e.g. date now out of range)
+function outboxGet(){ try{ const a=JSON.parse(localStorage.getItem(OUTBOX_KEY)||"[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function outboxSet(a){ try{ localStorage.setItem(OUTBOX_KEY, JSON.stringify(a)); }catch(e){} renderSyncBar(); }
+function outboxAdd(p){ const a=outboxGet(); if(!a.some(x=>x.clientId===p.clientId)) a.push(p); outboxSet(a); }
+function outboxHas(cid){ return outboxGet().some(x=>x.clientId===cid); }
+function outboxRemove(cid){ outboxSet(outboxGet().filter(x=>x.clientId!==cid)); }
+
+let flushing = false;
+async function flushOutbox(){
+  if(flushing) return;
+  const queue = outboxGet();
+  if(!queue.length) return;
+  flushing = true; renderSyncBar();
+  let synced = 0;
+  for(const p of queue){
+    if(!outboxHas(p.clientId)) continue; // deleted by the user meanwhile
+    try{
+      await api(p, { tries:2 });
+      outboxRemove(p.clientId); synced++;
+    }catch(e){
+      if(e.retryable) break; // still offline / server down — try again later, keep order
+      outboxRemove(p.clientId);
+      outboxRejected.push({ p, error:e.message });
+    }
+  }
+  flushing = false; renderSyncBar();
+  if(synced){
+    TX.all = [];
+    const v = document.body.dataset.view;
+    if(v==="home") loadHome();
+    else if(v==="transaction") loadTransactionPage();
+    else if(v==="wallet") loadWallets();
+  }
+}
+
+function renderSyncBar(){
+  const bar = $("sync-bar"); if(!bar) return;
+  const n = outboxGet().length;
+  if(!n && !outboxRejected.length){ bar.className="syncbar"; bar.innerHTML=""; return; }
+  let html = "";
+  if(n){
+    html += `<span>⏳ ${n} ${n===1?"entry":"entries"} saved on this phone — ${flushing?"syncing…":"waiting to sync"}</span>`+
+            (flushing?"":`<button type="button" id="sync-now">Sync now</button>`);
+  }
+  if(outboxRejected.length){
+    const r = outboxRejected[outboxRejected.length-1];
+    html += `<span class="rej">⚠️ ${outboxRejected.length} queued ${outboxRejected.length===1?"entry was":"entries were"} rejected: ${esc(r.error)} `+
+            `(${esc(fmt(r.p.amount))} on ${esc(r.p.date)}). Please re-enter it.</span>`+
+            `<button type="button" id="sync-dismiss">OK</button>`;
+  }
+  bar.className = "syncbar show" + (outboxRejected.length ? " bad" : "");
+  bar.innerHTML = html;
+  const sn=$("sync-now"); if(sn) sn.onclick = flushOutbox;
+  const sd=$("sync-dismiss"); if(sd) sd.onclick = ()=>{ outboxRejected=[]; renderSyncBar(); };
+}
+window.addEventListener("online", flushOutbox);
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") flushOutbox(); });
+setInterval(()=>{ if(outboxGet().length) flushOutbox(); }, 30000);
 
 /* ================= lookups ================= */
 const memberById = id => D.members.find(m=>m.id===id);
@@ -756,6 +874,8 @@ async function boot(){
     if(D.members.length && !S.memberId) selectMember(D.members[0].id, true);
     buildAdd();
     loadHome();
+    renderSyncBar();
+    flushOutbox(); // send anything left over from a previous failed session
   }catch(e){
     $("home-state").innerHTML = "Couldn't reach the backend.<br><button id='b-retry' type='button'>Retry</button>"+
       "<div class='raw'>"+esc(e.message)+"</div>";
@@ -1155,35 +1275,52 @@ $("save").onclick = async ()=>{
   err.classList.remove("show");
   btn.disabled=true; btn.textContent="Saving…";
   let payload, out;
+  /* one clientId per tap of Save — every retry of this save reuses it */
+  const clientId = newClientId();
+  if(S.type==="Transfer"){
+    payload = { action:"saveTransfer", type:"Transfer", date:entryDate(), memberId:S.memberId,
+                fromWalletId:S.fromWalletId, toWalletId:S.toWalletId,
+                subtype:S.subtype, categoryId:S.subtype==="payto"?S.paytoCategoryId:"",
+                amount:S.amount, note:($("transfer-note").value||"").trim(), clientId };
+  } else {
+    payload = { action:"saveTx", type:S.type, date:entryDate(), memberId:S.memberId,
+                categoryId:S.categoryId, amount:S.amount, walletId:S.walletId,
+                note:(S.note||"").trim(), clientId };
+  }
   try{
-    if(S.type==="Transfer"){
-      payload = { action:"saveTransfer", type:"Transfer", date:entryDate(), memberId:S.memberId,
-                  fromWalletId:S.fromWalletId, toWalletId:S.toWalletId,
-                  subtype:S.subtype, categoryId:S.subtype==="payto"?S.paytoCategoryId:"",
-                  amount:S.amount, note:($("transfer-note").value||"").trim() };
-    } else {
-      payload = { type:S.type, date:entryDate(), memberId:S.memberId,
-                  categoryId:S.categoryId, amount:S.amount, walletId:S.walletId,
-                  note:(S.note||"").trim() };
-    }
-    out = await api(payload);
+    out = await api(payload, { onRetry:(n,t)=>{ btn.textContent = `Connection slow — retrying (${n}/${t})…`; } });
     showSlip(payload, out.loggedAt);
     TX.all = [];
   }catch(e){
-    err.textContent = "Couldn't save — " + e.message;
-    err.classList.add("show");
-    refresh();
+    if(e.retryable){
+      /* network/server trouble: keep it on the phone and sync it in the background */
+      outboxAdd(payload);
+      showSlip(payload, null, true);
+    } else {
+      /* the backend rejected the data itself (bad date, missing field…) — retrying won't help */
+      err.textContent = "Couldn't save — " + e.message;
+      err.classList.add("show");
+      refresh();
+    }
   }
 };
 
 /* receipt */
 let lastLoggedAt = null;
 let lastIsTransfer = false;
-function showSlip(p, loggedAt){
+let lastClientId = null;
+let lastQueued = false;
+function showSlip(p, loggedAt, queued){
   lastLoggedAt = loggedAt || null;
   lastIsTransfer = p.type==="Transfer";
+  lastClientId = p.clientId || null;
+  lastQueued = !!queued;
   const isIn=p.type==="Income", isTrf=p.type==="Transfer";
-  const title = isTrf ? "Transfer done ✓" : (isIn ? "Income logged ✓" : "Logged ✓");
+  const title = queued ? "Saved on this phone ⏳"
+    : (isTrf ? "Transfer done ✓" : (isIn ? "Income logged ✓" : "Logged ✓"));
+  const queuedNote = queued
+    ? `<div class="sd" style="margin:4px 0 6px">Couldn't reach the sheet right now. This entry is kept on your phone and will sync automatically — no need to submit it again.</div>`
+    : "";
   const amtColor = isTrf ? "var(--accent)" : (isIn ? "var(--inc)" : "var(--exp)");
   const amtPrefix = isTrf ? "" : (isIn ? "+" : "");
   const bodyRows = isTrf
@@ -1193,7 +1330,8 @@ function showSlip(p, loggedAt){
        <div class="row"><span>${isIn?"Destination":"Wallet"}</span><b>${esc(walletLabel(p.walletId))}</b></div>`;
   openSheet(`
     <div class="perf"></div>
-    <h2 style="color:var(--person)">${title}</h2>
+    <h2 style="color:${queued?"var(--coin)":"var(--person)"}">${title}</h2>
+    ${queuedNote}
     <div class="amt" style="color:${amtColor}">${amtPrefix}${fmt(p.amount)}</div>
     ${bodyRows}
     <div class="row"><span>Day</span><b>${esc(p.date)}</b></div>
@@ -1204,8 +1342,15 @@ function showSlip(p, loggedAt){
   `, "slip");
   $("slip-again").onclick = ()=>{ closeSheet(); resetForm(); };
   $("slip-del").onclick = async ()=>{
+    const b=$("slip-del");
+    if(lastQueued){
+      /* still waiting on the phone → just drop it from the queue */
+      if(lastClientId && outboxHas(lastClientId)){ outboxRemove(lastClientId); closeSheet(); resetForm(); }
+      else b.textContent="Already synced — delete it from Transaction history";
+      return;
+    }
     if(!lastLoggedAt) return;
-    const b=$("slip-del"); b.disabled=true; b.textContent="Deleting…";
+    b.disabled=true; b.textContent="Deleting…";
     const act = lastIsTransfer ? "deleteTransfer" : "deleteTx";
     try{ await api({action:act, loggedAt:lastLoggedAt}); TX.all=[]; closeSheet(); resetForm(); }
     catch(e){ b.disabled=false; b.textContent="Couldn't delete — retry"; }
@@ -2691,6 +2836,7 @@ async function confirmPaid(walletId, bar){
 
 /* ================= go ================= */
 boot();
+renderSyncBar(); // show queued entries even if the backend is unreachable at startup
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 </body>
