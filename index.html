@@ -219,12 +219,13 @@ body[data-view="add"] .savebar{display:block}
   display:flex; flex-direction:column; align-items:center; gap:6px; min-width:62px; padding:2px;
 }
 .chip-cat .circ{
-  width:58px; height:58px; border-radius:50%; background:var(--card);
+  width:58px; height:58px; border-radius:50%; background:var(--card); color:var(--ink);
   border:1.5px solid var(--line); display:flex; align-items:center; justify-content:center;
   font-size:25px; transition:.15s;
 }
+.chip-cat:hover .circ{border-color:var(--muted)}
 .chip-cat .lbl{font-size:11.5px; font-weight:600; color:var(--muted); white-space:nowrap; max-width:74px; overflow:hidden; text-overflow:ellipsis}
-.chip-cat.sel .circ{border:2.5px solid var(--accent); background:var(--accent-tint)}
+.chip-cat.sel .circ{border:2.5px solid var(--accent); background:var(--accent-tint); color:var(--accent)}
 .chip-cat.sel .lbl{color:var(--accent); font-weight:700}
 .chip-cat .circ.plus{border-style:dashed; color:var(--muted); font-size:24px}
 
@@ -341,7 +342,13 @@ button.calcell{appearance:none; -webkit-appearance:none}
 .pie-wrap{display:flex; justify-content:center; align-items:center; position:relative}
 .pie-wrap svg{width:100%; max-width:190px; height:auto}
 .pie-lbl{font-family:var(--num); font-weight:700; fill:#fff}
-.pie-emoji{font-size:13px}
+.legdot, .bud .top .budico, .rcard .cico{color:var(--ink)}
+.h-ic, .b-ic{display:inline-flex; align-items:center; gap:8px}
+.b-ic .icon{color:var(--muted)}
+/* category icon picker: same 44px grid as before, icons instead of emoji */
+.cat-picker button{display:flex; align-items:center; justify-content:center; color:var(--ink)}
+.cat-picker button:hover{border-color:var(--muted)}
+.cat-picker button.sel{color:var(--accent)}
 .rep-totals{margin-top:16px; padding-top:12px; border-top:1px dashed var(--line);
   display:flex; flex-direction:column; gap:7px}
 .rep-totals .sr b.inc{color:var(--inc)}
@@ -712,7 +719,6 @@ const iso = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+
 const esc = s => String(s??"").replace(/[<>&"]/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]));
 const JOINT = "joint";
 const PALETTE = ["#1E7A50","#B04A72","#2D6CDF","#C9962A","#8B5C8F","#0E7A6B","#B23A2E","#6B5CA5"];
-const EMOJI_SET = ["🍜","🛵","🛍️","🧾","🛒","🍼","💵","💼","🎁","🔁","🏠","📅","⛽","💊","🎬","📚","✈️","☕","🐱","✨"];
 const DAYS = ["Today","Yesterday","Custom"];
 
 /* app data + ui state */
@@ -737,6 +743,39 @@ const ICON = {
   sliders:'<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>'
 };
 const icon = (name, size) => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"${size?` style="width:${size}px;height:${size}px"`:""}>${ICON[name]}</svg>`;
+
+/* Category icons, drawn in the same style as the navbar. The sheet still stores the emoji
+   (so existing data and older copies of the app keep working); the app only draws it as an icon. */
+const CAT_ICONS = [
+  { e:"🍜", name:"Food",          d:'<path d="M3 11h18c0 4.5-4 8.5-9 8.5S3 15.5 3 11z"/><path d="M8.5 4v4M12 3v5M15.5 4v4"/>' },
+  { e:"🛵", name:"Transport",     d:'<circle cx="6" cy="17" r="2.5"/><circle cx="18" cy="17" r="2.5"/><path d="M8.5 17h7l2.5-7.5V6h-3M15.5 17 13 10.5H6.5"/>' },
+  { e:"🛍️", name:"Shopping",     d:'<path d="M5 8h14l-1 12.5H6z"/><path d="M9 10V6.5a3 3 0 0 1 6 0V10"/>' },
+  { e:"🧾", name:"Bills",         d:'<path d="M5.5 3h13v18l-2.2-1.6-2.2 1.6-2.1-1.6-2.1 1.6-2.2-1.6L5.5 21z"/><path d="M9 8h6M9 12h6"/>' },
+  { e:"🛒", name:"Groceries",     d:'<path d="M2.5 4H5l2 11h11l2-8H6"/><circle cx="9" cy="19.5" r="1.5"/><circle cx="16.5" cy="19.5" r="1.5"/>' },
+  { e:"🍼", name:"Baby",          d:'<path d="M9 3h6M10 3v3L8 9v11.5h8V9l-2-3V3M8 13.5h8"/>' },
+  { e:"💵", name:"Cash",          d:'<path d="M2.5 6.5h19v11h-19z"/><circle cx="12" cy="12" r="2.5"/><path d="M6 10v4M18 10v4"/>' },
+  { e:"💼", name:"Salary",        d:'<path d="M3 7.5h18v12H3z"/><path d="M9 7.5v-3h6v3M3 12.5h18"/>' },
+  { e:"🎁", name:"Gift",          d:'<path d="M3.5 8.5h17v4h-17zM5 12.5v8h14v-8M12 8.5v12"/><path d="M12 8.5C11 5 9.5 4 8.3 4.3 6.8 4.7 7 7.5 9 8.5M12 8.5c1-3.5 2.5-4.5 3.7-4.2 1.5.4 1.3 3.2-.7 4.2"/>' },
+  { e:"🔁", name:"Transfer",      d:'<path d="M4 9h15M16 5.5 19.5 9 16 12.5M20 15H5M8 11.5 4.5 15 8 18.5"/>' },
+  { e:"🏠", name:"Household",     d:'<path d="M3 11 12 4l9 7M5.5 9.5V20h13V9.5M10 20v-5.5h4V20"/>' },
+  { e:"📅", name:"Monthly",       d:'<path d="M3.5 5.5h17v15h-17zM3.5 10h17M8 3v4.5M16 3v4.5"/>' },
+  { e:"⛽", name:"Fuel",          d:'<path d="M5 20.5V4h9v16.5M3.5 20.5h12M5 10h9M14 8.5l3.5 3v6a1.5 1.5 0 0 0 3 0V8.5L17.5 6"/>' },
+  { e:"💊", name:"Health",        d:'<path d="M12 3.5v17M3.5 12h17"/><path d="M8 3.5h8v4.5h4.5v8H16v4.5H8V16H3.5V8H8z"/>' },
+  { e:"🎬", name:"Entertainment", d:'<path d="M3 5h18v14H3z"/><path d="M10 9v6l5-3z"/>' },
+  { e:"📚", name:"Education",     d:'<path d="M3.5 5H10a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H3.5zM20.5 5H14a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h6.5z"/>' },
+  { e:"✈️", name:"Travel",        d:'<path d="M12 3c.8 0 1.5.7 1.5 1.5V10l7 4v2l-7-2v4l2 1.5V21L12 20l-3.5 1v-1.5l2-1.5v-4l-7 2v-2l7-4V4.5C10.5 3.7 11.2 3 12 3z"/>' },
+  { e:"☕", name:"Coffee",        d:'<path d="M4 9h12v5.5a5.5 5.5 0 0 1-5.5 5.5h-1A5.5 5.5 0 0 1 4 14.5zM16 10.5h1.5a2.5 2.5 0 0 1 0 5H16M8 3.5v3M12 3.5v3"/>' },
+  { e:"🐱", name:"Pets",          d:'<path d="M4.5 20.5V4l5 4.5h5l5-4.5v16.5z"/><circle cx="9" cy="13.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="13.5" r="1.3" fill="currentColor" stroke="none"/><path d="M11 17h2"/>' },
+  { e:"✨", name:"Other",         d:'<path d="M3.5 3.5h8l9 9-8 8-9-9z"/><circle cx="8" cy="8" r="1.5"/>' }
+];
+const EMOJI_SET = CAT_ICONS.map(x=>x.e); // what the picker can choose; the stored value stays the emoji
+const stripVS = s => String(s||"").replace(/️/g,"");
+const CAT_ICON_BY = {}; CAT_ICONS.forEach(x=>{ CAT_ICON_BY[stripVS(x.e)] = x; });
+/* anything not in the set (e.g. typed into the sheet by hand) falls back to the "Other" tag */
+function catIconDef(emoji){ return CAT_ICON_BY[stripVS(emoji)] || CAT_ICON_BY[stripVS("✨")]; }
+function catIcon(emoji, size){
+  return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" style="width:${size||22}px;height:${size||22}px">${catIconDef(emoji).d}</svg>`;
+}
 
 /* ================= theme (dark default, light option) ================= */
 const THEME_KEY = "duitkita-theme";
@@ -1030,7 +1069,7 @@ function buildCats(){
   list.forEach(c=>{
     const b = document.createElement("button");
     b.type="button"; b.className = "chip-cat" + (c.id===S.categoryId ? " sel" : "");
-    b.innerHTML = `<span class="circ">${esc(c.emoji||"✨")}</span><span class="lbl">${esc(c.name)}</span>`;
+    b.innerHTML = `<span class="circ">${catIcon(c.emoji, 26)}</span><span class="lbl">${esc(c.name)}</span>`;
     b.onclick = ()=>{ S.categoryId=c.id; buildCats(); $("note-reveal").classList.add("show"); refresh(); };
     el.appendChild(b);
   });
@@ -1170,7 +1209,7 @@ function buildPaytoCats(){
   cats.forEach(c=>{
     const btn=document.createElement("button"); btn.type="button";
     btn.className="chip-cat"+(c.id===S.paytoCategoryId?" sel":"");
-    btn.innerHTML=`<div class="circ">${esc(c.emoji||"✨")}</div><div class="lbl">${esc(c.name)}</div>`;
+    btn.innerHTML=`<div class="circ">${catIcon(c.emoji, 26)}</div><div class="lbl">${esc(c.name)}</div>`;
     btn.onclick=()=>{ S.paytoCategoryId=c.id; buildPaytoCats(); refresh(); };
     el.appendChild(btn);
   });
@@ -1617,10 +1656,10 @@ function openCategoriesSheet(){
   const list = S.memberId ? forMember(D.categories, S.memberId).filter(c=>c.kind===kind) : [];
   const rows = list.map(c=>`
     <div class="mrow">
-      <span class="dot" style="background:var(--card-2);color:var(--ink);font-size:16px">${esc(c.emoji||"✨")}</span>
+      <span class="dot" style="background:var(--card-2);color:var(--ink)">${catIcon(c.emoji, 18)}</span>
       <span class="t"><b>${esc(c.name)}</b><small>${c.budget?("budget "+fmt(c.budget)+"/mo"):"no budget"}${c.ownerId===JOINT?" · shared":""}</small></span>
-      <button class="x" data-edit="${esc(c.id)}" type="button" style="color:var(--muted)">✎</button>
-      <button class="x" data-del="${esc(c.id)}" type="button">✕</button>
+      <button class="x" data-edit="${esc(c.id)}" type="button" style="color:var(--muted)" aria-label="Edit ${esc(c.name)}"><span aria-hidden="true">✎</span></button>
+      <button class="x" data-del="${esc(c.id)}" type="button" aria-label="Delete ${esc(c.name)}"><span aria-hidden="true">✕</span></button>
     </div>`).join("");
   openSheet(`
     <h2>${kind==="income"?"Income":"Expense"} categories</h2>
@@ -1665,11 +1704,20 @@ function openCategorySheet(editId){
   `);
   let emoji = existing ? (existing.emoji||"✨") : "✨";
   const ew=$("cf-emoji");
-  EMOJI_SET.forEach(e=>{
+  ew.classList.add("cat-picker");
+  ew.setAttribute("role","radiogroup"); ew.setAttribute("aria-label","Icon");
+  const current = catIconDef(emoji).e;
+  CAT_ICONS.forEach(ic=>{
     const b=document.createElement("button");
-    b.type="button"; b.textContent=e;
-    if(e===emoji) b.classList.add("sel");
-    b.onclick=()=>{ emoji=e; [...ew.children].forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); };
+    b.type="button"; b.innerHTML=catIcon(ic.e, 22);
+    b.setAttribute("role","radio"); b.setAttribute("aria-label", ic.name); b.title = ic.name;
+    const on = ic.e===current;
+    b.classList.toggle("sel", on); b.setAttribute("aria-checked", String(on));
+    b.onclick=()=>{
+      emoji=ic.e;
+      [...ew.children].forEach(x=>{ x.classList.remove("sel"); x.setAttribute("aria-checked","false"); });
+      b.classList.add("sel"); b.setAttribute("aria-checked","true");
+    };
     ew.appendChild(b);
   });
   let owner = existing ? (existing.ownerId===JOINT?"joint":"mine") : "mine";
@@ -2073,10 +2121,9 @@ function openDayHistory(dateStr){
   const sd = [ exp?("−"+fmt(exp)+" spent"):"", inc?("+"+fmt(inc)+" in"):"" ].filter(Boolean).join(" · ") || "No transactions";
   const listHtml = rows.length ? rows.map(r=>{
     const isIn=r.type==="Income", isTrf=r.type==="Transfer";
-    const icon = isTrf ? "↔" : (catEmoji(r.categoryId));
     const label2 = isTrf
       ? `${esc(walletLabel(r.fromWalletId))} → ${esc(walletLabel(r.toWalletId))}${r.note?" · "+esc(r.note):""}`
-      : `${esc(catEmoji(r.categoryId))} ${esc(catLabel(r.categoryId))} · ${esc(walletLabel(r.walletId))}${r.note?" · "+esc(r.note):""}`;
+      : `${esc(catLabel(r.categoryId))} · ${esc(walletLabel(r.walletId))}${r.note?" · "+esc(r.note):""}`;
     const amtColor = isTrf ? "var(--accent)" : (isIn ? "var(--inc)" : "var(--exp)");
     const amtPfx = isTrf ? "" : (isIn ? "+" : "−");
     return `<div class="mrow" data-log="${esc(String(r.loggedAt))}" role="button" tabindex="0">
@@ -2272,7 +2319,7 @@ function renderBudgetSlides(){
         const d=document.createElement("div");
         d.className="bud"; d.style.cursor="pointer";
         d.innerHTML=`
-          <div class="top"><span class="budico" style="background:${catColor(b.categoryId)}22;border-color:${catColor(b.categoryId)}">${esc(b.emoji||"✨")}</span>${esc(b.name)}
+          <div class="top"><span class="budico" style="background:${catColor(b.categoryId)}22;border-color:${catColor(b.categoryId)}">${catIcon(b.emoji, 17)}</span>${esc(b.name)}
             <span class="rem ${over&&!income?"over":"ok"}">${remLabel}</span></div>
           <div class="bar"><i class="${cls}" style="width:${pct}%"></i></div>
           <div class="sub">${fmt(b.used)} of ${fmt(b.budget)}${income?" target":""}</div>`;
@@ -2327,7 +2374,8 @@ function pieSVG(items, total){
     /* only label slices large enough to hold text (~8%+) */
     let label = "";
     if(frac >= 0.08){
-      label = `<text class="pie-emoji" x="${lx}" y="${ly-2}" text-anchor="middle" dominant-baseline="middle">${esc(it.emoji||"")}</text>`+
+      /* category icon drawn into the slice: 24-unit icon scaled to about 12px, white strokes */
+      label = `<g transform="translate(${(lx-6.5).toFixed(1)} ${(ly-10.5).toFixed(1)}) scale(.54)" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="square" stroke-linejoin="miter" style="color:#fff">${catIconDef(it.emoji).d}</g>`+
               `<text class="pie-lbl" x="${lx}" y="${ly+11}" text-anchor="middle" dominant-baseline="middle" font-size="9">${pct}%</text>`;
     }
     return { shape, label };
@@ -2368,7 +2416,7 @@ function renderReportSlides(){
       const legend = items.map(it=>{
         const pct=Math.round(it.value/totalExp*100);
         return `<button type="button" class="legrow" data-cat="${esc(it.categoryId)}" data-from="${esc(p.fromStr)}" data-to="${esc(p.toStr)}" data-label="${esc(p.label)}">
-            <span class="legdot" style="background:${it.color}22;border-color:${it.color}">${esc(it.emoji||"✨")}</span>
+            <span class="legdot" style="background:${it.color}22;border-color:${it.color}">${catIcon(it.emoji, 17)}</span>
             <span class="nm">${esc(it.name)}</span>
             <span class="val">${fmt(it.value)}</span>
             <span class="pctv">${pct}%</span>
@@ -2434,7 +2482,7 @@ function syncSliders(source, sourceDots){
 /* direct budget limit edit from the Home budget bar */
 function openBudgetEdit(b){
   openSheet(`
-    <h2>${esc(b.emoji||"✨")} ${esc(b.name)}</h2>
+    <h2 class="h-ic">${catIcon(b.emoji, 22)}${esc(b.name)}</h2>
     <div class="sd">${b.kind==="income"?"Monthly income target":"Monthly budget limit"}. Leave blank or 0 to remove.</div>
     <div class="fld"><label>${b.kind==="income"?"Target (Rp)":"Budget limit (Rp)"}</label>
       <input id="be-amt" class="num" inputmode="numeric" value="${esc(b.budget?b.budget.toLocaleString("id-ID"):"")}" placeholder="e.g. 1.500.000"></div>
@@ -2475,7 +2523,7 @@ function openBudgetHistory(b, period){
       </div>`).join("")
     : `<div class='sd'>No transactions in this category in ${esc(periodLabel)}.</div>`;
   openSheet(`
-    <h2>${esc(b.emoji||"✨")} ${esc(b.name)}</h2>
+    <h2 class="h-ic">${catIcon(b.emoji, 22)}${esc(b.name)}</h2>
     <div class="sd">${esc(periodLabel)} · ${fmt(total)} ${income?"received":"spent"}${b.budget?(" of "+fmt(b.budget)+(income?" target":" budget")):""}</div>
     <div class="manage-list">${listHtml}</div>
     <div class="seg" style="margin-top:4px">
@@ -2549,7 +2597,7 @@ function renderTxList(rows){
       wrap.innerHTML =
         trashBtn+
         `<div class="rcard exp"${rowAttrs("Pay to, "+catLabel(r.categoryId)+", minus "+fmt(r.amount))}>`+
-          `<div class="cico">${esc(catEmoji(r.categoryId))}`+
+          `<div class="cico">${catIcon(catEmoji(r.categoryId), 20)}`+
             `<span class="badge" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span></div>`+
           `<div class="mid"><div class="cat">${esc(catLabel(r.categoryId))}</div>`+
           `<div class="sub">${esc(walletLabel(r.fromWalletId))} → ${esc(walletLabel(r.toWalletId))}${r.note?` · ${esc(r.note)}`:""}</div></div>`+
@@ -2559,7 +2607,7 @@ function renderTxList(rows){
       wrap.innerHTML =
         trashBtn+
         `<div class="rcard ${isIn?"inc":"exp"}"${rowAttrs((isIn?"Income, ":"Expense, ")+catLabel(r.categoryId)+", "+(isIn?"plus ":"minus ")+fmt(r.amount)+", "+memberName(r.memberId))}>`+
-          `<div class="cico">${esc(catEmoji(r.categoryId))}`+
+          `<div class="cico">${catIcon(catEmoji(r.categoryId), 20)}`+
             `<span class="badge" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span></div>`+
           `<div class="mid"><div class="cat">${esc(catLabel(r.categoryId))}</div>`+
           `<div class="sub">${esc(walletLabel(r.walletId))}${r.note?` · ${esc(r.note)}`:""}</div></div>`+
@@ -2623,7 +2671,7 @@ function openTxDetail(entry){
     openSheet(`
       <h2 style="color:${isPay?"var(--exp)":"var(--accent)"}">${isPay?"Pay to":"Transfer"}</h2>
       <div class="amt" style="color:${isPay?"var(--exp)":"var(--accent)"}">${isPay?"−":""}${fmt(entry.amount)}</div>
-      ${isPay?`<div class="row"><span>Category</span><b>${esc(catEmoji(entry.categoryId))} ${esc(catLabel(entry.categoryId))}</b></div>`:""}
+      ${isPay?`<div class="row"><span>Category</span><b class="b-ic">${catIcon(catEmoji(entry.categoryId), 16)}${esc(catLabel(entry.categoryId))}</b></div>`:""}
       <div class="row"><span>From</span><b>${esc(walletLabel(entry.fromWalletId))}</b></div>
       <div class="row"><span>To</span><b>${esc(walletLabel(entry.toWalletId))}</b></div>
       <div class="row"><span>Person</span><b>${esc(memberName(entry.memberId))}</b></div>
@@ -2650,7 +2698,7 @@ function openTxDetail(entry){
   openSheet(`
     <h2 style="color:${esc(memberColor(entry.memberId))}">${isIn?"Income":"Expense"}</h2>
     <div class="amt" style="color:${isIn?"var(--inc)":"var(--exp)"}">${isIn?"+":"−"}${fmt(entry.amount)}</div>
-    <div class="row"><span>Category</span><b>${esc(catEmoji(entry.categoryId))} ${esc(catLabel(entry.categoryId))}</b></div>
+    <div class="row"><span>Category</span><b class="b-ic">${catIcon(catEmoji(entry.categoryId), 16)}${esc(catLabel(entry.categoryId))}</b></div>
     <div class="row"><span>${isIn?"Destination":"Wallet"}</span><b>${esc(walletLabel(entry.walletId))}</b></div>
     <div class="row"><span>Person</span><b>${esc(memberName(entry.memberId))}</b></div>
     <div class="row"><span>Date</span><b>${esc(entry.date)}</b></div>
@@ -2694,7 +2742,7 @@ function openTransferEdit(entry){
   /* payto category options: sender's expense categories + joint */
   const payCats = D.categories.filter(c=>c.kind==="expense"&&(c.ownerId===mid||c.ownerId===JOINT));
   const catOpts = payCats.map(c=>`
-    <option value="${esc(c.id)}" ${c.id===entry.categoryId?"selected":""}>${esc((c.emoji||"✨")+" "+c.name)}</option>`).join("");
+    <option value="${esc(c.id)}" ${c.id===entry.categoryId?"selected":""}>${esc(c.name)}</option>`).join("");
 
   openSheet(`
     <h2 style="color:${isPay?"var(--exp)":"var(--accent)"}">Edit ${isPay?"Pay to":"Transfer"}</h2>
@@ -2766,7 +2814,7 @@ function openTxEdit(entry){
       <div class="fld"><label>Person</label>
         <select id="te-member">${D.members.map(m=>`<option value="${esc(m.id)}" ${m.id===E.memberId?"selected":""}>${esc(m.name)}</option>`).join("")}</select></div>
       <div class="fld"><label>Category</label>
-        <select id="te-cat">${catsFor().map(c=>`<option value="${esc(c.id)}" ${c.id===E.categoryId?"selected":""}>${esc(c.emoji||"")} ${esc(c.name)}</option>`).join("")}</select></div>
+        <select id="te-cat">${catsFor().map(c=>`<option value="${esc(c.id)}" ${c.id===E.categoryId?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div>
       <div class="fld"><label>Amount</label>
         <input id="te-amt" class="num" inputmode="numeric" value="${E.amount?Number(E.amount).toLocaleString("id-ID"):""}"></div>
       <div class="fld"><label>${E.type==="Income"?"Destination":"Wallet"}</label>
