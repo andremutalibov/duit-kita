@@ -92,13 +92,17 @@ section{margin-top:18px}
   color:var(--muted); margin-bottom:8px; padding-left:4px;
   display:flex; align-items:center; justify-content:space-between; gap:8px;
 }
-.label .mini{
-  position:relative; font-family:var(--body); font-weight:700;
-  font-size:12px; color:var(--person-deep); background:var(--person-tint);
-  border:none; padding:5px 11px; border-radius:8px; cursor:pointer;
+/* section title with its edit (pencil) button right beside it */
+.lbl-grp{display:inline-flex; align-items:center; gap:8px}
+.lbl-edit{
+  position:relative; width:30px; height:30px; padding:0; border-radius:8px;
+  border:1.5px solid var(--line); background:var(--card-2); color:var(--muted);
+  display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
 }
+.lbl-edit:hover{color:var(--ink); border-color:var(--muted)}
 /* invisible 44px touch area around small controls, without making them look bigger */
-.label .mini::after, .qf::after{content:""; position:absolute; inset:-10px -4px} /* 25px + 20px = 45px tall */
+.lbl-edit::after{content:""; position:absolute; inset:-7px}          /* 30px + 14px = 44px */
+.qf::after{content:""; position:absolute; inset:-10px -4px}          /* 30px + 20px = 50px tall */
 .scroll-spacer{height:180px}
 .nav-spacer{height:90px}
 
@@ -140,8 +144,8 @@ body[data-view="add"] .savebar{display:block}
 .chip.sel{border-color:var(--accent); background:var(--accent-tint); color:var(--ink); border-width:2px}
 .chip.num{font-family:var(--num); font-weight:700; font-size:16px}
 .chip.wal{align-items:flex-start; padding-left:14px; text-align:left}
-.chip.wal small{font-size:11.5px; color:var(--muted); font-weight:600}
-.chip.sel.wal small{color:var(--accent)}
+.chip small{font-size:11.5px; color:var(--muted); font-weight:600}
+.chip.sel small{color:var(--accent)}
 .chip.add{border-style:dashed; color:var(--muted); font-weight:700}
 .trf-disabled{opacity:.35; cursor:not-allowed}
 .cyc-input{width:48px; min-height:38px; text-align:center; border:1.5px solid var(--line);
@@ -199,11 +203,14 @@ body[data-view="add"] .savebar{display:block}
 .who::-webkit-scrollbar{display:none}
 .who button{
   flex:0 0 auto; background:none; border:none; cursor:pointer;
-  display:flex; flex-direction:column; align-items:center; gap:7px; padding:2px; min-width:66px;
+  display:flex; flex-direction:column; align-items:center; gap:7px; padding:2px; min-width:74px;
 }
+/* centred when the people fit, still scrolls from the first person when they don't */
+#members > :first-child{margin-left:auto}
+#members > :last-child{margin-right:auto}
 .who .ava{
-  width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-  font-family:var(--disp); font-weight:700; font-size:25px; color:#fff; transition:.18s;
+  flex:0 0 auto; width:70px; height:70px; border-radius:50%; display:flex; align-items:center; justify-content:center; /* 64px + 10% */
+  font-family:var(--disp); font-weight:700; font-size:27px; color:#fff; transition:.18s;
   border:3px solid transparent; filter:saturate(.3) brightness(.85); /* unselected: muted color, initial stays readable */
 }
 .who .nm{font-family:var(--disp); font-weight:600; font-size:13px; color:var(--muted)}
@@ -219,7 +226,7 @@ body[data-view="add"] .savebar{display:block}
   display:flex; flex-direction:column; align-items:center; gap:6px; min-width:62px; padding:2px;
 }
 .chip-cat .circ{
-  width:58px; height:58px; border-radius:50%; background:var(--card); color:var(--ink);
+  width:55px; height:55px; border-radius:50%; background:var(--card); color:var(--ink); /* 58px - 5%, smaller than people */
   border:1.5px solid var(--line); display:flex; align-items:center; justify-content:center;
   font-size:25px; transition:.15s;
 }
@@ -228,6 +235,15 @@ body[data-view="add"] .savebar{display:block}
 .chip-cat.sel .circ{border:2.5px solid var(--accent); background:var(--accent-tint); color:var(--accent)}
 .chip-cat.sel .lbl{color:var(--accent); font-weight:700}
 .chip-cat .circ.plus{border-style:dashed; color:var(--muted); font-size:24px}
+.chip-cat .sub{font-size:10.5px; font-weight:600; color:var(--muted); margin-top:-4px}
+/* wallets: same circles as categories, filled with the wallet's own colour */
+.chip-wal .circ{border:none; font-family:var(--disp); font-weight:700; font-size:21px}
+.chip-wal:hover .circ{filter:brightness(1.08)}
+.chip-wal.sel .circ{box-shadow:0 0 0 3px var(--paper), 0 0 0 5.5px var(--accent)} /* selection ring, not a glow */
+/* colour swatches (people and wallets) */
+.swatches{display:flex; flex-wrap:wrap; gap:12px; padding:4px}
+.swatches button{width:44px; height:44px; border-radius:50%; border:none; cursor:pointer; padding:0}
+.swatches button.sel{box-shadow:0 0 0 3px var(--card), 0 0 0 5.5px var(--ink)}
 
 /* ---------- save bar ---------- */
 .savebar{
@@ -532,6 +548,7 @@ button.calcell{appearance:none; -webkit-appearance:none}
 .mrow .t small{font-size:11.5px; color:var(--muted)}
 .mrow .x{background:none; border:none; color:var(--exp); font-size:17px; cursor:pointer; min-width:44px; min-height:44px; margin:-8px -8px -8px 0}
 .mrow[role="button"]:hover{border-color:var(--muted)}
+.mrow .x, .wcard .wedit{display:inline-flex; align-items:center; justify-content:center}
 
 /* receipt */
 .slip .perf{height:12px; margin:-24px -22px 16px;
@@ -607,15 +624,14 @@ button:focus-visible,input:focus-visible,select:focus-visible,[role="button"]:fo
   </div>
 
   <section>
-    <div class="label">Who's logging</div>
+    <div class="label"><span class="lbl-grp">Who's logging
+      <button class="lbl-edit" id="mng-mem" type="button" aria-label="Edit people"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" style="width:16px;height:16px"><path d="M4 20h4.5L19.5 9 15 4.5 4 15.5z"/><path d="M13 6.5l4.5 4.5"/></svg></button></span></div>
     <div class="who" id="members"></div>
   </section>
 
   <section id="cat-sec">
-    <div class="label">
-      <span>Category</span>
-      <button class="mini" id="mng-cat" type="button">Manage</button>
-    </div>
+    <div class="label"><span class="lbl-grp">Category
+      <button class="lbl-edit" id="mng-cat" type="button" aria-label="Edit categories"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" style="width:16px;height:16px"><path d="M4 20h4.5L19.5 9 15 4.5 4 15.5z"/><path d="M13 6.5l4.5 4.5"/></svg></button></span></div>
     <div class="catrow" id="cats"></div>
     <div class="reveal" id="note-reveal">
       <label class="label" for="note-input">Note (optional)</label>
@@ -658,11 +674,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,[role="button"]:fo
   </section>
 
   <section id="wallet-sec">
-    <div class="label">
-      <span id="wal-label">Wallet</span>
-      <button class="mini" id="mng-wal" type="button">Manage</button>
-    </div>
-    <div class="grid g-wal" id="wallets"></div>
+    <div class="label"><span class="lbl-grp"><span id="wal-label">Wallet</span>
+      <button class="lbl-edit" id="mng-wal" type="button" aria-label="Edit wallets"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" style="width:16px;height:16px"><path d="M4 20h4.5L19.5 9 15 4.5 4 15.5z"/><path d="M13 6.5l4.5 4.5"/></svg></button></span></div>
+    <div class="catrow" id="wallets"></div>
   </section>
 
   <section>
@@ -740,7 +754,8 @@ const ICON = {
   eye:   '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
   eyeOff:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/>',
   trash: '<path d="M4 7h16M9.5 7V4h5v3M6 7l1 13.5h10L18 7M10 11v6M14 11v6"/>',
-  sliders:'<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>'
+  sliders:'<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
+  pencil:'<path d="M4 20h4.5L19.5 9 15 4.5 4 15.5z"/><path d="M13 6.5l4.5 4.5"/>'
 };
 const icon = (name, size) => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"${size?` style="width:${size}px;height:${size}px"`:""}>${ICON[name]}</svg>`;
 
@@ -943,6 +958,24 @@ function walletLabel(id){
   return w.ownerId===JOINT ? w.name : (w.name + " · " + memberName(w.ownerId));
 }
 function catLabel(id){ const c=catById(id); return c?c.name:"?"; }
+/* wallet colours: the owner picks one per wallet (saved in the sheet); until then each wallet
+   gets a stable default from the palette based on its position in the Wallets sheet */
+const WALLET_COLORS = [
+  {c:"#22B378", n:"Green"}, {c:"#3B82F6", n:"Blue"}, {c:"#A855C7", n:"Purple"}, {c:"#CFA94D", n:"Gold"},
+  {c:"#2DD4BF", n:"Teal"},  {c:"#E5573D", n:"Red"},  {c:"#6B7DE8", n:"Indigo"}, {c:"#D08A3E", n:"Orange"},
+  {c:"#7A8594", n:"Grey"},  {c:"#C2457A", n:"Pink"}
+];
+function walletColor(w){
+  if(w && /^#[0-9a-f]{6}$/i.test(String(w.color||""))) return w.color;
+  const i = Math.max(0, D.wallets.indexOf(w));
+  return WALLET_COLORS[i % 8].c;
+}
+/* readable letter colour on a filled circle: white or near-black, whichever contrasts more */
+function onColor(hex){
+  if(!/^#[0-9a-f]{6}$/i.test(hex)) return "#fff";
+  const c = hexRgb(hex);
+  return cRatio([255,255,255],c) >= cRatio([14,17,22],c) ? "#FFFFFF" : "#0E1116";
+}
 function catEmoji(id){ const c=catById(id); return c&&c.emoji?c.emoji:"✨"; }
 /* items visible to a member: their own + joint */
 const forMember = (arr, mid) => arr.filter(x => x.ownerId===mid || x.ownerId===JOINT);
@@ -1021,11 +1054,7 @@ function buildMembers(){
     b.onclick = ()=>selectMember(m.id);
     el.appendChild(b);
   });
-  const add = document.createElement("button");
-  add.type="button";
-  add.innerHTML = `<span class="ava plus">+</span><span class="nm">Add</span>`;
-  add.onclick = openMembersSheet;
-  el.appendChild(add);
+  /* adding people now lives behind the pencil next to "Who's logging" */
 }
 
 /* The selected person's color drives buttons and accents. Member colors are user-picked, so work out
@@ -1092,15 +1121,22 @@ function buildWallets(){
   list = list.slice().sort((a,b)=>rank(a)-rank(b));
   list.forEach(w=>{
     const b = document.createElement("button");
-    b.type="button"; b.className = "chip wal" + (w.id===S.walletId ? " sel" : "");
-    const tag = w.type==="debt" ? "credit / bill" : (w.ownerId===JOINT ? "joint" : "personal");
-    b.innerHTML = `${esc(w.name)}<small>${tag}</small>`;
+    const on = w.id===S.walletId;
+    b.type="button"; b.className = "chip-cat chip-wal" + (on ? " sel" : "");
+    b.setAttribute("aria-pressed", String(on));
+    const col = walletColor(w);
+    /* personal is the default, so only joint wallets and credit lines get a second line */
+    const tag = w.type==="debt" ? "credit" : (w.ownerId===JOINT ? "joint" : "");
+    b.setAttribute("aria-label", w.name + (w.type==="debt" ? ", credit line" : (w.ownerId===JOINT ? ", joint" : ", personal")));
+    b.innerHTML = `<span class="circ" style="background:${esc(col)};color:${onColor(col)}" aria-hidden="true">${esc((w.name[0]||"?").toUpperCase())}</span>`+
+      `<span class="lbl" aria-hidden="true">${esc(w.name)}</span>`+(tag?`<span class="sub" aria-hidden="true">${tag}</span>`:"");
     b.onclick = ()=>{ S.walletId=w.id; buildWallets(); refresh(); };
     el.appendChild(b);
   });
   const add = document.createElement("button");
-  add.type="button"; add.className="chip add";
-  add.textContent = "+ New wallet";
+  add.type="button"; add.className="chip-cat";
+  add.innerHTML = `<span class="circ plus" aria-hidden="true">+</span><span class="lbl">New</span>`;
+  add.setAttribute("aria-label","New wallet");
   add.onclick = ()=>openWalletSheet(null);
   el.appendChild(add);
   /* default to first available wallet */
@@ -1285,7 +1321,7 @@ function buildQuickfill(){
     el.appendChild(b);
   });
   const edit=document.createElement("button");
-  edit.type="button"; edit.className="qf edit"; edit.textContent="✎";
+  edit.type="button"; edit.className="qf edit"; edit.innerHTML=icon("pencil",14);
   edit.setAttribute("aria-label","Edit quick amounts");
   edit.onclick=openQuickfillSheet;
   el.appendChild(edit);
@@ -1340,12 +1376,28 @@ buildQuickfill();
 const dayInput = $("day-input");
 { const mx=new Date(), mn=new Date(); mn.setDate(mn.getDate()-30);
   dayInput.max=iso(mx); dayInput.min=iso(mn); }
+/* Today / Yesterday show their actual date; relabelled when the app comes back to the front,
+   so a phone left open overnight doesn't show yesterday's date under "Today" */
+function dayDateLabel(it){
+  if(it==="Custom") return S.customDate ? new Date(S.customDate+"T00:00:00").toLocaleDateString("id-ID",{weekday:"short", day:"numeric", month:"short"}) : "pick a date";
+  const d=new Date(); if(it==="Yesterday") d.setDate(d.getDate()-1);
+  return d.toLocaleDateString("id-ID",{weekday:"short", day:"numeric", month:"short"});
+}
+function labelDays(){
+  $("days").querySelectorAll(".chip").forEach(b=>{
+    const it=b.dataset.day;
+    b.innerHTML = `${it}<small>${esc(dayDateLabel(it))}</small>`;
+  });
+  const mx=new Date(), mn=new Date(); mn.setDate(mn.getDate()-30);
+  dayInput.max=iso(mx); dayInput.min=iso(mn);
+}
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") labelDays(); });
 (function buildDays(){
   const el=$("days"); el.innerHTML="";
   DAYS.forEach(it=>{
     const b=document.createElement("button");
     b.type="button"; b.className="chip"+(it==="Today"?" sel":"");
-    b.textContent=it;
+    b.dataset.day=it;
     b.onclick=()=>{
       el.querySelectorAll(".chip").forEach(c=>c.classList.remove("sel"));
       b.classList.add("sel");
@@ -1356,12 +1408,14 @@ const dayInput = $("day-input");
         S.customDate=dayInput.value;
         setTimeout(()=>$("day-reveal").scrollIntoView({behavior:"smooth",block:"center"}),60);
       } else S.customDate=null;
+      labelDays();
       refresh();
     };
     el.appendChild(b);
   });
+  labelDays();
 })();
-dayInput.addEventListener("change", ()=>{ S.customDate=dayInput.value; refresh(); });
+dayInput.addEventListener("change", ()=>{ S.customDate=dayInput.value; labelDays(); refresh(); });
 
 /* validate + save */
 function entryDate(){
@@ -1500,7 +1554,8 @@ function resetForm(){
   $("payto-cat-sec").style.display="none";
   S.recipient=null;
   [...$("quickfill").querySelectorAll(".qf")].forEach(x=>x.classList.remove("sel"));
-  [...$("days").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.textContent==="Today"));
+  [...$("days").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel", c.dataset.day==="Today"));
+  labelDays();
   if(S.type!=="Transfer") buildCats();
   else { buildTrfRecipients(); buildTransferWallets(); }
   refresh();
@@ -1547,6 +1602,7 @@ function linkFieldLabels(root){
 $("sheet-ovl").addEventListener("click", e=>{ if(e.target.id==="sheet-ovl") closeSheet(); });
 
 /* ---- members ---- */
+$("mng-mem").onclick = openMembersSheet;
 $("mng-cat").onclick = openCategoriesSheet;
 $("mng-wal").onclick = openWalletsSheet;
 
@@ -1605,19 +1661,13 @@ function openMembersSheet(){
       <input id="nm-name" type="text" placeholder="e.g. Dinda" maxlength="30" autocomplete="off"></div>
     <div class="fld"><label>Cycle start day (1–28)</label>
       <input id="nm-cyc" class="num" type="number" min="1" max="28" value="1" inputmode="numeric"></div>
-    <div class="fld"><label>Colour</label><div class="emojis" id="nm-colors"></div></div>
+    <div class="fld"><label id="nm-colors-lbl">Colour</label><div class="swatches" id="nm-colors" role="radiogroup" aria-labelledby="nm-colors-lbl"></div></div>
     <button class="go" id="nm-save" type="button">Add member</button>
     <button class="ghost" id="nm-close" type="button">Done</button>
   `);
   let color = PALETTE[D.members.length % PALETTE.length];
-  const cw=$("nm-colors");
-  PALETTE.forEach(c=>{
-    const b=document.createElement("button");
-    b.type="button"; b.style.background=c; b.style.borderColor=c;
-    if(c===color) b.classList.add("sel");
-    b.onclick=()=>{ color=c; [...cw.children].forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); };
-    cw.appendChild(b);
-  });
+  const PALETTE_NAMES = ["Green","Rose","Blue","Gold","Plum","Teal","Red","Violet"];
+  buildSwatches($("nm-colors"), PALETTE.map((c,i)=>({c, n:PALETTE_NAMES[i]||("Colour "+(i+1))})), color, c=>{ color=c; });
   $("nm-close").onclick = closeSheet;
   $("nm-save").onclick = async ()=>{
     const name=$("nm-name").value.trim();
@@ -1658,7 +1708,7 @@ function openCategoriesSheet(){
     <div class="mrow">
       <span class="dot" style="background:var(--card-2);color:var(--ink)">${catIcon(c.emoji, 18)}</span>
       <span class="t"><b>${esc(c.name)}</b><small>${c.budget?("budget "+fmt(c.budget)+"/mo"):"no budget"}${c.ownerId===JOINT?" · shared":""}</small></span>
-      <button class="x" data-edit="${esc(c.id)}" type="button" style="color:var(--muted)" aria-label="Edit ${esc(c.name)}"><span aria-hidden="true">✎</span></button>
+      <button class="x" data-edit="${esc(c.id)}" type="button" style="color:var(--muted)" aria-label="Edit ${esc(c.name)}">${icon("pencil",17)}</button>
       <button class="x" data-del="${esc(c.id)}" type="button" aria-label="Delete ${esc(c.name)}"><span aria-hidden="true">✕</span></button>
     </div>`).join("");
   openSheet(`
@@ -1750,10 +1800,10 @@ function openWalletsSheet(){
   const list = S.memberId ? forMember(D.wallets, S.memberId) : D.wallets;
   const rows = list.map(w=>`
     <div class="mrow">
-      <span class="dot" style="background:${w.type==="debt"?"#B23A2E":"#1E7A50"}">${w.type==="debt"?"C":"W"}</span>
+      <span class="dot" style="background:${esc(walletColor(w))};color:${onColor(walletColor(w))}" aria-hidden="true">${esc((w.name[0]||"?").toUpperCase())}</span>
       <span class="t"><b>${esc(w.name)}</b><small>${w.ownerId===JOINT?"joint":"personal"}${w.type==="debt"?" · credit / bill":""}</small></span>
-      <button class="x" data-edit="${esc(w.id)}" type="button" style="color:var(--muted)">✎</button>
-      <button class="x" data-del="${esc(w.id)}" type="button">✕</button>
+      <button class="x" data-edit="${esc(w.id)}" type="button" style="color:var(--muted)" aria-label="Edit ${esc(w.name)}">${icon("pencil",17)}</button>
+      <button class="x" data-del="${esc(w.id)}" type="button" aria-label="Delete ${esc(w.name)}"><span aria-hidden="true">✕</span></button>
     </div>`).join("");
   openSheet(`
     <h2>Wallets</h2>
@@ -1792,6 +1842,8 @@ function openWalletSheet(editId){
         <button type="button" data-t="normal">Normal account</button>
         <button type="button" data-t="debt">Credit / paylater</button>
       </div></div>
+    <div class="fld"><label id="wf-color-lbl">Colour</label>
+      <div class="swatches" id="wf-color" role="radiogroup" aria-labelledby="wf-color-lbl"></div></div>
     <div class="fld" id="wf-link-fld" style="display:none">
       <label>Paid from which wallet?</label>
       <select id="wf-link">
@@ -1809,6 +1861,8 @@ function openWalletSheet(editId){
   }
   [...tw.children].forEach(b=>{ b.onclick=()=>{ type=b.dataset.t; syncType(); }; });
   syncType();
+  let color = ex ? walletColor(ex) : WALLET_COLORS[D.wallets.length % WALLET_COLORS.length].c;
+  buildSwatches($("wf-color"), WALLET_COLORS, color, c=>{ color=c; });
   $("wf-cancel").onclick = ()=>openWalletsSheet();
   $("wf-save").onclick = async ()=>{
     const name=$("wf-name").value.trim();
@@ -1817,13 +1871,31 @@ function openWalletSheet(editId){
     const linkedWalletId = type==="debt" ? $("wf-link").value : "";
     const b=$("wf-save"); b.disabled=true; b.textContent="Saving…";
     try{
-      if(ex) await api({action:"updateWallet", id:ex.id, name, ownerId, type, linkedWalletId});
-      else await api({action:"addWallet", name, ownerId, type, linkedWalletId});
+      if(ex) await api({action:"updateWallet", id:ex.id, name, ownerId, type, linkedWalletId, color});
+      else await api({action:"addWallet", name, ownerId, type, linkedWalletId, color});
       await reloadData();
       if(document.body.dataset.view==="wallet"){ closeSheet(); loadWallets(); }
       else openWalletsSheet();
     }catch(e){ b.disabled=false; b.textContent="Couldn't save: "+e.message; }
   };
+}
+
+/* round colour buttons that act as one radio group; list = [{c, n}] */
+function buildSwatches(el, list, current, onPick){
+  el.innerHTML="";
+  list.forEach(({c,n})=>{
+    const b=document.createElement("button");
+    b.type="button"; b.style.background=c;
+    b.setAttribute("role","radio"); b.setAttribute("aria-label", n); b.title=n;
+    const on = c.toLowerCase()===String(current).toLowerCase();
+    b.classList.toggle("sel", on); b.setAttribute("aria-checked", String(on));
+    b.onclick=()=>{
+      [...el.children].forEach(x=>{ x.classList.remove("sel"); x.setAttribute("aria-checked","false"); });
+      b.classList.add("sel"); b.setAttribute("aria-checked","true");
+      onPick(c);
+    };
+    el.appendChild(b);
+  });
 }
 
 function alertSheet(msg){
@@ -2890,8 +2962,6 @@ async function loadWallets(){
   }
 }
 
-const WALLET_THEMES = ["#22B378","#3B82F6","#A855C7","#CFA94D","#2DD4BF","#E5573D","#6B7DE8","#D08A3E"];
-function walletTheme(w, i){ return WALLET_THEMES[i % WALLET_THEMES.length]; }
 
 function renderWallets(){
   const el=$("wallet-list"); el.innerHTML="";
@@ -2901,7 +2971,6 @@ function renderWallets(){
   const groups = [{key:JOINT, label:"Joint household"}]
     .concat(D.members.map(m=>({key:m.id, label:m.name+"'s wallets"})));
 
-  let idx=0;
   groups.forEach(g=>{
     const mine = normals.filter(w=>w.ownerId===g.key);
     const orphanDebts = debts.filter(w=>w.ownerId===g.key && !normals.some(n=>n.id===w.linkedWalletId));
@@ -2912,7 +2981,7 @@ function renderWallets(){
     mine.forEach(w=>{
       const val = BAL.balances[w.id] || 0;
       const linked = debts.filter(dw=>dw.linkedWalletId===w.id);
-      const color = walletTheme(w, idx++);
+      const color = walletColor(w); // same colour as on the Add page
       const card=document.createElement("div");
       card.className="wcard"+(linked.length?" has-debt":"");
       card.style.borderLeftColor=color;
@@ -2921,7 +2990,7 @@ function renderWallets(){
         <div class="wmeta"><div class="wname">${esc(w.name)}</div>
           <div class="whint">${BAL.starting[w.id]?("start "+fmt(BAL.starting[w.id])):"no starting balance set"}</div></div>
         <div class="wval bal-mask">${fmt(val)}</div>
-        <button class="wedit" type="button" aria-label="${esc(w.name)}: balance and options"><span aria-hidden="true">✎</span></button>`;
+        <button class="wedit" type="button" aria-label="${esc(w.name)}: balance and options">${icon("pencil",17)}</button>`;
       card.querySelector(".wedit").onclick=()=>openBalanceSheet(w);
       el.appendChild(card);
 
@@ -2952,13 +3021,14 @@ function renderWallets(){
     orphanDebts.forEach(dw=>{
       const amt=BAL.debts[dw.id]||0;
       const card=document.createElement("div");
-      card.className="wcard"; card.style.borderLeftColor="var(--exp)";
+      const dcol = walletColor(dw);
+      card.className="wcard"; card.style.borderLeftColor=dcol;
       card.innerHTML=`
-        <div class="wchip" style="background:#E5573D22" aria-hidden="true">${esc((dw.name[0]||"?").toUpperCase())}</div>
+        <div class="wchip" style="background:${esc(dcol)}22" aria-hidden="true">${esc((dw.name[0]||"?").toUpperCase())}</div>
         <div class="wmeta"><div class="wname">${esc(dw.name)}</div>
           <div class="whint">credit / bill · not linked to a wallet yet</div></div>
         <div class="wval bal-mask" style="color:var(--exp)">−${fmt(amt)}</div>
-        <button class="wedit" type="button" aria-label="Edit ${esc(dw.name)}"><span aria-hidden="true">✎</span></button>`;
+        <button class="wedit" type="button" aria-label="Edit ${esc(dw.name)}">${icon("pencil",17)}</button>`;
       card.querySelector(".wedit").onclick=()=>openWalletSheet(dw.id);
       el.appendChild(card);
     });
