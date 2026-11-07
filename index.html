@@ -90,7 +90,9 @@ body:not([data-view="home"]):not([data-view="wallet"]) #eye-toggle{display:none}
 body:not([data-view="add"]) #edit-toggle{display:none}
 #edit-toggle[aria-pressed="true"]{background:var(--accent-tint); border-color:var(--accent); color:var(--accent)}
 /* Add page stays clean: edit (pencil) buttons only appear after tapping the gear */
-body:not(.editing) #v-add .lbl-edit, body:not(.editing) #v-add .qf.edit{display:none}
+body:not(.editing) #v-add .lbl-edit, body:not(.editing) #v-add .qf.edit, body:not(.editing) #cats .chip-pill.add{display:none}
+.chip-pill.add{border-style:dashed; color:var(--muted)}
+.chip-pill.add:hover{color:var(--ink)}
 main{padding:0 16px}
 section{margin-top:18px}
 .label{
@@ -167,7 +169,14 @@ body[data-view="add"] .savebar{display:block}
   background:var(--card); color:var(--ink); outline:none;
 }
 .reveal .hint{font-size:12px; color:var(--muted); margin-top:6px; padding-left:4px}
-#note-input{font-family:var(--body); font-size:16px; font-weight:600}
+/* note: always visible, deliberately smaller and quieter than the amount box (62px, 2px teal border, 25px) */
+.note-field{
+  width:100%; min-height:46px; padding:0 14px; border:1.5px solid var(--line); border-radius:var(--radius);
+  background:var(--card); color:var(--ink); font-family:var(--body); font-size:15px; font-weight:500; outline:none;
+}
+.note-field::placeholder{color:var(--muted)}
+.note-field:focus{border-color:var(--accent)}
+#cat-sec{margin-top:24px} /* without a title, extra space keeps categories apart from the quick amounts */
 
 /* primary amount field + quick-fill pills */
 .amtbox{
@@ -672,13 +681,25 @@ button:focus-visible,input:focus-visible,select:focus-visible,[role="button"]:fo
     <div class="who" id="members"></div>
   </section>
 
-  <section id="cat-sec">
-    <div class="label"><span class="lbl-grp">Category
-      <button class="lbl-edit" id="mng-cat" type="button" aria-label="Edit categories"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" style="width:16px;height:16px"><path d="M4 20h4.5L19.5 9 15 4.5 4 15.5z"/><path d="M13 6.5l4.5 4.5"/></svg></button></span></div>
+  <!-- order: who's logging > amount > category > note > wallet > day (amount is the main field) -->
+  <section>
+    <label class="label" for="amt-input">Amount</label>
+    <div class="amtbox">
+      <span class="amtcur">Rp</span>
+      <input id="amt-input" inputmode="numeric" placeholder="0" autocomplete="off">
+    </div>
+    <div class="quickfill" id="quickfill"></div>
+  </section>
+
+  <!-- no visible title: the icons and names make the section obvious; screen readers get a group name -->
+  <section id="cat-sec" role="group" aria-label="Category">
     <div class="pillgrid" id="cats"></div>
-    <div class="reveal" id="note-reveal">
+  </section>
+
+  <section id="note-sec">
+    <div id="note-reveal">
       <label class="label" for="note-input">Note (optional)</label>
-      <input id="note-input" type="text" maxlength="140" placeholder="What it was for" autocomplete="off">
+      <input id="note-input" class="note-field" type="text" maxlength="140" placeholder="What it was for" autocomplete="off">
     </div>
   </section>
 
@@ -702,18 +723,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,[role="button"]:fo
     </div>
     <div style="margin-top:16px">
       <label class="label" for="transfer-note">Note (optional)</label>
-      <input id="transfer-note" type="text" maxlength="140" placeholder="What it was for" autocomplete="off"
-        style="width:100%;min-height:52px;border:1.5px solid var(--line);border-radius:var(--radius);padding:0 16px;font-family:var(--body);font-size:16px;font-weight:600;background:var(--card);color:var(--ink);outline:none;">
+      <input id="transfer-note" class="note-field" type="text" maxlength="140" placeholder="What it was for" autocomplete="off">
     </div>
-  </section>
-
-  <section>
-    <label class="label" for="amt-input">Amount</label>
-    <div class="amtbox">
-      <span class="amtcur">Rp</span>
-      <input id="amt-input" inputmode="numeric" placeholder="0" autocomplete="off">
-    </div>
-    <div class="quickfill" id="quickfill"></div>
   </section>
 
   <section id="wallet-sec">
@@ -1230,10 +1241,17 @@ function buildCats(){
   const kind = S.type==="Income" ? "income" : "expense";
   const list = S.memberId ? byOrder(forMember(D.categories, S.memberId).filter(c=>c.kind===kind)) : [];
   list.forEach(c=>{
-    el.appendChild(catPillBtn(c, c.id===S.categoryId, ()=>{ S.categoryId=c.id; buildCats(); $("note-reveal").classList.add("show"); refresh(); }));
+    el.appendChild(catPillBtn(c, c.id===S.categoryId, ()=>{ S.categoryId=c.id; buildCats(); refresh(); }));
   });
   /* adding categories lives behind the gear, then the pencil next to "Category" */
-  if(!list.length && S.memberId) emptyPick(el, `No ${kind} categories yet. Tap the gear at the top, then the pencil next to Category to add one.`);
+  if(!list.length && S.memberId) emptyPick(el, `No ${kind} categories yet. Tap the gear at the top, then "+ New" to add one.`);
+  /* "+ New" only shows with the gear on (CSS); it opens the full list: add, edit, delete, change order */
+  const add=document.createElement("button");
+  add.type="button"; add.className="chip-pill add";
+  add.setAttribute("aria-label", `Add or edit ${kind} categories`);
+  add.innerHTML=`<span aria-hidden="true">+ New</span>`;
+  add.onclick=()=>openCategoriesSheet();
+  el.appendChild(add);
 }
 $("note-input").addEventListener("input", e=>{ S.note = e.target.value; });
 
@@ -1351,7 +1369,7 @@ function buildPaytoCats(){
   cats.forEach(c=>{
     el.appendChild(catPillBtn(c, c.id===S.paytoCategoryId, ()=>{ S.paytoCategoryId=c.id; buildPaytoCats(); refresh(); }));
   });
-  if(!cats.length) emptyPick(el, "No expense categories yet. Add one from Expense, using the gear and the pencil next to Category.");
+  if(!cats.length) emptyPick(el, 'No expense categories yet. Add one on the Expense tab: tap the gear, then "+ New".');
 }
 
 /* type toggle */
@@ -1391,6 +1409,7 @@ function setType(t){
   S.recipient=null;
   /* show category+wallet OR transfer section */
   $("cat-sec").style.display      = t==="Transfer" ? "none" : "";
+  $("note-sec").style.display     = t==="Transfer" ? "none" : ""; // Transfer has its own note field
   $("wallet-sec").style.display   = t==="Transfer" ? "none" : "";
   $("transfer-sec").style.display = t==="Transfer" ? "block" : "none";
   if(t!=="Transfer"){ buildCats(); buildWallets(); }
@@ -1705,7 +1724,6 @@ $("sheet-ovl").addEventListener("click", e=>{ if(e.target.id==="sheet-ovl") clos
 
 /* ---- members ---- */
 $("mng-mem").onclick = openMembersSheet;
-$("mng-cat").onclick = ()=>openCategoriesSheet();
 $("mng-wal").onclick = ()=>openWalletsSheet();
 
 /* small focused sheet to set ONE person's cycle day (from the overview gear) */
