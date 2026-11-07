@@ -85,6 +85,12 @@ header h1 .dot{color:var(--person)}
 /* hide-balance mode */
 body.hide-bal .bal-mask{filter:blur(7px); user-select:none; pointer-events:none; transition:filter .2s}
 #eye-toggle.hidden{opacity:.5}
+/* header buttons per page: the eye only where balances show (Home, Wallet); the gear only on Add */
+body:not([data-view="home"]):not([data-view="wallet"]) #eye-toggle{display:none}
+body:not([data-view="add"]) #edit-toggle{display:none}
+#edit-toggle[aria-pressed="true"]{background:var(--accent-tint); border-color:var(--accent); color:var(--accent)}
+/* Add page stays clean: edit (pencil) buttons only appear after tapping the gear */
+body:not(.editing) #v-add .lbl-edit, body:not(.editing) #v-add .qf.edit{display:none}
 main{padding:0 16px}
 section{margin-top:18px}
 .label{
@@ -236,8 +242,21 @@ body[data-view="add"] .savebar{display:block}
 .chip-cat.sel .lbl{color:var(--accent); font-weight:700}
 .chip-cat .circ.plus{border-style:dashed; color:var(--muted); font-size:24px}
 .chip-cat .sub{font-size:10.5px; font-weight:600; color:var(--muted); margin-top:-4px}
+/* picker grids (categories, wallets, Pay to, From / Destination): every item visible, 5 per row,
+   a short last row centred; no sideways scrolling */
+.pickgrid{display:flex; flex-wrap:wrap; justify-content:center; row-gap:14px; padding:4px 0 6px}
+.pickgrid > .chip-cat{flex:0 0 20%; min-width:0; padding:2px 2px; gap:5px; justify-content:flex-start}
+.pickgrid .chip-cat .circ{width:52px; height:52px}  /* 55px - 5% */
+.pickgrid .chip-cat .lbl{
+  font-size:11px; line-height:1.25; white-space:normal; max-width:100%; text-align:center;
+  -webkit-hyphens:auto; hyphens:auto; overflow-wrap:break-word; /* long single words hyphenate on phones */
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; /* up to two lines */
+}
+.pickgrid .chip-cat .lbl.long{font-size:10px; letter-spacing:-.01em} /* a single word too wide for the column */
+.pickgrid .chip-cat .sub{margin-top:-2px}
+.pick-empty{font-size:13px; color:var(--muted); padding:6px 4px; text-align:center; line-height:1.45}
 /* wallets: same circles as categories, filled with the wallet's own colour */
-.chip-wal .circ{border:none; font-family:var(--disp); font-weight:700; font-size:21px}
+.chip-wal .circ{border:none; font-family:var(--disp); font-weight:700; font-size:20px}
 .chip-wal:hover .circ{filter:brightness(1.08)}
 .chip-wal.sel .circ{box-shadow:0 0 0 3px var(--paper), 0 0 0 5.5px var(--accent)} /* selection ring, not a glow */
 /* colour swatches (people and wallets) */
@@ -549,6 +568,15 @@ button.calcell{appearance:none; -webkit-appearance:none}
 .mrow .x{background:none; border:none; color:var(--exp); font-size:17px; cursor:pointer; min-width:44px; min-height:44px; margin:-8px -8px -8px 0}
 .mrow[role="button"]:hover{border-color:var(--muted)}
 .mrow .x, .wcard .wedit{display:inline-flex; align-items:center; justify-content:center}
+/* reorder mode in the category / wallet sheets */
+.sheet-mode{min-height:44px; padding:0 16px; margin:0 0 12px; border-radius:var(--radius-btn);
+  border:1.5px solid var(--line); background:var(--card-2); color:var(--ink);
+  font-family:var(--disp); font-weight:600; font-size:14px; cursor:pointer}
+.sheet-mode:hover{border-color:var(--muted)}
+.sheet-mode[aria-pressed="true"]{border-color:var(--accent); background:var(--accent-tint); color:var(--accent)}
+.mrow .x.mv{color:var(--ink)}
+.mrow .x.mv:hover:not(:disabled){color:var(--accent)}
+.mrow .x.mv:disabled{opacity:.3}
 
 /* receipt */
 .slip .perf{height:12px; margin:-24px -22px 16px;
@@ -569,6 +597,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,[role="button"]:fo
   <h1>Duit Kita<span class="dot">.</span></h1>
   <div style="display:flex;gap:8px;align-items:center">
     <button class="theme-toggle" id="eye-toggle" type="button" aria-label="Hide balances" aria-pressed="false"></button>
+    <button class="theme-toggle" id="edit-toggle" type="button" aria-label="Show edit buttons" aria-pressed="false"></button>
     <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to light theme"></button>
   </div>
 </header>
@@ -632,7 +661,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,[role="button"]:fo
   <section id="cat-sec">
     <div class="label"><span class="lbl-grp">Category
       <button class="lbl-edit" id="mng-cat" type="button" aria-label="Edit categories"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" style="width:16px;height:16px"><path d="M4 20h4.5L19.5 9 15 4.5 4 15.5z"/><path d="M13 6.5l4.5 4.5"/></svg></button></span></div>
-    <div class="catrow" id="cats"></div>
+    <div class="pickgrid" id="cats"></div>
     <div class="reveal" id="note-reveal">
       <label class="label" for="note-input">Note (optional)</label>
       <input id="note-input" type="text" maxlength="140" placeholder="What it was for" autocomplete="off">
@@ -645,17 +674,17 @@ button:focus-visible,input:focus-visible,select:focus-visible,[role="button"]:fo
       <button id="trf-payto" type="button">Pay to</button>
     </div>
     <div class="label">From</div>
-    <div class="grid g-wal" id="from-wallets"></div>
+    <div class="pickgrid" id="from-wallets"></div>
 
     <div class="label" style="margin-top:16px" id="recipient-label">Send to</div>
     <div class="who" id="trf-recipients"></div>
 
     <div class="label" style="margin-top:16px">Destination wallet</div>
-    <div class="grid g-wal" id="to-wallets"></div>
+    <div class="pickgrid" id="to-wallets"></div>
 
     <div id="payto-cat-sec" style="display:none;margin-top:16px">
       <div class="label"><span>Category</span></div>
-      <div class="catrow" id="payto-cats"></div>
+      <div class="pickgrid" id="payto-cats"></div>
     </div>
     <div style="margin-top:16px">
       <label class="label" for="transfer-note">Note (optional)</label>
@@ -676,7 +705,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,[role="button"]:fo
   <section id="wallet-sec">
     <div class="label"><span class="lbl-grp"><span id="wal-label">Wallet</span>
       <button class="lbl-edit" id="mng-wal" type="button" aria-label="Edit wallets"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" style="width:16px;height:16px"><path d="M4 20h4.5L19.5 9 15 4.5 4 15.5z"/><path d="M13 6.5l4.5 4.5"/></svg></button></span></div>
-    <div class="catrow" id="wallets"></div>
+    <div class="pickgrid" id="wallets"></div>
   </section>
 
   <section>
@@ -755,7 +784,10 @@ const ICON = {
   eyeOff:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/>',
   trash: '<path d="M4 7h16M9.5 7V4h5v3M6 7l1 13.5h10L18 7M10 11v6M14 11v6"/>',
   sliders:'<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
-  pencil:'<path d="M4 20h4.5L19.5 9 15 4.5 4 15.5z"/><path d="M13 6.5l4.5 4.5"/>'
+  pencil:'<path d="M4 20h4.5L19.5 9 15 4.5 4 15.5z"/><path d="M13 6.5l4.5 4.5"/>',
+  gear:  '<path d="M10.3 3h3.4l.5 2.4 1.7.7 2-1.4 2.4 2.4-1.4 2 .7 1.7 2.4.5v3.4l-2.4.5-.7 1.7 1.4 2-2.4 2.4-2-1.4-1.7.7-.5 2.4h-3.4l-.5-2.4-1.7-.7-2 1.4-2.4-2.4 1.4-2-.7-1.7-2.4-.5v-3.4l2.4-.5.7-1.7-1.4-2 2.4-2.4 2 1.4 1.7-.7z"/><circle cx="12" cy="12" r="3"/>',
+  up:    '<path d="M12 19V5M6 11l6-6 6 6"/>',
+  down:  '<path d="M12 5v14M6 13l6 6 6-6"/>'
 };
 const icon = (name, size) => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"${size?` style="width:${size}px;height:${size}px"`:""}>${ICON[name]}</svg>`;
 
@@ -824,6 +856,19 @@ function renderEye(){
   b.classList.toggle("hidden", balHidden);
 }
 renderEye();
+
+/* ================= edit mode (gear on the Add page) ================= */
+let editing = false;
+function renderEditToggle(){
+  const b=$("edit-toggle");
+  b.innerHTML = icon("gear", 20);
+  b.setAttribute("aria-pressed", String(editing));
+  b.setAttribute("aria-label", editing ? "Hide edit buttons" : "Show edit buttons");
+  document.body.classList.toggle("editing", editing);
+}
+renderEditToggle();
+$("edit-toggle").onclick = ()=>{ editing = !editing; renderEditToggle(); };
+
 $("eye-toggle").onclick = ()=>{
   balHidden = !balHidden;
   document.body.classList.toggle("hide-bal", balHidden);
@@ -833,7 +878,7 @@ $("eye-toggle").onclick = ()=>{
 /* ================= api ================= */
 /* Reads are always safe to repeat. Saves are safe to repeat because each one carries a
    clientId the backend de-duplicates on. Edits/deletes are NOT auto-retried. */
-const RETRY_ACTIONS = { bootstrap:1, list:1, balances:1, saveTx:1, saveTransfer:1 };
+const RETRY_ACTIONS = { bootstrap:1, list:1, balances:1, saveTx:1, saveTransfer:1, reorder:1 }; // reorder sends the full order, so repeating it is harmless
 const API_TIMEOUT_MS = 25000;
 const sleep = ms => new Promise(r=>setTimeout(r, ms));
 function newClientId(){
@@ -970,6 +1015,80 @@ function walletColor(w){
   const i = Math.max(0, D.wallets.indexOf(w));
   return WALLET_COLORS[i % 8].c;
 }
+/* display order the owner set (saved in the sheet); items not ordered yet follow, by rank (if given)
+   and then in sheet order */
+function byOrder(list, rank){
+  return list.map((x,i)=>({x,i})).sort((a,b)=>{
+    const oa = a.x.order==null ? Infinity : a.x.order, ob = b.x.order==null ? Infinity : b.x.order;
+    if(oa!==ob) return oa-ob;
+    return (rank ? rank(a.x)-rank(b.x) : 0) || a.i-b.i;
+  }).map(o=>o.x);
+}
+/* old default for wallets not ordered yet: own first, then joint, then credit lines */
+const walletRank = w => (w.type==="debt" ? 2 : (w.ownerId===JOINT ? 1 : 0));
+
+/* Move one item up (-1) or down (+1) within the list shown, keeping every other item of that kind
+   where it was; returns the full new id order for the sheet, and applies it locally. */
+function moveInOrder(all, shown, id, dir, rank){
+  const ids = shown.map(x=>x.id);
+  const i = ids.indexOf(id), j = i + dir;
+  if(i<0 || j<0 || j>=ids.length) return null;
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  const full = byOrder(all, rank).map(x=>x.id);
+  const inShown = new Set(ids);
+  let n = 0;
+  full.forEach((x,k)=>{ if(inShown.has(x)) full[k] = ids[n++]; });
+  const byId = {}; all.forEach(x=>{ byId[x.id]=x; });
+  full.forEach((x,k)=>{ if(byId[x]) byId[x].order = k; });
+  return full;
+}
+/* save shortly after the last tap, so quick repeated moves become one request */
+const orderTimers = {};
+function saveOrderSoon(kind, ids){
+  clearTimeout(orderTimers[kind]);
+  orderTimers[kind] = setTimeout(async ()=>{
+    try{ await api({action:"reorder", kind, ids}); }
+    catch(e){ if($("sheet-ovl").classList.contains("show")) alertSheet("Couldn't save the new order: "+e.message); }
+  }, 700);
+}
+/* the up / down pair shown on a row in reorder mode */
+function moveBtns(item, first, last){
+  return `<button class="x mv" data-mv="-1" data-id="${esc(item.id)}" type="button" aria-label="Move ${esc(item.name)} up"${first?" disabled":""}>${icon("up",18)}</button>`+
+         `<button class="x mv" data-mv="1" data-id="${esc(item.id)}" type="button" aria-label="Move ${esc(item.name)} down"${last?" disabled":""}>${icon("down",18)}</button>`;
+}
+/* after a re-render, keep keyboard focus on the moved item's arrow (or its other arrow at an end) */
+function refocusMove(id, dir){
+  const box=$("sheet-body");
+  const want = box.querySelector(`.mv[data-id="${CSS.escape(id)}"][data-mv="${dir}"]`);
+  const other = box.querySelector(`.mv[data-id="${CSS.escape(id)}"][data-mv="${-dir}"]`);
+  const t = want && !want.disabled ? want : other;
+  if(t) t.focus({preventScroll:false});
+}
+/* one round picker button (category or wallet), used by the Add and Transfer grids */
+function catCircleBtn(c, selected, onPick){
+  const b=document.createElement("button");
+  b.type="button"; b.className="chip-cat"+(selected?" sel":"");
+  b.setAttribute("aria-pressed", String(!!selected));
+  b.innerHTML=`<span class="circ">${catIcon(c.emoji, 24)}</span><span class="lbl${longWord(c.name)?" long":""}">${esc(c.name)}</span>`;
+  b.onclick=onPick;
+  return b;
+}
+function walletCircleBtn(w, selected, sub, onPick, disabled){
+  const b=document.createElement("button");
+  b.type="button"; b.className="chip-cat chip-wal"+(selected?" sel":"")+(disabled?" trf-disabled":"");
+  b.setAttribute("aria-pressed", String(!!selected));
+  if(disabled){ b.disabled=true; }
+  const col = walletColor(w);
+  b.setAttribute("aria-label", w.name + (sub ? ", "+sub : "") + (disabled ? ", already the source" : ""));
+  b.innerHTML = `<span class="circ" style="background:${esc(col)};color:${onColor(col)}" aria-hidden="true">${esc((w.name[0]||"?").toUpperCase())}</span>`+
+    `<span class="lbl${longWord(w.name)?" long":""}" aria-hidden="true">${esc(w.name)}</span>`+(sub?`<span class="sub" aria-hidden="true">${esc(sub)}</span>`:"");
+  b.onclick=onPick;
+  return b;
+}
+function emptyPick(el, msg){ el.innerHTML = `<div class="pick-empty">${msg}</div>`; }
+/* a name with a word longer than ~11 letters gets the slightly smaller label so it isn't split mid-word */
+const longWord = name => String(name).split(/\s+/).some(w=>w.length>11);
+
 /* readable letter colour on a filled circle: white or near-black, whichever contrasts more */
 function onColor(hex){
   if(!/^#[0-9a-f]{6}$/i.test(hex)) return "#fff";
@@ -1094,19 +1213,12 @@ function selectMember(id, silent){
 function buildCats(){
   const el = $("cats"); el.innerHTML = "";
   const kind = S.type==="Income" ? "income" : "expense";
-  const list = S.memberId ? forMember(D.categories, S.memberId).filter(c=>c.kind===kind) : [];
+  const list = S.memberId ? byOrder(forMember(D.categories, S.memberId).filter(c=>c.kind===kind)) : [];
   list.forEach(c=>{
-    const b = document.createElement("button");
-    b.type="button"; b.className = "chip-cat" + (c.id===S.categoryId ? " sel" : "");
-    b.innerHTML = `<span class="circ">${catIcon(c.emoji, 26)}</span><span class="lbl">${esc(c.name)}</span>`;
-    b.onclick = ()=>{ S.categoryId=c.id; buildCats(); $("note-reveal").classList.add("show"); refresh(); };
-    el.appendChild(b);
+    el.appendChild(catCircleBtn(c, c.id===S.categoryId, ()=>{ S.categoryId=c.id; buildCats(); $("note-reveal").classList.add("show"); refresh(); }));
   });
-  const add = document.createElement("button");
-  add.type="button"; add.className="chip-cat";
-  add.innerHTML = `<span class="circ plus">+</span><span class="lbl">New</span>`;
-  add.onclick = ()=>openCategorySheet(null);
-  el.appendChild(add);
+  /* adding categories lives behind the gear, then the pencil next to "Category" */
+  if(!list.length && S.memberId) emptyPick(el, `No ${kind} categories yet. Tap the gear at the top, then the pencil next to Category to add one.`);
 }
 $("note-input").addEventListener("input", e=>{ S.note = e.target.value; });
 
@@ -1116,29 +1228,14 @@ function buildWallets(){
   let list = S.memberId ? forMember(D.wallets, S.memberId) : [];
   /* debt wallets can only be spent from, never received into */
   if(S.type==="Income") list = list.filter(w=>w.type!=="debt");
-  /* own wallets first, then joint, then credit lines last */
-  const rank = w => (w.type==="debt" ? 2 : (w.ownerId===JOINT ? 1 : 0));
-  list = list.slice().sort((a,b)=>rank(a)-rank(b));
+  /* the owner's order first; wallets not ordered yet keep the old default: own, joint, credit lines */
+  list = byOrder(list, walletRank);
   list.forEach(w=>{
-    const b = document.createElement("button");
-    const on = w.id===S.walletId;
-    b.type="button"; b.className = "chip-cat chip-wal" + (on ? " sel" : "");
-    b.setAttribute("aria-pressed", String(on));
-    const col = walletColor(w);
     /* personal is the default, so only joint wallets and credit lines get a second line */
-    const tag = w.type==="debt" ? "credit" : (w.ownerId===JOINT ? "joint" : "");
-    b.setAttribute("aria-label", w.name + (w.type==="debt" ? ", credit line" : (w.ownerId===JOINT ? ", joint" : ", personal")));
-    b.innerHTML = `<span class="circ" style="background:${esc(col)};color:${onColor(col)}" aria-hidden="true">${esc((w.name[0]||"?").toUpperCase())}</span>`+
-      `<span class="lbl" aria-hidden="true">${esc(w.name)}</span>`+(tag?`<span class="sub" aria-hidden="true">${tag}</span>`:"");
-    b.onclick = ()=>{ S.walletId=w.id; buildWallets(); refresh(); };
-    el.appendChild(b);
+    const sub = w.type==="debt" ? "credit" : (w.ownerId===JOINT ? "joint" : "");
+    el.appendChild(walletCircleBtn(w, w.id===S.walletId, sub, ()=>{ S.walletId=w.id; buildWallets(); refresh(); }));
   });
-  const add = document.createElement("button");
-  add.type="button"; add.className="chip-cat";
-  add.innerHTML = `<span class="circ plus" aria-hidden="true">+</span><span class="lbl">New</span>`;
-  add.setAttribute("aria-label","New wallet");
-  add.onclick = ()=>openWalletSheet(null);
-  el.appendChild(add);
+  if(!list.length && S.memberId) emptyPick(el, "No wallets yet. Tap the gear at the top, then the pencil next to Wallet to add one.");
   /* default to first available wallet */
   if(!S.walletId && list.length){ S.walletId = list[0].id; buildWallets(); }
 }
@@ -1183,6 +1280,10 @@ function buildTrfRecipients(){
     S.recipient = owners.length ? owners[0] : null;
     S.toWalletId = null;
   }
+  if(!owners.length){
+    el.innerHTML = `<div class="pick-empty" style="width:100%">${S.subtype==="payto" ? "Nobody else has a wallet to pay into yet. Add one for them from the Wallet pencil." : "No other wallets to move money into yet."}</div>`;
+    return;
+  }
   owners.forEach(o=>{
     const btn=document.createElement("button"); btn.type="button";
     if(o===S.recipient) btn.classList.add("sel");
@@ -1209,47 +1310,33 @@ function buildTransferWallets(){
     ? D.wallets.filter(w=>w.ownerId===S.memberId && w.type!=="debt")
     : D.wallets.filter(w=>w.type!=="debt" && (w.ownerId===S.memberId||w.ownerId===JOINT));
 
-  fromList.forEach(w=>{
-    const bf=document.createElement("button"); bf.type="button";
-    bf.className="chip wal"+(w.id===S.fromWalletId?" sel":"");
-    bf.innerHTML=`${esc(w.name)}<small>${esc(tag(w))}</small>`;
-    bf.onclick=()=>{
+  byOrder(fromList, walletRank).forEach(w=>{
+    fromEl.appendChild(walletCircleBtn(w, w.id===S.fromWalletId, tag(w), ()=>{
       S.fromWalletId=w.id;
       if(S.toWalletId===w.id) S.toWalletId=null;
       buildTransferWallets(); refresh();
-    };
-    fromEl.appendChild(bf);
+    }));
   });
+  if(!fromList.length) emptyPick(fromEl, "No wallets to send from.");
 
   /* To wallets: only the SELECTED recipient's non-debt wallets */
-  const toList = D.wallets.filter(w=>w.type!=="debt" && w.ownerId===S.recipient);
+  const toList = byOrder(D.wallets.filter(w=>w.type!=="debt" && w.ownerId===S.recipient), walletRank);
   toList.forEach(w=>{
     const isFrom = w.id===S.fromWalletId;
-    const bt=document.createElement("button"); bt.type="button";
-    bt.className="chip wal"+(w.id===S.toWalletId?" sel":"")+(isFrom?" trf-disabled":"");
-    bt.disabled=isFrom;
-    bt.innerHTML=`${esc(w.name)}<small>${esc(tag(w))}</small>`;
-    bt.onclick=()=>{ if(isFrom) return; S.toWalletId=w.id; buildTransferWallets(); refresh(); };
-    toEl.appendChild(bt);
+    toEl.appendChild(walletCircleBtn(w, w.id===S.toWalletId, tag(w), ()=>{ if(isFrom) return; S.toWalletId=w.id; buildTransferWallets(); refresh(); }, isFrom));
   });
-  if(!toList.length){
-    toEl.innerHTML="<div style='color:var(--muted);font-size:13px;padding:2px'>No wallets for this recipient.</div>";
-  }
+  if(!toList.length) emptyPick(toEl, S.recipient ? "No wallets for this recipient." : "No wallet to send to yet.");
 }
 
 function buildPaytoCats(){
   const el=$("payto-cats"); if(!el) return;
   el.innerHTML="";
   /* show expense categories belonging to the sender (S.memberId) + joint */
-  const cats = D.categories.filter(c=>c.kind==="expense"&&(c.ownerId===S.memberId||c.ownerId===JOINT));
+  const cats = byOrder(D.categories.filter(c=>c.kind==="expense"&&(c.ownerId===S.memberId||c.ownerId===JOINT)));
   cats.forEach(c=>{
-    const btn=document.createElement("button"); btn.type="button";
-    btn.className="chip-cat"+(c.id===S.paytoCategoryId?" sel":"");
-    btn.innerHTML=`<div class="circ">${catIcon(c.emoji, 26)}</div><div class="lbl">${esc(c.name)}</div>`;
-    btn.onclick=()=>{ S.paytoCategoryId=c.id; buildPaytoCats(); refresh(); };
-    el.appendChild(btn);
+    el.appendChild(catCircleBtn(c, c.id===S.paytoCategoryId, ()=>{ S.paytoCategoryId=c.id; buildPaytoCats(); refresh(); }));
   });
-  if(!cats.length) el.innerHTML="<div style='color:var(--muted);font-size:13px'>No expense categories found. Add one first.</div>";
+  if(!cats.length) emptyPick(el, "No expense categories yet. Add one from Expense, using the gear and the pencil next to Category.");
 }
 
 /* type toggle */
@@ -1603,8 +1690,8 @@ $("sheet-ovl").addEventListener("click", e=>{ if(e.target.id==="sheet-ovl") clos
 
 /* ---- members ---- */
 $("mng-mem").onclick = openMembersSheet;
-$("mng-cat").onclick = openCategoriesSheet;
-$("mng-wal").onclick = openWalletsSheet;
+$("mng-cat").onclick = ()=>openCategoriesSheet();
+$("mng-wal").onclick = ()=>openWalletsSheet();
 
 /* small focused sheet to set ONE person's cycle day (from the overview gear) */
 function openCycleSheet(memberId){
@@ -1701,35 +1788,56 @@ function openMembersSheet(){
 }
 
 /* ---- categories ---- */
-function openCategoriesSheet(){
+function openCategoriesSheet(startReordering){
   const kind = S.type==="Income" ? "income" : "expense";
-  const list = S.memberId ? forMember(D.categories, S.memberId).filter(c=>c.kind===kind) : [];
-  const rows = list.map(c=>`
-    <div class="mrow">
-      <span class="dot" style="background:var(--card-2);color:var(--ink)">${catIcon(c.emoji, 18)}</span>
-      <span class="t"><b>${esc(c.name)}</b><small>${c.budget?("budget "+fmt(c.budget)+"/mo"):"no budget"}${c.ownerId===JOINT?" · shared":""}</small></span>
-      <button class="x" data-edit="${esc(c.id)}" type="button" style="color:var(--muted)" aria-label="Edit ${esc(c.name)}">${icon("pencil",17)}</button>
-      <button class="x" data-del="${esc(c.id)}" type="button" aria-label="Delete ${esc(c.name)}"><span aria-hidden="true">✕</span></button>
-    </div>`).join("");
+  let reordering = !!startReordering;
+  const shown = ()=> S.memberId ? byOrder(forMember(D.categories, S.memberId).filter(c=>c.kind===kind)) : [];
   openSheet(`
     <h2>${kind==="income"?"Income":"Expense"} categories</h2>
     <div class="sd">For ${esc(memberName(S.memberId))}. Set a monthly ${kind==="income"?"target":"budget"} on any of them.</div>
-    <div class="manage-list">${rows || "<div class='sd'>None yet.</div>"}</div>
+    <button class="sheet-mode" id="cs-mode" type="button" aria-pressed="false"></button>
+    <div class="manage-list" id="cs-list"></div>
     <button class="go" id="cs-new" type="button">+ New category</button>
     <button class="ghost" id="cs-close" type="button">Done</button>
   `);
+  function render(){
+    const list = shown();
+    $("cs-mode").textContent = reordering ? "Done changing order" : "Change order";
+    $("cs-mode").setAttribute("aria-pressed", String(reordering));
+    $("cs-mode").style.display = list.length > 1 ? "" : "none";
+    $("cs-new").style.display = reordering ? "none" : "";
+    $("cs-list").innerHTML = list.map((c,i)=>`
+      <div class="mrow">
+        <span class="dot" style="background:var(--card-2);color:var(--ink)">${catIcon(c.emoji, 18)}</span>
+        <span class="t"><b>${esc(c.name)}</b><small>${c.budget?("budget "+fmt(c.budget)+"/mo"):"no budget"}${c.ownerId===JOINT?" · shared":""}</small></span>
+        ${reordering ? moveBtns(c, i===0, i===list.length-1) :
+          `<button class="x" data-edit="${esc(c.id)}" type="button" style="color:var(--muted)" aria-label="Edit ${esc(c.name)}">${icon("pencil",17)}</button>
+           <button class="x" data-del="${esc(c.id)}" type="button" aria-label="Delete ${esc(c.name)}"><span aria-hidden="true">✕</span></button>`}
+      </div>`).join("") || "<div class='sd'>None yet.</div>";
+    const box=$("cs-list");
+    box.querySelectorAll("[data-edit]").forEach(b=>{ b.onclick = ()=>openCategorySheet(b.dataset.edit); });
+    box.querySelectorAll("[data-del]").forEach(b=>{
+      b.onclick = async ()=>{
+        b.textContent="…";
+        try{ await api({action:"deleteCategory", id:b.dataset.del}); await reloadData(); openCategoriesSheet(); }
+        catch(e){ b.textContent="✕"; alertSheet(e.message); }
+      };
+    });
+    box.querySelectorAll(".mv").forEach(b=>{
+      b.onclick = ()=>{
+        const dir=Number(b.dataset.mv), id=b.dataset.id;
+        const full = moveInOrder(D.categories, shown(), id, dir);
+        if(!full) return;
+        saveOrderSoon("category", full);
+        render(); buildCats(); buildPaytoCats(); // the grids behind the sheet follow along
+        refocusMove(id, dir);
+      };
+    });
+  }
+  render();
+  $("cs-mode").onclick = ()=>{ reordering=!reordering; render(); $("cs-mode").focus(); };
   $("cs-close").onclick = closeSheet;
   $("cs-new").onclick = ()=>openCategorySheet(null);
-  $("sheet-body").querySelectorAll("[data-edit]").forEach(b=>{
-    b.onclick = ()=>openCategorySheet(b.dataset.edit);
-  });
-  $("sheet-body").querySelectorAll("[data-del]").forEach(b=>{
-    b.onclick = async ()=>{
-      b.textContent="…";
-      try{ await api({action:"deleteCategory", id:b.dataset.del}); await reloadData(); openCategoriesSheet(); }
-      catch(e){ b.textContent="✕"; alertSheet(e.message); }
-    };
-  });
 }
 
 function openCategorySheet(editId){
@@ -1796,32 +1904,56 @@ function openCategorySheet(editId){
 }
 
 /* ---- wallets ---- */
-function openWalletsSheet(){
-  const list = S.memberId ? forMember(D.wallets, S.memberId) : D.wallets;
-  const rows = list.map(w=>`
-    <div class="mrow">
-      <span class="dot" style="background:${esc(walletColor(w))};color:${onColor(walletColor(w))}" aria-hidden="true">${esc((w.name[0]||"?").toUpperCase())}</span>
-      <span class="t"><b>${esc(w.name)}</b><small>${w.ownerId===JOINT?"joint":"personal"}${w.type==="debt"?" · credit / bill":""}</small></span>
-      <button class="x" data-edit="${esc(w.id)}" type="button" style="color:var(--muted)" aria-label="Edit ${esc(w.name)}">${icon("pencil",17)}</button>
-      <button class="x" data-del="${esc(w.id)}" type="button" aria-label="Delete ${esc(w.name)}"><span aria-hidden="true">✕</span></button>
-    </div>`).join("");
+function openWalletsSheet(startReordering){
+  let reordering = !!startReordering;
+  const shown = ()=> byOrder(S.memberId ? forMember(D.wallets, S.memberId) : D.wallets, walletRank);
   openSheet(`
     <h2>Wallets</h2>
     <div class="sd">Bank accounts, e-wallets, cash, and credit lines.</div>
-    <div class="manage-list">${rows || "<div class='sd'>None yet.</div>"}</div>
+    <button class="sheet-mode" id="ws-mode" type="button" aria-pressed="false"></button>
+    <div class="manage-list" id="ws-list"></div>
     <button class="go" id="ws-new" type="button">+ New wallet</button>
     <button class="ghost" id="ws-close" type="button">Done</button>
   `);
+  function render(){
+    const list = shown();
+    $("ws-mode").textContent = reordering ? "Done changing order" : "Change order";
+    $("ws-mode").setAttribute("aria-pressed", String(reordering));
+    $("ws-mode").style.display = list.length > 1 ? "" : "none";
+    $("ws-new").style.display = reordering ? "none" : "";
+    $("ws-list").innerHTML = list.map((w,i)=>`
+      <div class="mrow">
+        <span class="dot" style="background:${esc(walletColor(w))};color:${onColor(walletColor(w))}" aria-hidden="true">${esc((w.name[0]||"?").toUpperCase())}</span>
+        <span class="t"><b>${esc(w.name)}</b><small>${w.ownerId===JOINT?"joint":"personal"}${w.type==="debt"?" · credit / bill":""}</small></span>
+        ${reordering ? moveBtns(w, i===0, i===list.length-1) :
+          `<button class="x" data-edit="${esc(w.id)}" type="button" style="color:var(--muted)" aria-label="Edit ${esc(w.name)}">${icon("pencil",17)}</button>
+           <button class="x" data-del="${esc(w.id)}" type="button" aria-label="Delete ${esc(w.name)}"><span aria-hidden="true">✕</span></button>`}
+      </div>`).join("") || "<div class='sd'>None yet.</div>";
+    const box=$("ws-list");
+    box.querySelectorAll("[data-edit]").forEach(b=>{ b.onclick=()=>openWalletSheet(b.dataset.edit); });
+    box.querySelectorAll("[data-del]").forEach(b=>{
+      b.onclick = async ()=>{
+        b.textContent="…";
+        try{ await api({action:"deleteWallet", id:b.dataset.del}); await reloadData(); openWalletsSheet(); }
+        catch(e){ b.textContent="✕"; alertSheet(e.message); }
+      };
+    });
+    box.querySelectorAll(".mv").forEach(b=>{
+      b.onclick = ()=>{
+        const dir=Number(b.dataset.mv), id=b.dataset.id;
+        const full = moveInOrder(D.wallets, shown(), id, dir, walletRank);
+        if(!full) return;
+        saveOrderSoon("wallet", full);
+        render(); buildWallets(); buildTransferWallets();
+        if(document.body.dataset.view==="wallet") renderWallets();
+        refocusMove(id, dir);
+      };
+    });
+  }
+  render();
+  $("ws-mode").onclick = ()=>{ reordering=!reordering; render(); $("ws-mode").focus(); };
   $("ws-close").onclick = closeSheet;
   $("ws-new").onclick = ()=>openWalletSheet(null);
-  $("sheet-body").querySelectorAll("[data-edit]").forEach(b=>{ b.onclick=()=>openWalletSheet(b.dataset.edit); });
-  $("sheet-body").querySelectorAll("[data-del]").forEach(b=>{
-    b.onclick = async ()=>{
-      b.textContent="…";
-      try{ await api({action:"deleteWallet", id:b.dataset.del}); await reloadData(); openWalletsSheet(); }
-      catch(e){ b.textContent="✕"; alertSheet(e.message); }
-    };
-  });
 }
 
 function openWalletSheet(editId){
@@ -2972,7 +3104,7 @@ function renderWallets(){
     .concat(D.members.map(m=>({key:m.id, label:m.name+"'s wallets"})));
 
   groups.forEach(g=>{
-    const mine = normals.filter(w=>w.ownerId===g.key);
+    const mine = byOrder(normals.filter(w=>w.ownerId===g.key), walletRank); // same order as the Add page
     const orphanDebts = debts.filter(w=>w.ownerId===g.key && !normals.some(n=>n.id===w.linkedWalletId));
     if(!mine.length && !orphanDebts.length) return;
     const h=document.createElement("div"); h.className="wgroup"; h.textContent=g.label;
