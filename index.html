@@ -290,6 +290,16 @@ body[data-view="add"] .savebar{display:block}
 #v-add .card-sec .g-day .chip, #v-add .card-sec .reveal input{background:var(--paper)}
 #v-add .card-sec .chip-pill.sel, #v-add .card-sec .qf.sel, #v-add .card-sec .g-day .chip.sel{background:var(--accent-tint)}
 #v-add .card-sec #members .chip-pill.sel{background:var(--person)}
+/* who's logging and day float on the page with no card; their buttons take the card tone so they still stand out from the page */
+#v-add #who-card, #v-add #day-card{background:none; border:0; box-shadow:none; padding:0; border-radius:0}
+#v-add #who-card .chip-pill, #v-add #day-card .g-day .chip, #v-add #day-card .reveal input{background:var(--card)}
+#v-add #day-card .g-day .chip.sel{background:var(--accent-tint)}
+#v-add #day-card .label{padding-left:2px}
+/* categories: slightly tighter and thinner rows (36px to 34px, 8px to 6px between rows) */
+#cats, #payto-cats{row-gap:6px}
+#cats .chip-pill, #payto-cats .chip-pill{min-height:34px}
+/* each button owns half of the 6px gap above and below it, so touch areas never overlap (40px tall) */
+#cats .chip-pill::after, #payto-cats .chip-pill::after{inset:-4px -3px}
 #entry-card #cat-sec{margin-top:18px}
 #entry-card #note-sec{margin-top:14px}
 #transfer-sec .type{margin-top:0}
