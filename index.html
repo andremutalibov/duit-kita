@@ -90,7 +90,8 @@ body:not([data-view="home"]):not([data-view="wallet"]) #eye-toggle{display:none}
 body:not([data-view="add"]) #edit-toggle{display:none}
 #edit-toggle[aria-pressed="true"]{background:var(--accent-tint); border-color:var(--accent); color:var(--accent)}
 /* Add page stays clean: edit (pencil) buttons only appear after tapping the gear */
-body:not(.editing) #v-add .lbl-edit, body:not(.editing) #v-add .qf.edit, body:not(.editing) #cats .chip-pill.add{display:none}
+body:not(.editing) #v-add .lbl-edit, body:not(.editing) #v-add .qf.edit, body:not(.editing) #cats .chip-pill.add,
+body:not(.editing) #members .chip-pill.add{display:none}
 .chip-pill.add{border-style:dashed; color:var(--muted)}
 .chip-pill.add:hover{color:var(--ink)}
 main{padding:0 16px}
@@ -176,7 +177,6 @@ body[data-view="add"] .savebar{display:block}
 }
 .note-field::placeholder{color:var(--muted)}
 .note-field:focus{border-color:var(--accent)}
-#cat-sec{margin-top:24px} /* without a title, extra space keeps categories apart from the quick amounts */
 
 /* primary amount field + quick-fill pills */
 .amtbox{
@@ -220,9 +220,6 @@ body[data-view="add"] .savebar{display:block}
   flex:0 0 auto; background:none; border:none; cursor:pointer;
   display:flex; flex-direction:column; align-items:center; gap:7px; padding:2px; min-width:74px;
 }
-/* centred when the people fit, still scrolls from the first person when they don't */
-#members > :first-child{margin-left:auto}
-#members > :last-child{margin-right:auto}
 .who .ava{
   flex:0 0 auto; width:70px; height:70px; border-radius:50%; display:flex; align-items:center; justify-content:center; /* 64px + 10% */
   font-family:var(--disp); font-weight:700; font-size:27px; color:#fff; transition:.18s;
@@ -275,13 +272,40 @@ body[data-view="add"] .savebar{display:block}
 .chip-pill:hover{border-color:var(--muted)}
 .chip-pill.sel{border-color:var(--accent); background:var(--accent-tint); color:var(--accent)}
 .chip-pill.sel .icon{color:var(--accent)}
+/* people: same rectangle, a little taller, sharing the row equally (no initials, a colour dot instead) */
+.who-pills .chip-pill.person{flex:1 1 0; min-width:104px; min-height:44px; justify-content:center; font-size:14px}
+.who-pills .chip-pill.add{flex:0 0 auto; min-height:44px}
+.pdot{width:10px; height:10px; border-radius:50%; flex:0 0 10px}
+/* the selected person is filled with their own colour, like the Expense / Income / Transfer toggle */
+#members .chip-pill.sel{border-color:var(--person); background:var(--person); color:var(--on-person)}
+#members .chip-pill.sel .pdot{background:var(--on-person) !important}
+.who-pills .chip-pill.person::after{display:none} /* already 44px tall */
+
+/* section cards on the Add page: quiet containers that group related fields */
+#v-add .card-sec{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; margin-top:12px; box-shadow:var(--card-shadow)}
+#v-add .type{margin-bottom:2px}
+#v-add .card-sec .label:first-child{margin-top:0}
+/* fields and buttons inside a card sit on the page tone, so they read as set into the card */
+#v-add .card-sec .chip-pill, #v-add .card-sec .qf, #v-add .card-sec .note-field, #v-add .card-sec .amtbox,
+#v-add .card-sec .g-day .chip, #v-add .card-sec .reveal input{background:var(--paper)}
+#v-add .card-sec .chip-pill.sel, #v-add .card-sec .qf.sel, #v-add .card-sec .g-day .chip.sel{background:var(--accent-tint)}
+#v-add .card-sec #members .chip-pill.sel{background:var(--person)}
+#entry-card #cat-sec{margin-top:18px}
+#entry-card #note-sec{margin-top:14px}
+#transfer-sec .type{margin-top:0}
+
+/* day: thinner buttons, label and date stacked tight */
+#v-add .g-day{gap:8px}
+#v-add .g-day .chip{min-height:44px; padding:4px; gap:0; font-size:14px; line-height:1.2}
+#v-add .g-day .chip small{font-size:11px}
+#v-add .reveal input{min-height:46px; border-width:1.5px; font-size:16px}
 .chip-pill::after{content:""; position:absolute; inset:-5px -3px} /* measured from inside the 1px border: 36px + 8px = 44px touch area, meets the 8px gap */
 .pickgrid .chip-cat .sub{margin-top:-2px}
 .pick-empty{font-size:13px; color:var(--muted); padding:6px 4px; text-align:center; line-height:1.45}
 /* wallets: same circles as categories, filled with the wallet's own colour */
 .chip-wal .circ{border:none; font-family:var(--disp); font-weight:700; font-size:20px}
 .chip-wal:hover .circ{filter:brightness(1.08)}
-.chip-wal.sel .circ{box-shadow:0 0 0 3px var(--paper), 0 0 0 5.5px var(--accent)} /* selection ring, not a glow */
+.chip-wal.sel .circ{box-shadow:0 0 0 3px var(--card), 0 0 0 5.5px var(--accent)} /* selection ring, not a glow; gap matches the card behind */
 /* colour swatches (people and wallets) */
 .swatches{display:flex; flex-wrap:wrap; gap:12px; padding:4px}
 .swatches button{width:44px; height:44px; border-radius:50%; border:none; cursor:pointer; padding:0}
@@ -675,35 +699,32 @@ button:focus-visible,input:focus-visible,select:focus-visible,[role="button"]:fo
     <button id="t-trf" type="button">Transfer</button>
   </div>
 
-  <section>
-    <div class="label"><span class="lbl-grp">Who's logging
-      <button class="lbl-edit" id="mng-mem" type="button" aria-label="Edit people"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" style="width:16px;height:16px"><path d="M4 20h4.5L19.5 9 15 4.5 4 15.5z"/><path d="M13 6.5l4.5 4.5"/></svg></button></span></div>
-    <div class="who" id="members"></div>
+  <!-- four section cards: 1 who's logging, 2 amount + category + note, 3 wallet, 4 day
+       (Transfer swaps card 3 for its own From / Send to card) -->
+  <section class="card-sec" id="who-card" role="group" aria-label="Who's logging">
+    <div class="pillgrid who-pills" id="members"></div>
   </section>
 
-  <!-- order: who's logging > amount > category > note > wallet > day (amount is the main field) -->
-  <section>
+  <section class="card-sec" id="entry-card">
     <label class="label" for="amt-input">Amount</label>
     <div class="amtbox">
       <span class="amtcur">Rp</span>
       <input id="amt-input" inputmode="numeric" placeholder="0" autocomplete="off">
     </div>
     <div class="quickfill" id="quickfill"></div>
-  </section>
 
-  <!-- no visible title: the icons and names make the section obvious; screen readers get a group name -->
-  <section id="cat-sec" role="group" aria-label="Category">
-    <div class="pillgrid" id="cats"></div>
-  </section>
+    <!-- no visible title: the icons and names make the categories obvious; screen readers get a group name -->
+    <div id="cat-sec" role="group" aria-label="Category">
+      <div class="pillgrid" id="cats"></div>
+    </div>
 
-  <section id="note-sec">
-    <div id="note-reveal">
+    <div id="note-sec">
       <label class="label" for="note-input">Note (optional)</label>
       <input id="note-input" class="note-field" type="text" maxlength="140" placeholder="What it was for" autocomplete="off">
     </div>
   </section>
 
-  <section id="transfer-sec" style="display:none">
+  <section class="card-sec" id="transfer-sec" style="display:none">
     <div class="type type-2" id="trf-subtype" style="margin-bottom:16px">
       <button id="trf-normal" class="sel" type="button">Normal movement</button>
       <button id="trf-payto" type="button">Pay to</button>
@@ -712,7 +733,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,[role="button"]:fo
     <div class="pickgrid" id="from-wallets"></div>
 
     <div class="label" style="margin-top:16px" id="recipient-label">Send to</div>
-    <div class="who" id="trf-recipients"></div>
+    <div class="pillgrid who-pills" id="trf-recipients"></div>
 
     <div class="label" style="margin-top:16px">Destination wallet</div>
     <div class="pickgrid" id="to-wallets"></div>
@@ -727,13 +748,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,[role="button"]:fo
     </div>
   </section>
 
-  <section id="wallet-sec">
+  <section class="card-sec" id="wallet-sec">
     <div class="label"><span class="lbl-grp"><span id="wal-label">Wallet</span>
       <button class="lbl-edit" id="mng-wal" type="button" aria-label="Edit wallets"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" style="width:16px;height:16px"><path d="M4 20h4.5L19.5 9 15 4.5 4 15.5z"/><path d="M13 6.5l4.5 4.5"/></svg></button></span></div>
     <div class="pickgrid" id="wallets"></div>
   </section>
 
-  <section>
+  <section class="card-sec" id="day-card">
     <div class="label">Day</div>
     <div class="grid g-day" id="days"></div>
     <div class="reveal" id="day-reveal">
@@ -1193,13 +1214,24 @@ function buildAdd(){ buildMembers(); buildCats(); buildWallets(); buildTrfRecipi
 function buildMembers(){
   const el = $("members"); el.innerHTML = "";
   D.members.forEach(m=>{
-    const b = document.createElement("button");
-    b.type="button"; b.className = m.id===S.memberId ? "sel" : "";
-    b.innerHTML = `<span class="ava" style="background:${esc(m.color||"#1E7A50")}">${esc(m.name[0]||"?").toUpperCase()}</span><span class="nm">${esc(m.name)}</span>`;
-    b.onclick = ()=>selectMember(m.id);
-    el.appendChild(b);
+    el.appendChild(personPillBtn(m.color||"#1E7A50", m.name, m.id===S.memberId, ()=>selectMember(m.id)));
   });
-  /* adding people now lives behind the pencil next to "Who's logging" */
+  /* with the gear on, "+ New" opens the household screen (add people, pay-cycle days) */
+  const add=document.createElement("button");
+  add.type="button"; add.className="chip-pill add";
+  add.setAttribute("aria-label","Add or edit people");
+  add.innerHTML=`<span aria-hidden="true">+ New</span>`;
+  add.onclick=openMembersSheet;
+  el.appendChild(add);
+}
+/* a person as a rectangle like the categories: their colour as a small dot, then their name */
+function personPillBtn(color, name, selected, onPick){
+  const b=document.createElement("button");
+  b.type="button"; b.className="chip-pill person"+(selected?" sel":"");
+  b.setAttribute("aria-pressed", String(!!selected));
+  b.innerHTML=`<span class="pdot" style="background:${esc(color)}" aria-hidden="true"></span><span>${esc(name)}</span>`;
+  b.onclick=onPick;
+  return b;
 }
 
 /* The selected person's color drives buttons and accents. Member colors are user-picked, so work out
@@ -1231,7 +1263,6 @@ function selectMember(id, silent){
   applyPersonColor();
   S.categoryId = null; S.walletId = null; S.fromWalletId = null; S.toWalletId = null; S.note = "";
   if($("note-input")) $("note-input").value = "";
-  if($("note-reveal")) $("note-reveal").classList.remove("show");
   if($("transfer-note")) $("transfer-note").value = "";
   if(!silent){ buildMembers(); buildCats(); buildWallets(); buildTrfRecipients(); buildTransferWallets(); refresh(); }
 }
@@ -1318,14 +1349,9 @@ function buildTrfRecipients(){
     return;
   }
   owners.forEach(o=>{
-    const btn=document.createElement("button"); btn.type="button";
-    if(o===S.recipient) btn.classList.add("sel");
-    const initial = o===JOINT ? "◆" : (memberName(o)[0]||"?").toUpperCase();
     const color = o===JOINT ? "var(--accent)" : memberColor(o);
-    btn.innerHTML=`<span class="ava" style="background:${esc(color)}">${esc(initial)}</span>
-      <span class="nm">${esc(recipientLabel(o))}</span>`;
-    btn.onclick=()=>{ S.recipient=o; S.toWalletId=null; buildTrfRecipients(); buildTransferWallets(); refresh(); };
-    el.appendChild(btn);
+    el.appendChild(personPillBtn(color, recipientLabel(o), o===S.recipient,
+      ()=>{ S.recipient=o; S.toWalletId=null; buildTrfRecipients(); buildTransferWallets(); refresh(); }));
   });
 }
 
@@ -1402,7 +1428,7 @@ function setType(t){
   $("t-trf").classList.toggle("sel", t==="Transfer");
   S.categoryId=null; S.walletId=null; S.fromWalletId=null; S.toWalletId=null;
   S.subtype="normal"; S.paytoCategoryId=null; S.note="";
-  $("note-input").value=""; $("note-reveal").classList.remove("show");
+  $("note-input").value="";
   $("transfer-note").value="";
   $("trf-normal").classList.add("sel"); $("trf-payto").classList.remove("sel");
   $("payto-cat-sec").style.display="none";
@@ -1669,7 +1695,7 @@ function resetForm(){
   S.categoryId=null; S.amount=null; S.day="Today"; S.customDate=null; S.note="";
   S.fromWalletId=null; S.toWalletId=null; S.paytoCategoryId=null; S.subtype="normal";
   $("amt-input").value=""; $("day-reveal").classList.remove("show");
-  $("note-input").value=""; $("note-reveal").classList.remove("show");
+  $("note-input").value="";
   $("transfer-note").value="";
   $("trf-normal").classList.add("sel"); $("trf-payto").classList.remove("sel");
   $("payto-cat-sec").style.display="none";
@@ -1723,7 +1749,6 @@ function linkFieldLabels(root){
 $("sheet-ovl").addEventListener("click", e=>{ if(e.target.id==="sheet-ovl") closeSheet(); });
 
 /* ---- members ---- */
-$("mng-mem").onclick = openMembersSheet;
 $("mng-wal").onclick = ()=>openWalletsSheet();
 
 /* small focused sheet to set ONE person's cycle day (from the overview gear) */
