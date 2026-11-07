@@ -357,6 +357,9 @@ body[data-view="add"] .savebar{display:block}
   display:flex; flex-direction:column; gap:7px}
 .sr{display:flex; justify-content:space-between; font-size:13px; color:var(--muted)}
 .sr b{font-family:var(--num); font-weight:700; color:var(--ink)}
+.sr .tag{font-size:11px; color:var(--muted); margin-left:6px}
+.sumcard .bigcap{font-size:12px; font-weight:600; color:var(--muted); margin-top:12px}
+.sumcard .bigcap + .big{margin-top:2px}
 .sr b.inc{color:var(--inc)}
 
 .dots{display:flex; justify-content:center; gap:6px; margin-top:10px}
@@ -811,7 +814,7 @@ const PALETTE = ["#1E7A50","#B04A72","#2D6CDF","#C9962A","#8B5C8F","#0E7A6B","#B
 const DAYS = ["Today","Yesterday","Custom"];
 
 /* app data + ui state */
-const D = { members:[], wallets:[], categories:[] };
+const D = { members:[], wallets:[], categories:[], settings:{} };
 const S = { type:"Expense", memberId:null, categoryId:null, amount:null,
             walletId:null, fromWalletId:null, toWalletId:null,
             subtype:"normal", paytoCategoryId:null, recipient:null,
@@ -1155,7 +1158,7 @@ async function boot(){
       await api({action:"migrate"});
       out = await api({action:"bootstrap"});
     }
-    D.members = out.members; D.wallets = out.wallets; D.categories = out.categories;
+    D.members = out.members; D.wallets = out.wallets; D.categories = out.categories; D.settings = out.settings || {};
     if(D.members.length && !S.memberId) selectMember(D.members[0].id, true);
     buildAdd();
     loadHome();
@@ -1751,38 +1754,47 @@ $("sheet-ovl").addEventListener("click", e=>{ if(e.target.id==="sheet-ovl") clos
 /* ---- members ---- */
 $("mng-wal").onclick = ()=>openWalletsSheet();
 
-/* small focused sheet to set ONE person's cycle day (from the overview gear) */
+/* focused sheet to set ONE cycle day: a person's ("Andre's cycle") or, for "all", the household's,
+   which the Everyone view uses. Opened from the settings button on the Home card. */
 function openCycleSheet(memberId){
-  const m = D.members.find(x=>x.id===memberId);
-  if(!m){ openMembersSheet(); return; }
-  const cur = m.cycleDay || 1;
+  const household = memberId==="all";
+  const m = household ? null : D.members.find(x=>x.id===memberId);
+  if(!household && !m){ openMembersSheet(); return; }
+  const cur = cycleDayFor(memberId);
   openSheet(`
-    <h2>${esc(m.name)}'s cycle</h2>
-    <div class="sd">The day ${esc(m.name)}'s salary lands (1–28). Budgets and totals for ${esc(m.name)} group from this day instead of the 1st.</div>
-    <div class="fld"><label>Cycle start day</label>
-      <input id="cyc-one" class="num" type="number" min="1" max="28" value="${esc(String(cur))}" inputmode="numeric"></div>
+    <h2>${household ? "Household cycle" : esc(m.name)+"'s cycle"}</h2>
+    <div class="sd">${household
+      ? "The day the Everyone view starts each cycle. Set it to your main payday so a salary and the month it pays for stay together."
+      : "The day "+esc(m.name)+"'s salary lands. Budgets and totals for "+esc(m.name)+" group from this day instead of the 1st."}
+      If a month is shorter, the cycle starts on its last day.</div>
+    <div class="fld"><label>Cycle start day (1–31)</label>
+      <input id="cyc-one" class="num" type="number" min="1" max="31" value="${esc(String(cur))}" inputmode="numeric"></div>
     <div class="sd" id="cyc-preview" style="margin-top:-6px"></div>
     <button class="go" id="cyc-save" type="button">Save</button>
     <button class="ghost" id="cyc-close" type="button">Cancel</button>
   `);
+  const val = ()=>{ const v=parseInt($("cyc-one").value,10); return (v>=1&&v<=31) ? v : 1; };
   const preview = ()=>{
-    let v=parseInt($("cyc-one").value,10); if(!(v>=1&&v<=28)) v=1;
+    const v=val();
     if(v===1){ $("cyc-preview").textContent="Same as the calendar month."; return; }
-    const today=new Date(); let y=today.getFullYear(), mo=today.getMonth();
-    if(today.getDate()<v){ mo-=1; if(mo<0){mo=11;y-=1;} }
-    const from=new Date(y,mo,v), to=new Date(y,mo+1,v); to.setDate(to.getDate()-1);
-    $("cyc-preview").textContent="This cycle: "+fmtShort(iso(from))+" – "+fmtShort(iso(to))
-      +" → "+to.toLocaleDateString("id-ID",{month:"long"})+" Cycle "+to.getFullYear();
+    const a=cycleRange(v,0), b=cycleRange(v,-1);
+    $("cyc-preview").textContent="This cycle: "+fmtShort(iso(a.from))+" – "+fmtShort(iso(a.to))
+      +". Next: "+fmtShort(iso(b.from))+" – "+fmtShort(iso(b.to))+".";
   };
   $("cyc-one").addEventListener("input", preview); preview();
   $("cyc-close").onclick = closeSheet;
   $("cyc-save").onclick = async ()=>{
-    let v=parseInt($("cyc-one").value,10); if(!(v>=1&&v<=28)) v=1;
+    const v=val();
     const b=$("cyc-save"); b.disabled=true; b.textContent="Saving…";
     try{
-      await api({action:"updateMember", id:memberId, cycleDay:v});
-      await reloadData();
-      const mm=D.members.find(x=>x.id===memberId); if(mm) mm.cycleDay=v;
+      if(household){
+        await api({action:"setSetting", key:"householdCycleDay", value:v});
+        D.settings = Object.assign({}, D.settings, {householdCycleDay:v});
+      } else {
+        await api({action:"updateMember", id:memberId, cycleDay:v});
+        await reloadData();
+        const mm=D.members.find(x=>x.id===memberId); if(mm) mm.cycleDay=v;
+      }
       closeSheet();
       if(document.body.dataset.view==="home") renderHome();
     }catch(e){ b.disabled=false; b.textContent="Couldn't save: "+e.message; }
@@ -1794,18 +1806,18 @@ function openMembersSheet(){
     <div class="mrow">
       <span class="dot" style="background:${esc(m.color||"#1E7A50")}">${esc((m.name[0]||"?").toUpperCase())}</span>
       <span class="t"><b>${esc(m.name)}</b><small>cycle starts day ${esc(String(m.cycleDay||1))}</small></span>
-      <input class="cyc-input" data-cyc="${esc(m.id)}" type="number" min="1" max="28" value="${esc(String(m.cycleDay||1))}"
+      <input class="cyc-input" data-cyc="${esc(m.id)}" type="number" min="1" max="31" value="${esc(String(m.cycleDay||1))}"
         aria-label="Cycle start day" inputmode="numeric">
       <button class="x" data-del="${esc(m.id)}" type="button">✕</button>
     </div>`).join("");
   openSheet(`
     <h2>Household</h2>
-    <div class="sd">Everyone who logs in this household. The number is each person's <b>cycle start day</b>: the day their salary lands (1–28). Budgets and totals group by that day instead of the 1st.</div>
+    <div class="sd">Everyone who logs in this household. The number is each person's <b>cycle start day</b>: the day their salary lands (1–31; a shorter month starts on its last day). Budgets and totals group by that day instead of the 1st.</div>
     <div class="manage-list">${rows || "<div class='sd'>No members yet.</div>"}</div>
     <div class="fld"><label>Add someone</label>
       <input id="nm-name" type="text" placeholder="e.g. Dinda" maxlength="30" autocomplete="off"></div>
-    <div class="fld"><label>Cycle start day (1–28)</label>
-      <input id="nm-cyc" class="num" type="number" min="1" max="28" value="1" inputmode="numeric"></div>
+    <div class="fld"><label>Cycle start day (1–31)</label>
+      <input id="nm-cyc" class="num" type="number" min="1" max="31" value="1" inputmode="numeric"></div>
     <div class="fld"><label id="nm-colors-lbl">Colour</label><div class="swatches" id="nm-colors" role="radiogroup" aria-labelledby="nm-colors-lbl"></div></div>
     <button class="go" id="nm-save" type="button">Add member</button>
     <button class="ghost" id="nm-close" type="button">Done</button>
@@ -1817,7 +1829,7 @@ function openMembersSheet(){
   $("nm-save").onclick = async ()=>{
     const name=$("nm-name").value.trim();
     if(!name) return;
-    let cyc=parseInt($("nm-cyc").value,10); if(!(cyc>=1&&cyc<=28)) cyc=1;
+    let cyc=parseInt($("nm-cyc").value,10); if(!(cyc>=1&&cyc<=31)) cyc=1;
     const b=$("nm-save"); b.disabled=true; b.textContent="Adding…";
     try{
       await api({action:"addMember", name, color, cycleDay:cyc});
@@ -1827,7 +1839,7 @@ function openMembersSheet(){
   /* inline cycle-day editing per member */
   $("sheet-body").querySelectorAll("[data-cyc]").forEach(inp=>{
     inp.onchange = async ()=>{
-      let v=parseInt(inp.value,10); if(!(v>=1&&v<=28)){ v=Math.max(1,Math.min(28,v||1)); inp.value=v; }
+      let v=parseInt(inp.value,10); if(!(v>=1&&v<=31)){ v=Math.max(1,Math.min(31,v||1)); inp.value=v; }
       inp.disabled=true;
       try{ await api({action:"updateMember", id:inp.dataset.cyc, cycleDay:v}); await reloadData();
         const m=D.members.find(x=>x.id===inp.dataset.cyc); if(m) m.cycleDay=v;
@@ -2097,7 +2109,7 @@ function alertSheet(msg){
 
 async function reloadData(){
   const out = await api({action:"bootstrap"});
-  D.members=out.members; D.wallets=out.wallets; D.categories=out.categories;
+  D.members=out.members; D.wallets=out.wallets; D.categories=out.categories; D.settings=out.settings||{};
   if(S.memberId && !memberById(S.memberId)) S.memberId = D.members.length?D.members[0].id:null;
   buildMembers(); buildCats(); buildWallets(); refresh();
 }
@@ -2136,21 +2148,51 @@ function buildHomeMembers(){
 function homeRows(){
   return TX.member==="all" ? TX.all : TX.all.filter(r=>r.memberId===TX.member);
 }
-/* helpers: payto transfers count as expense for the sender */
-function isExpenseRow(r){ return (r.type==="Expense") || (r.type==="Transfer" && r.subtype==="payto"); }
-function isIncomeRow(r){ return r.type==="Income"; }
-/* Transaction page: member + wallet filter
-   Also includes payto transfers RECEIVED by the current member (they show for receiver too) */
+/* ================= counting rules =================
+   Money moving between household members is not spending. How each row counts depends on the view:
+
+                         | that person's view                | Everyone view
+   Income                | income (if theirs)                | income
+   Expense               | expense (if theirs)               | expense
+   Transfer, own wallets | nothing (just rearranging)        | nothing
+   Transfer to someone   | sender: payout, receiver: received| payout line only (not in net)
+   Pay to (split bill)   | sender: expense (its category),   | nothing (the real expense is the
+                         | receiver: received                |  bill the other person logged)
+
+   Net: person = income + received - payout - expenses;  Everyone = income - expenses.
+   "Someone" includes the joint wallet; nobody receives money paid into it as a person. */
+function walletOwner(id){ const w=walletById(id); return w ? w.ownerId : null; }
+function rowFlow(r, view){
+  if(r.type==="Income")  return (view==="all" || r.memberId===view) ? "income"  : null;
+  if(r.type==="Expense") return (view==="all" || r.memberId===view) ? "expense" : null;
+  if(r.type!=="Transfer") return null;
+  const from = walletOwner(r.fromWalletId) || r.memberId, to = walletOwner(r.toWalletId);
+  if(!to || from===to) return null;                       // between your own wallets
+  const payto = r.subtype==="payto";
+  if(view==="all") return payto ? null : "payout";         // shown on the card, never in net
+  if(from===view) return payto ? "expense" : "payout";
+  if(to===view)   return "received";
+  return null;
+}
+const isExpenseIn = (r, view) => rowFlow(r, view)==="expense";
+const isIncomeIn  = (r, view) => rowFlow(r, view)==="income";
+/* totals for a set of rows in one view */
+function flowTotals(rows, view){
+  const t={income:0, received:0, payout:0, expense:0};
+  rows.forEach(r=>{ const f=rowFlow(r, view); if(f) t[f]+=r.amount; });
+  t.net = view==="all" ? t.income - t.expense : t.income + t.received - t.payout - t.expense;
+  return t;
+}
+/* Transaction page: member + wallet filter.
+   A person's history also lists transfers they RECEIVED (allowances and split-bill payments). */
 function txRows(){
   let rows = homeRows();
-  /* add payto transfers where current member is the receiver (toWallet belongs to them) */
   if(TX.member!=="all"){
-    const receivedPayto = TX.all.filter(r=>
-      r.type==="Transfer" && r.subtype==="payto" &&
-      r.memberId!==TX.member && // not the sender (already in homeRows)
-      D.wallets.find(w=>w.id===r.toWalletId && w.ownerId===TX.member)
+    const received = TX.all.filter(r=>
+      r.type==="Transfer" && r.memberId!==TX.member && // not already listed as theirs
+      rowFlow(r, TX.member)==="received"
     );
-    if(receivedPayto.length) rows = [...rows, ...receivedPayto];
+    if(received.length) rows = [...rows, ...received];
   }
   if(TX.wallet==="all") return rows;
   const wid=TX.wallet;
@@ -2290,10 +2332,11 @@ function renderCalWeek(){
     for(let j=0;j<7;j++) dates.push(dateMinus(7*i + (6-j))); // oldest→today, left→right
     const map={};
     rows.forEach(r=>{
-      if(r.type==="Transfer") return;
       if(dates.indexOf(r.date)<0) return;
+      const f = rowFlow(r, TX.member);   // same counting rules as Home
+      if(f!=="income" && f!=="expense") return;
       const t = map[r.date] || (map[r.date]={e:0,i:0});
-      if(isIncomeRow(r)) t.i+=r.amount; else if(isExpenseRow(r)) t.e+=r.amount;
+      if(f==="income") t.i+=r.amount; else t.e+=r.amount;
     });
 
     let heads="", cells="";
@@ -2342,11 +2385,11 @@ function renderCalMonth(){
 
     const dayExp={}, dayInc={};
     rows.forEach(r=>{
-      if(r.type==="Transfer") return;
       if(r.date.indexOf(key)!==0) return;
+      const f = rowFlow(r, TX.member);
       const dd = Number(r.date.slice(8,10));
-      if(isIncomeRow(r)) dayInc[dd]=(dayInc[dd]||0)+r.amount;
-      else if(isExpenseRow(r)) dayExp[dd]=(dayExp[dd]||0)+r.amount;
+      if(f==="income") dayInc[dd]=(dayInc[dd]||0)+r.amount;
+      else if(f==="expense") dayExp[dd]=(dayExp[dd]||0)+r.amount;
     });
 
     let cells="";
@@ -2377,8 +2420,8 @@ function renderCalMonth(){
 function openDayHistory(dateStr){
   const rows = txRows().filter(r=>r.date===dateStr)
     .sort((a,c)=>(c.loggedAt||0)-(a.loggedAt||0));
-  const exp = rows.filter(r=>isExpenseRow(r)).reduce((a,r)=>a+r.amount,0);
-  const inc = rows.filter(isIncomeRow).reduce((a,r)=>a+r.amount,0);
+  const exp = rows.filter(r=>isExpenseIn(r, TX.member)).reduce((a,r)=>a+r.amount,0);
+  const inc = rows.filter(r=>isIncomeIn(r, TX.member)).reduce((a,r)=>a+r.amount,0);
   const label = new Date(dateStr+"T00:00:00").toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"long", year:"numeric"});
   const sd = [ exp?("−"+fmt(exp)+" spent"):"", inc?("+"+fmt(inc)+" in"):"" ].filter(Boolean).join(" · ") || "No transactions";
   const listHtml = rows.length ? rows.map(r=>{
@@ -2435,12 +2478,28 @@ function monthsAvailable(){
 
 /* ---- pay-cycle helpers (Home sliders group by per-person cycle, not calendar month) ---- */
 const MAX_CYCLES_BACK = 3;
-/* cycle start day for the active filter: 1 for "Everyone", else that member's cycleDay */
-function activeCycleDay(){
-  if(TX.member==="all") return 1;
-  const m = D.members.find(x=>x.id===TX.member);
-  const cd = m && m.cycleDay ? parseInt(m.cycleDay,10) : 1;
-  return (cd>=1 && cd<=28) ? cd : 1;
+/* cycle start day (1-31) for a view: the household setting for "Everyone", else that member's day */
+function cycleDayFor(view){
+  const raw = view==="all" ? (D.settings && D.settings.householdCycleDay) : ((D.members.find(x=>x.id===view)||{}).cycleDay);
+  const cd = parseInt(raw,10);
+  return (cd>=1 && cd<=31) ? cd : 1;
+}
+function activeCycleDay(){ return cycleDayFor(TX.member); }
+/* a cycle that "starts on the 30th" starts on the last day of a shorter month (28 or 29 Feb) */
+function cycleStart(y, m, cd){
+  while(m<0){ m+=12; y-=1; } while(m>11){ m-=12; y+=1; }
+  const dim = new Date(y, m+1, 0).getDate();
+  return new Date(y, m, Math.min(cd, dim));
+}
+/* the cycle `offset` cycles back from the one containing `today` → {from, to} dates */
+function cycleRange(cd, offset, today){
+  today = today || new Date(); today = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  let y=today.getFullYear(), m=today.getMonth();
+  if(today < cycleStart(y, m, cd)) m -= 1;                  // current cycle began last month
+  m -= offset;
+  const from = cycleStart(y, m, cd);
+  const to = cycleStart(y, m+1, cd); to.setDate(to.getDate()-1); // day before the next cycle starts
+  return { from, to };
 }
 function fmtShort(isoStr){
   const d=new Date(isoStr+"T00:00:00");
@@ -2449,13 +2508,7 @@ function fmtShort(isoStr){
 /* the cycle `offset` cycles before the current one → {fromStr,toStr,label,days,cd} */
 function periodFor(offset){
   const cd = activeCycleDay();
-  const today = new Date(); today.setHours(0,0,0,0);
-  let y=today.getFullYear(), m=today.getMonth();
-  if(today.getDate() < cd){ m-=1; if(m<0){ m=11; y-=1; } } // current cycle began last month
-  m -= offset;
-  while(m<0){ m+=12; y-=1; }
-  const from = new Date(y, m, cd);
-  const to = new Date(y, m+1, cd); to.setDate(to.getDate()-1); // day before next cycle start
+  const { from, to } = cycleRange(cd, offset);
   const monthName = to.toLocaleDateString("id-ID",{month:"long"});
   const yr = to.getFullYear();
   const label = cd===1 ? (monthName+" "+yr) : (monthName+" Cycle "+yr);
@@ -2482,7 +2535,8 @@ function renderHome(){
 
 /* ---- overview: slideable, one card per month, synced with budgets ---- */
 function renderOverviewSlides(){
-  const rows = homeRows();
+  const view = TX.member;          // "all" or a member id
+  const rows = TX.all;             // every row; rowFlow decides what counts in this view
   const count = periodsAvailable();
   const cd = activeCycleDay();
   const slider = $("sumslider"), dots = $("sumdots");
@@ -2494,14 +2548,13 @@ function renderOverviewSlides(){
   for(let i=0;i<count;i++){
     const p = periodFor(i);
     const inPeriod = rows.filter(r=>r.date>=p.fromStr && r.date<=p.toStr);
-    const exp = inPeriod.filter(r=>isExpenseRow(r)).reduce((a,r)=>a+r.amount,0);
-    const inc = inPeriod.filter(isIncomeRow).reduce((a,r)=>a+r.amount,0);
-    const net = inc-exp;
+    const t = flowTotals(inPeriod, view);
+    const exp = t.expense, inc = t.income, net = t.net;
 
     let sub2Label1, sub2Val1, sub2Label2, sub2Val2;
     if(i===0){
-      const todayExp = rows.filter(r=>isExpenseRow(r)&&r.date===todayKey).reduce((a,r)=>a+r.amount,0);
-      const weekExp = rows.filter(r=>isExpenseRow(r)&&r.date>=monKey&&r.date<=todayKey).reduce((a,r)=>a+r.amount,0);
+      const todayExp = rows.filter(r=>isExpenseIn(r,view)&&r.date===todayKey).reduce((a,r)=>a+r.amount,0);
+      const weekExp = rows.filter(r=>isExpenseIn(r,view)&&r.date>=monKey&&r.date<=todayKey).reduce((a,r)=>a+r.amount,0);
       sub2Label1="Today"; sub2Val1=todayExp;
       sub2Label2="This week"; sub2Val2=weekExp;
     } else {
@@ -2517,22 +2570,22 @@ function renderOverviewSlides(){
     const card=document.createElement("div");
     card.className="sumcard";
     card.innerHTML=`
-      <button class="cyc-gear" type="button" aria-label="Pay cycle settings">${icon("sliders",20)}</button>
+      <button class="cyc-gear" type="button" aria-label="${view==="all"?"Household cycle settings":"Pay cycle settings"}">${icon("sliders",20)}</button>
       <div class="cap">${esc(cap)}</div>
       <div class="dt">${esc(range)}</div>
+      <div class="bigcap">Expenses</div>
       <div class="big ${exp?"":"zero"} bal-mask">${exp?"−"+fmt(exp):"Rp0"}</div>
       <div class="split">
-        <div class="sr"><span>Income</span><b class="inc">${inc?"+"+fmt(inc):"Rp0"}</b></div>
-        <div class="sr"><span>Net</span><b style="color:${net<0?"var(--exp)":"var(--inc)"}">${net<0?"−":""}${fmt(Math.abs(net))}</b></div>
+        <div class="sr"><span>Income</span><b class="inc bal-mask">${inc?"+"+fmt(inc):"Rp0"}</b></div>
+        ${t.received ? `<div class="sr"><span>Received</span><b class="inc bal-mask">+${fmt(t.received)}</b></div>` : ""}
+        <div class="sr"><span>Payout${view==="all"?`<span class="tag">between you, not in net</span>`:""}</span><b class="bal-mask">${t.payout?"−"+fmt(t.payout):"Rp0"}</b></div>
+        <div class="sr"><span>Net</span><b class="bal-mask" style="color:${net<0?"var(--exp)":"var(--inc)"}">${net<0?"−":""}${fmt(Math.abs(net))}</b></div>
       </div>
       <div class="sub2">
         <div class="sr"><span>${sub2Label1}</span><b>${sub2Val1?fmt(sub2Val1):"Rp0"}</b></div>
         <div class="sr"><span>${sub2Label2}</span><b>${sub2Val2?fmt(sub2Val2):"Rp0"}</b></div>
       </div>`;
-    card.querySelector(".cyc-gear").onclick = ()=>{
-      if(TX.member==="all") openMembersSheet();
-      else openCycleSheet(TX.member);
-    };
+    card.querySelector(".cyc-gear").onclick = ()=>openCycleSheet(TX.member); // "all" = household cycle
     slider.appendChild(card);
     const dot=document.createElement("span"); if(i===0) dot.className="on";
     dots.appendChild(dot);
@@ -2543,9 +2596,15 @@ function renderOverviewSlides(){
 }
 
 /* ---- budgets: slideable, one page per cycle, synced with overview ---- */
+/* Budget use per category. A joint category is a household budget, so it counts by the Everyone
+   rules (a split-bill Pay to is not counted again). A personal category counts by its owner's rules,
+   so the sender's share of a split bill does count toward their own budget. */
 function budgetsForPeriod(p){
   return D.categories.map(c=>{
-    const used = TX.all.filter(r=>r.categoryId===c.id && r.date>=p.fromStr && r.date<=p.toStr).reduce((a,r)=>a+r.amount,0);
+    const view = c.ownerId===JOINT ? "all" : c.ownerId;
+    const want = c.kind==="income" ? "income" : "expense";
+    const used = TX.all.filter(r=>r.categoryId===c.id && r.date>=p.fromStr && r.date<=p.toStr && rowFlow(r, view)===want)
+      .reduce((a,r)=>a+r.amount,0);
     return { categoryId:c.id, name:c.name, kind:c.kind, ownerId:c.ownerId, emoji:c.emoji,
              budget:Number(c.budget)||0, used, remaining:c.budget?c.budget-used:0 };
   });
@@ -2651,15 +2710,14 @@ function renderReportSlides(){
   const count = periodsAvailable();
   const slider = $("reportslider"), dots = $("reportdots");
   slider.innerHTML=""; dots.innerHTML="";
-  const rows = homeRows();
+  const view = TX.member, rows = TX.all;
 
   for(let i=0;i<count;i++){
     const p = periodFor(i);
     const inPeriod = rows.filter(r=>r.date>=p.fromStr && r.date<=p.toStr);
-    const expRows = inPeriod.filter(r=>isExpenseRow(r));
-    const totalExp = expRows.reduce((a,r)=>a+r.amount,0);
-    const totalInc = inPeriod.filter(isIncomeRow).reduce((a,r)=>a+r.amount,0);
-    const net = totalInc - totalExp;
+    const expRows = inPeriod.filter(r=>isExpenseIn(r, view));
+    const t = flowTotals(inPeriod, view);
+    const totalExp = t.expense, totalInc = t.income, net = t.net;
 
     const byCat = {};
     expRows.forEach(r=>{ byCat[r.categoryId] = (byCat[r.categoryId]||0) + r.amount; });
@@ -2671,9 +2729,20 @@ function renderReportSlides(){
     const periodLabel = p.label;
 
     const page=document.createElement("div"); page.className="reportpage";
+    const totalsHtml = `
+        <div class="rep-totals">
+          <div class="sr"><span>Total income</span><b class="inc">${fmt(totalInc)}</b></div>
+          ${t.received ? `<div class="sr"><span>Total received</span><b class="inc">${fmt(t.received)}</b></div>` : ""}
+          <div class="sr"><span>Total payout${view==="all"?`<span class="tag">not in surplus</span>`:""}</span><b>${fmt(t.payout)}</b></div>
+          <div class="sr"><span>Total spent</span><b>${fmt(totalExp)}</b></div>
+          <div class="sr"><span>${net>=0?"Surplus":"Deficit"}</span>
+            <b style="color:${net>=0?"var(--inc)":"var(--exp)"}">${fmt(Math.abs(net))}</b></div>
+        </div>`;
     if(!items.length){
+      /* totals still show: income and payouts matter even in a cycle with no spending yet */
       page.innerHTML = `<div class="rep-month-label">${esc(periodLabel)}</div>
-        <div class="rep-empty">No expenses recorded this ${p.cd===1?"month":"cycle"}. Expenses you log on the Add tab show up here by category.</div>`;
+        <div class="rep-empty">No expenses recorded this ${p.cd===1?"month":"cycle"}. Expenses you log on the Add tab show up here by category.</div>`+
+        ((totalInc||t.received||t.payout) ? totalsHtml : "");
     } else {
       const legend = items.map(it=>{
         const pct=Math.round(it.value/totalExp*100);
@@ -2689,12 +2758,7 @@ function renderReportSlides(){
       page.innerHTML = `
         <div class="rep-month-label">${esc(periodLabel)}</div>
         <div class="pie-wrap">${pieSVG(items, totalExp)}</div>
-        <div class="rep-totals">
-          <div class="sr"><span>Total spent</span><b>${fmt(totalExp)}</b></div>
-          <div class="sr"><span>Total income</span><b class="inc">${fmt(totalInc)}</b></div>
-          <div class="sr"><span>${net>=0?"Surplus":"Deficit"}</span>
-            <b style="color:${net>=0?"var(--inc)":"var(--exp)"}">${fmt(Math.abs(net))}</b></div>
-        </div>
+        ${totalsHtml}
         <div class="legend">${legend}</div>`;
     }
     slider.appendChild(page);
@@ -2712,7 +2776,7 @@ function renderReportSlides(){
       const period={ fromStr:row.dataset.from, toStr:row.dataset.to, label:row.dataset.label };
       const cat=catById(cid);
       if(cat) openBudgetHistory({categoryId:cid, name:cat.name, emoji:cat.emoji,
-        kind:cat.kind, budget:Number(cat.budget)||0, ownerId:cat.ownerId}, period);
+        kind:cat.kind, budget:Number(cat.budget)||0, ownerId:cat.ownerId, view:TX.member}, period);
     };
   });
 }
@@ -2772,7 +2836,10 @@ function openBudgetEdit(b){
 /* tap a budget bar → see that category's transactions for the period */
 function openBudgetHistory(b, period){
   const p = period && period.fromStr ? period : periodFor(0);
-  const rows = TX.all.filter(r=>r.categoryId===b.categoryId && r.date>=p.fromStr && r.date<=p.toStr)
+  /* list exactly what was counted: the report passes its view; a budget counts by its owner (joint = Everyone) */
+  const view = b.view || (b.ownerId===JOINT ? "all" : (b.ownerId || "all"));
+  const want = b.kind==="income" ? "income" : "expense";
+  const rows = TX.all.filter(r=>r.categoryId===b.categoryId && r.date>=p.fromStr && r.date<=p.toStr && rowFlow(r, view)===want)
     .sort((a,c)=>{ if(c.date!==a.date) return c.date.localeCompare(a.date); return (c.loggedAt||0)-(a.loggedAt||0); });
   const income = b.kind==="income";
   const total = rows.reduce((a,r)=>a+r.amount,0);
@@ -2781,7 +2848,7 @@ function openBudgetHistory(b, period){
       <div class="mrow" data-log="${esc(String(r.loggedAt))}" role="button" tabindex="0">
         <span class="dot" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span>
         <span class="t"><b>${income?"+":"−"}${fmt(r.amount)}</b>
-          <small>${esc(r.date)} · ${esc(walletLabel(r.walletId))}${r.note?" · "+esc(r.note):""}</small></span>
+          <small>${esc(r.date)} · ${esc(walletLabel(r.walletId || r.fromWalletId))}${r.type==="Transfer"?" · split bill":""}${r.note?" · "+esc(r.note):""}</small></span>
       </div>`).join("")
     : `<div class='sd'>No transactions in this category in ${esc(periodLabel)}.</div>`;
   openSheet(`
@@ -2843,7 +2910,20 @@ function renderTxList(rows){
        keyboard and mouse users delete from the row's detail sheet instead */
     const trashBtn = `<button class="rtrash" type="button" tabindex="-1" aria-label="Delete">${icon("trash",22)}</button>`;
     const rowAttrs = (label)=>` role="button" tabindex="0" aria-label="${esc(label)}"`;
-    if(isTrf && !isPayto){
+    /* in the receiver's own view, money sent to them reads as money in, from the sender */
+    const recv = isTrf && TX.member!=="all" && rowFlow(r, TX.member)==="received";
+    if(recv){
+      const what = isPayto ? catLabel(r.categoryId)+" (split bill)" : "Transfer";
+      wrap.innerHTML =
+        trashBtn+
+        `<div class="rcard inc"${rowAttrs("Received "+fmt(r.amount)+" from "+memberName(r.memberId)+", "+what)}>`+
+          `<div class="cico">${isPayto ? catIcon(catEmoji(r.categoryId), 20) : "↔"}`+
+            `<span class="badge" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span></div>`+
+          `<div class="mid"><div class="cat">From ${esc(memberName(r.memberId))}</div>`+
+          `<div class="sub">${esc(what)} · ${esc(walletLabel(r.toWalletId))}${r.note?` · ${esc(r.note)}`:""}</div></div>`+
+          `<div class="amt">+${fmt(r.amount)}</div>`+
+        `</div>`;
+    } else if(isTrf && !isPayto){
       /* normal transfer */
       wrap.innerHTML =
         trashBtn+
