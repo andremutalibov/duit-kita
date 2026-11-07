@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Duit Kita</title>
 
 <link rel="manifest" href="manifest.json">
@@ -15,50 +15,61 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<!-- IBM Plex Sans for headings and numbers (DESIGN.md: calm, neat, banking-app) -->
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
 :root{
   --paper:#0E1116; --card:#191D24; --card-2:#232935; --ink:#F3F5F8; --muted:#8A929E;
-  --line:#2A2F3A; --coin:#CFA94D;
-  --accent:#2DD4BF; --accent-dim:#1E8578; --accent-tint:#2DD4BF1F;
-  --person:#22B378; --person-tint:#22B37826; --person-deep:#5FE0AE;
-  --exp:#E5573D; --inc:#22B378;
-  --disabled-bg:#2A2F3A; --err-bg:#3A1E1A; --err-fg:#F0A79A;
+  --line:#2A2F3A; --coin:#CFA94D; --coin-ink:#CFA94D;
+  --accent:#2DD4BF; --accent-dim:#1E8578; --accent-tint:#2DD4BF1F; --on-accent:#06201C;
+  --person:#22B378; --person-tint:#22B37826; --person-deep:#5FE0AE; --on-person:#06120C;
+  --exp:#E5573D; --inc:#22B378; --on-exp:#1A0805;
+  --disabled-bg:#2A2F3A; --disabled-fg:#B3BAC5; --err-bg:#3A1E1A; --err-fg:#F0A79A;
   --card-shadow:none;
-  --radius:16px;
-  --disp:"Bricolage Grotesque", system-ui, sans-serif;
-  --num:"Space Grotesk", ui-monospace, monospace;
+  --radius:12px;      /* cards and inputs */
+  --radius-btn:10px;  /* buttons: one family with the cards, no pills (R-11) */
+  --disp:"IBM Plex Sans", system-ui, sans-serif;
+  --num:"IBM Plex Sans", system-ui, sans-serif;
   --body:system-ui, -apple-system, "Segoe UI", sans-serif;
 }
+/* light tokens darkened just enough to meet WCAG AA text contrast; hues unchanged (palette kept per DESIGN.md) */
 :root[data-theme="light"]{
-  --paper:#EEF1F5; --card:#FFFFFF; --card-2:#F3F5F8; --ink:#1A222C; --muted:#6B7480;
-  --line:#E2E6EC; --coin:#B8912F;
-  --accent:#0FA896; --accent-dim:#0B7D70; --accent-tint:#0FA8961A;
-  --person:#1FA971; --person-tint:#1FA97122; --person-deep:#0F7A50;
-  --exp:#D9463A; --inc:#159C63;
-  --disabled-bg:#D8DCE2; --err-bg:#FBEAE7; --err-fg:#8C2B1D;
+  --paper:#EEF1F5; --card:#FFFFFF; --card-2:#F3F5F8; --ink:#1A222C; --muted:#5B6470;
+  --line:#E2E6EC; --coin:#B8912F; --coin-ink:#7E5F14;
+  --accent:#0A6E63; --accent-dim:#0B7D70; --accent-tint:#0FA8961A; --on-accent:#FFFFFF;
+  --person:#1FA971; --person-tint:#1FA97122; --person-deep:#0F7A50; --on-person:#06120C;
+  --exp:#C03A2E; --inc:#0B7A4B; --on-exp:#FFFFFF;
+  --disabled-bg:#D8DCE2; --disabled-fg:#4A525D; --err-bg:#FBEAE7; --err-fg:#8C2B1D;
   --card-shadow:0 1px 3px rgba(20,30,45,.06);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{
   font-family:var(--body); background:var(--paper); color:var(--ink);
+  font-variant-numeric:tabular-nums; /* amounts line up digit for digit */
   padding-bottom:calc(170px + env(safe-area-inset-bottom));
 }
+button, [role="button"], select, label[for]{cursor:pointer}
+button:disabled{cursor:not-allowed}
+.vh{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+/* icons: drawn for this app, 2px stroke with square ends and sharp joins to match the calm,
+   banking-app direction; they replace emoji, which render differently on every phone */
+.icon{width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:square; stroke-linejoin:miter; display:block}
 body[data-view="add"]{padding-bottom:calc(300px + env(safe-area-inset-bottom))}
 
 header{
   padding:calc(14px + env(safe-area-inset-top)) 20px 4px;
   display:flex; align-items:center; justify-content:space-between; gap:10px;
 }
-header h1{font-family:var(--disp); font-weight:800; font-size:25px; letter-spacing:-.02em}
+header h1{font-family:var(--disp); font-weight:700; font-size:24px; letter-spacing:-.01em}
 header h1 .dot{color:var(--person)}
 .theme-toggle{
-  width:38px; height:38px; border-radius:999px; border:1.5px solid var(--line);
-  background:var(--card-2); font-size:17px; cursor:pointer; line-height:1;
-  display:flex; align-items:center; justify-content:center; flex:0 0 38px;
+  width:44px; height:44px; border-radius:var(--radius-btn); border:1.5px solid var(--line);
+  background:var(--card-2); color:var(--ink); cursor:pointer; line-height:1;
+  display:flex; align-items:center; justify-content:center; flex:0 0 44px;
 }
+.theme-toggle:hover{border-color:var(--muted)}
 .theme-toggle:active{background:var(--accent-tint)}
 /* offline-queue banner */
 .syncbar{display:none; margin:8px 16px 0; padding:10px 12px; border-radius:14px;
@@ -67,9 +78,9 @@ header h1 .dot{color:var(--person)}
 .syncbar.show{display:flex}
 .syncbar.bad{border-color:var(--exp); background:var(--err-bg); color:var(--err-fg)}
 .syncbar span{flex:1; min-width:180px}
-.syncbar button{border:none; border-radius:999px; padding:7px 14px; min-height:32px; cursor:pointer;
-  background:var(--coin); color:#1A1405; font-family:var(--disp); font-weight:700; font-size:12px}
-.syncbar.bad button{background:var(--exp); color:#fff}
+.syncbar button{border:none; border-radius:var(--radius-btn); padding:0 16px; min-height:44px; cursor:pointer;
+  background:var(--coin); color:#1A1405; font-family:var(--disp); font-weight:700; font-size:13px}
+.syncbar.bad button{background:var(--exp); color:var(--on-exp)}
 .err{color:var(--exp); font-size:13px; font-weight:600; margin:2px 0 6px}
 /* hide-balance mode */
 body.hide-bal .bal-mask{filter:blur(7px); user-select:none; pointer-events:none; transition:filter .2s}
@@ -77,17 +88,17 @@ body.hide-bal .bal-mask{filter:blur(7px); user-select:none; pointer-events:none;
 main{padding:0 16px}
 section{margin-top:18px}
 .label{
-  font-family:var(--disp); font-weight:600; font-size:12px; letter-spacing:.14em;
-  text-transform:uppercase; color:var(--muted); margin-bottom:8px; padding-left:4px;
+  font-family:var(--disp); font-weight:600; font-size:13px;
+  color:var(--muted); margin-bottom:8px; padding-left:4px;
   display:flex; align-items:center; justify-content:space-between; gap:8px;
 }
 .label .mini{
-  font-family:var(--body); font-weight:700; letter-spacing:0; text-transform:none;
-  font-size:12px; color:var(--person); background:var(--person-tint);
-  border:none; padding:5px 11px; border-radius:999px; cursor:pointer;
+  position:relative; font-family:var(--body); font-weight:700;
+  font-size:12px; color:var(--person-deep); background:var(--person-tint);
+  border:none; padding:5px 11px; border-radius:8px; cursor:pointer;
 }
-.foot{font-family:var(--num); font-size:12px; color:var(--muted); text-align:center;
-  letter-spacing:.08em; padding:34px 0 30px; opacity:.6}
+/* invisible 44px touch area around small controls, without making them look bigger */
+.label .mini::after, .qf::after{content:""; position:absolute; inset:-10px -4px} /* 25px + 20px = 45px tall */
 .scroll-spacer{height:180px}
 .nav-spacer{height:90px}
 
@@ -109,12 +120,11 @@ body[data-view="add"] .savebar{display:block}
 }
 .navbtn{
   background:none; border:none; cursor:pointer; display:flex; flex-direction:column;
-  align-items:center; gap:3px; padding:6px 0; color:var(--muted);
-  font-family:var(--disp); font-weight:700; font-size:10.5px;
+  align-items:center; gap:4px; padding:6px 0; min-height:48px; color:var(--muted);
+  font-family:var(--disp); font-weight:600; font-size:11px;
 }
-.navbtn .ic{font-size:21px; line-height:1; filter:grayscale(1) opacity(.5); transition:.15s}
+.navbtn:hover{color:var(--ink)}
 .navbtn.sel{color:var(--accent)}
-.navbtn.sel .ic{filter:none}
 
 /* ---------- generic chips ---------- */
 .grid{display:grid; gap:10px}
@@ -131,7 +141,7 @@ body[data-view="add"] .savebar{display:block}
 .chip.num{font-family:var(--num); font-weight:700; font-size:16px}
 .chip.wal{align-items:flex-start; padding-left:14px; text-align:left}
 .chip.wal small{font-size:11.5px; color:var(--muted); font-weight:600}
-.chip.sel.wal small{color:var(--accent); opacity:.85}
+.chip.sel.wal small{color:var(--accent)}
 .chip.add{border-style:dashed; color:var(--muted); font-weight:700}
 .trf-disabled{opacity:.35; cursor:not-allowed}
 .cyc-input{width:48px; min-height:38px; text-align:center; border:1.5px solid var(--line);
@@ -156,29 +166,33 @@ body[data-view="add"] .savebar{display:block}
 }
 .amtbox .amtcur{font-family:var(--num); font-weight:700; font-size:18px; color:var(--muted)}
 .amtbox input{
-  flex:1; min-width:0; border:none; background:none; outline:none; padding:0;
+  flex:1; min-width:0; min-height:58px; border:none; background:none; outline:none; padding:0;
   font-family:var(--num); font-weight:700; font-size:25px; color:var(--ink);
 }
+.amtbox:focus-within{outline:3px solid var(--coin); outline-offset:2px}
+.amtbox input:focus-visible{outline:none} /* the whole box carries the focus ring instead */
 .amtbox input::placeholder{color:var(--muted)}
-.quickfill{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px}
+.quickfill{display:flex; flex-wrap:wrap; gap:7px 8px; margin-top:12px}
 .qf{
-  min-height:30px; padding:0 13px; border-radius:999px; border:1px solid var(--line);
+  position:relative; min-height:30px; padding:0 13px; border-radius:8px; border:1px solid var(--line);
   background:var(--card); color:var(--ink); font-family:var(--num); font-weight:700; font-size:12px;
   cursor:pointer; display:flex; align-items:center; justify-content:center;
 }
+.qf:hover{border-color:var(--muted)}
 .qf:active{background:var(--accent-tint)}
 .qf.sel{border-color:var(--accent); background:var(--accent-tint); color:var(--accent)}
 .qf.edit{border-style:dashed; color:var(--muted); min-width:36px; font-size:13px}
 
 /* ---------- type toggle ---------- */
 .type{display:grid; grid-template-columns:1fr 1fr 1fr; border:1.5px solid var(--line);
-  border-radius:999px; background:var(--card); padding:4px; margin-top:14px}
+  border-radius:var(--radius); background:var(--card); padding:4px; margin-top:14px}
 .type.type-2{grid-template-columns:1fr 1fr}
 .type button{
-  min-height:44px; border:none; border-radius:999px; background:transparent;
-  font-family:var(--disp); font-weight:700; font-size:15px; color:var(--muted); cursor:pointer; transition:.15s;
+  min-height:44px; border:none; border-radius:8px; background:transparent;
+  font-family:var(--disp); font-weight:600; font-size:15px; color:var(--muted); cursor:pointer; transition:.15s;
 }
-.type button.sel{background:var(--person); color:#06120C}
+.type button:hover{color:var(--ink)}
+.type button.sel{background:var(--person); color:var(--on-person)}
 
 /* ---------- member avatars ---------- */
 .who{display:flex; gap:22px; overflow-x:auto; padding:6px 2px 4px; scrollbar-width:none}
@@ -189,13 +203,13 @@ body[data-view="add"] .savebar{display:block}
 }
 .who .ava{
   width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-  font-family:var(--disp); font-weight:800; font-size:25px; color:#fff; transition:.18s;
-  border:3px solid transparent; opacity:.45;
+  font-family:var(--disp); font-weight:700; font-size:25px; color:#fff; transition:.18s;
+  border:3px solid transparent; filter:saturate(.3) brightness(.85); /* unselected: muted color, initial stays readable */
 }
-.who .nm{font-family:var(--disp); font-weight:700; font-size:13px; color:var(--muted)}
-.who button.sel .ava{opacity:1; transform:scale(1.07); border-color:var(--person); box-shadow:0 0 16px -2px var(--person)}
-.who button.sel .nm{color:var(--ink)}
-.who .ava.plus{background:var(--card); border:2px dashed var(--line); color:var(--muted); opacity:1; font-size:26px}
+.who .nm{font-family:var(--disp); font-weight:600; font-size:13px; color:var(--muted)}
+.who button.sel .ava{filter:none; border-color:var(--ink)}
+.who button.sel .nm{color:var(--ink); font-weight:700}
+.who .ava.plus{background:var(--card); border:2px dashed var(--line); color:var(--muted); filter:none; font-size:26px}
 
 /* ---------- category circles ---------- */
 .catrow{display:flex; gap:13px; overflow-x:auto; padding:4px 2px 10px; scrollbar-width:none}
@@ -210,7 +224,7 @@ body[data-view="add"] .savebar{display:block}
   font-size:25px; transition:.15s;
 }
 .chip-cat .lbl{font-size:11.5px; font-weight:600; color:var(--muted); white-space:nowrap; max-width:74px; overflow:hidden; text-overflow:ellipsis}
-.chip-cat.sel .circ{border:2.5px solid var(--accent); background:var(--accent-tint); transform:scale(1.06); box-shadow:0 0 14px -3px var(--accent)}
+.chip-cat.sel .circ{border:2.5px solid var(--accent); background:var(--accent-tint)}
 .chip-cat.sel .lbl{color:var(--accent); font-weight:700}
 .chip-cat .circ.plus{border-style:dashed; color:var(--muted); font-size:24px}
 
@@ -221,11 +235,12 @@ body[data-view="add"] .savebar{display:block}
   padding:12px 16px; background:linear-gradient(to top, var(--paper) 72%, transparent);
 }
 #save{
-  width:100%; min-height:58px; border:none; border-radius:18px;
-  background:var(--person); color:#fff; font-family:var(--disp); font-weight:800;
-  font-size:18px; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.14);
+  width:100%; min-height:58px; border:none; border-radius:var(--radius);
+  background:var(--person); color:var(--on-person); font-family:var(--disp); font-weight:700;
+  font-size:18px; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.14); /* the one raised element: the main action */
 }
-#save:disabled{background:var(--disabled-bg); color:var(--muted); box-shadow:none}
+#save:not(:disabled):hover{filter:brightness(1.06)}
+#save:disabled{background:var(--disabled-bg); color:var(--disabled-fg); box-shadow:none}
 #save .sub{display:block; font-family:var(--num); font-weight:500; font-size:12px; opacity:.85; margin-top:2px}
 .errbar{display:none; margin:0 0 10px; padding:12px 14px; border-radius:14px;
   background:var(--err-bg); color:var(--err-fg); font-size:14px; font-weight:600}
@@ -240,15 +255,16 @@ body[data-view="add"] .savebar{display:block}
 .sumslider::-webkit-scrollbar{display:none}
 .sumcard{
   flex:0 0 100%; scroll-snap-align:start; background:var(--card); position:relative;
-  border:1.5px solid var(--line); border-radius:20px; padding:20px 22px; box-shadow:var(--card-shadow);
+  border:1.5px solid var(--line); border-radius:16px; padding:20px 22px; box-shadow:var(--card-shadow);
 }
 .cyc-gear{
-  position:absolute; top:14px; right:14px; width:34px; height:34px; border-radius:999px;
+  position:absolute; top:10px; right:10px; width:44px; height:44px; border-radius:var(--radius-btn);
   border:1.5px solid var(--line); background:var(--card-2); color:var(--muted);
   font-size:15px; cursor:pointer; line-height:1; display:flex; align-items:center; justify-content:center;
 }
+.cyc-gear:hover{color:var(--ink)}
 .cyc-gear:active{background:var(--accent-tint); color:var(--accent)}
-.sumcard .cap{font-family:var(--disp); font-weight:700; font-size:14px; color:var(--muted); padding-right:40px}
+.sumcard .cap{font-family:var(--disp); font-weight:600; font-size:14px; color:var(--muted); padding-right:50px}
 .sumcard .dt{font-family:var(--num); font-size:12px; color:var(--muted); margin-top:2px}
 .sumcard .big{font-family:var(--num); font-weight:700; font-size:34px; color:var(--exp); margin-top:10px}
 .sumcard .big.zero{color:var(--muted)}
@@ -277,47 +293,50 @@ body[data-view="add"] .savebar{display:block}
   -webkit-overflow-scrolling:touch; scrollbar-width:none; margin-top:12px}
 .calslider::-webkit-scrollbar{display:none}
 .calpage{flex:0 0 100%; scroll-snap-align:start; min-width:0;
-  background:var(--card); border:1.5px solid var(--line); border-radius:20px; padding:16px 12px 12px; box-shadow:var(--card-shadow)}
-.cal-month{font-family:var(--disp); font-weight:800; font-size:17px; text-align:center; margin-bottom:12px}
+  background:var(--card); border:1.5px solid var(--line); border-radius:16px; padding:16px 12px 12px; box-shadow:var(--card-shadow)}
+.cal-month{font-family:var(--disp); font-weight:700; font-size:17px; text-align:center; margin-bottom:12px}
 .calgrid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px}
-.caldayhead{text-align:center; font-family:var(--disp); font-weight:700; font-size:10px; color:var(--muted); padding-bottom:2px}
+.caldayhead{text-align:center; font-family:var(--disp); font-weight:600; font-size:11px; color:var(--muted); padding-bottom:2px}
 .calbody{margin-top:2px}
 .calcell{
-  min-height:46px; border-radius:8px; padding:3px 1px 2px; overflow:hidden;
+  min-height:48px; border-radius:8px; padding:3px 1px 2px; overflow:hidden;
   display:flex; flex-direction:column; align-items:center; gap:1px;
-  background:var(--paper); border:1px solid transparent;
+  background:var(--paper); border:1px solid transparent; font:inherit; color:inherit; width:100%;
 }
+button.calcell{appearance:none; -webkit-appearance:none}
 .calcell.empty{background:transparent}
 .calcell.has{cursor:pointer; border-color:var(--line)}
+.calcell.has:hover{border-color:var(--muted)}
 .calcell.has:active{background:var(--accent-tint)}
-.calcell.today{border-color:var(--accent); border-width:1.5px; box-shadow:0 0 10px -3px var(--accent)}
+.calcell.today{border-color:var(--accent); border-width:1.5px}
 .calcell .cd{font-family:var(--num); font-size:11px; font-weight:700; color:var(--ink)}
 .calcell.today .cd{color:var(--accent)}
-.calcell .ce{font-family:var(--num); font-size:8.5px; font-weight:700; color:var(--exp); line-height:1.15; white-space:nowrap}
-.calcell .ci{font-family:var(--num); font-size:8.5px; font-weight:700; color:var(--inc); line-height:1.15; white-space:nowrap}
+.calcell .ce{font-family:var(--num); font-size:10px; font-weight:700; color:var(--exp); line-height:1.15; white-space:nowrap; letter-spacing:-.02em}
+.calcell .ci{font-family:var(--num); font-size:10px; font-weight:700; color:var(--inc); line-height:1.15; white-space:nowrap; letter-spacing:-.02em}
 .cal-toggle-wrap{display:flex; justify-content:center; margin-top:10px}
 #caldots{display:none}
 .cal-toggle{
-  border:1.5px solid var(--accent); background:var(--accent-tint); border-radius:999px;
-  font-family:var(--disp); font-weight:700; font-size:12px; color:var(--accent);
-  padding:8px 18px; cursor:pointer; min-height:38px;
+  border:1.5px solid var(--accent); background:var(--accent-tint); border-radius:var(--radius-btn);
+  font-family:var(--disp); font-weight:600; font-size:13px; color:var(--accent);
+  padding:0 18px; cursor:pointer; min-height:44px;
 }
-.cal-toggle:active{background:var(--accent);color:#06201C}
+.cal-toggle:hover{background:var(--card-2)}
+.cal-toggle:active{background:var(--accent);color:var(--on-accent)}
 /* calendar prev/next arrows */
 .cal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:8px}
 .cal-head .cal-month{margin-bottom:0; flex:1}
-.cal-arrow{flex:0 0 auto; width:30px; height:30px; border-radius:999px; border:none;
-  background:var(--card-2); color:var(--ink); font-size:16px; cursor:pointer; line-height:1}
-.cal-arrow:disabled{opacity:.3; cursor:default}
+.cal-arrow{flex:0 0 auto; width:44px; height:44px; border-radius:var(--radius-btn); border:none;
+  background:var(--card-2); color:var(--ink); font-size:18px; cursor:pointer; line-height:1}
+.cal-arrow:disabled{opacity:.35; cursor:not-allowed}
 
 /* monthly report pie */
-.rep-month-label{font-family:var(--disp); font-weight:800; font-size:19px; color:var(--ink); margin-bottom:14px; text-align:center}
+.rep-month-label{font-family:var(--disp); font-weight:700; font-size:19px; color:var(--ink); margin-bottom:14px; text-align:center}
 .reportslider{display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory;
   -webkit-overflow-scrolling:touch; scrollbar-width:none}
 .reportslider::-webkit-scrollbar{display:none}
 .reportpage{
   flex:0 0 100%; scroll-snap-align:start; min-width:0;
-  background:var(--card); border:1.5px solid var(--line); border-radius:20px; padding:20px 18px 16px; box-shadow:var(--card-shadow);
+  background:var(--card); border:1.5px solid var(--line); border-radius:16px; padding:20px 18px 16px; box-shadow:var(--card-shadow);
 }
 .pie-wrap{display:flex; justify-content:center; align-items:center; position:relative}
 .pie-wrap svg{width:100%; max-width:190px; height:auto}
@@ -328,26 +347,29 @@ body[data-view="add"] .savebar{display:block}
 .rep-totals .sr b.inc{color:var(--inc)}
 .legend{margin-top:16px; display:flex; flex-direction:column; gap:8px}
 .legrow{
-  display:flex; align-items:center; gap:11px; padding:10px 13px; border-radius:13px; cursor:pointer;
+  display:flex; align-items:center; gap:11px; padding:10px 13px; border-radius:var(--radius); cursor:pointer;
   border:1.5px solid var(--line); background:var(--card-2);
+  width:100%; min-height:52px; font:inherit; color:var(--ink); text-align:left;
 }
+.legrow:hover{border-color:var(--muted)}
 .legrow:active{background:var(--accent-tint)}
 .legdot{width:32px; height:32px; border-radius:999px; flex:0 0 32px; border:1.5px solid;
   display:flex; align-items:center; justify-content:center; font-size:16px}
 .legrow .nm{flex:1; min-width:0; font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .legrow .val{font-family:var(--num); font-weight:700; font-size:12.5px; margin-right:2px; color:var(--ink)}
 .legrow .pctv{font-family:var(--num); font-size:11.5px; color:var(--muted); min-width:32px; text-align:right}
-.legrow .chev{color:var(--muted); font-size:16px; font-weight:700; opacity:.5}
+.legrow .chev{color:var(--muted); font-size:16px; font-weight:700}
 .rep-empty{text-align:center; color:var(--muted); font-size:13px; padding:26px 10px}
 
 .mfilter{display:flex; gap:8px; overflow-x:auto; margin-top:12px; padding-bottom:2px; scrollbar-width:none}
 .mfilter::-webkit-scrollbar{display:none}
 .mfilter button{
-  flex:0 0 auto; min-height:38px; padding:0 16px; border:1.5px solid var(--line);
-  border-radius:999px; background:var(--card); font-family:var(--disp);
-  font-weight:700; font-size:13px; color:var(--ink); cursor:pointer;
+  flex:0 0 auto; min-height:44px; padding:0 16px; border:1.5px solid var(--line);
+  border-radius:var(--radius-btn); background:var(--card); font-family:var(--disp);
+  font-weight:600; font-size:14px; color:var(--ink); cursor:pointer;
 }
-.mfilter button.sel{background:var(--accent); border-color:var(--accent); color:#06201C}
+.mfilter button:hover{border-color:var(--muted)}
+.mfilter button.sel{background:var(--accent); border-color:var(--accent); color:var(--on-accent)}
 
 /* budgets */
 .bud{background:var(--card); border:1.5px solid var(--line); border-radius:14px; box-shadow:var(--card-shadow);
@@ -364,28 +386,23 @@ body[data-view="add"] .savebar{display:block}
 .bud .sub{font-size:11.5px; color:var(--muted); margin-top:6px; font-family:var(--num)}
 
 /* transaction list */
-.rmonth{font-family:var(--disp); font-weight:800; font-size:19px; margin:20px 4px 2px}
-.rday{font-family:var(--num); font-size:12px; color:var(--muted); letter-spacing:.06em; margin:13px 4px 7px}
-.rwrap{position:relative; margin-bottom:8px; border-radius:16px; overflow:hidden}
+.rmonth{font-family:var(--disp); font-weight:700; font-size:19px; margin:20px 4px 2px}
+.rday{font-family:var(--num); font-size:12px; font-weight:500; color:var(--muted); margin:13px 4px 7px}
+.rwrap{position:relative; margin-bottom:8px; border-radius:var(--radius); overflow:hidden}
 .rcard{
-  border-radius:16px; padding:12px 14px; display:flex; align-items:center; gap:11px;
-  border:1.5px solid transparent; position:relative; z-index:1; background:var(--card);
+  border-radius:var(--radius); padding:12px 14px; display:flex; align-items:center; gap:11px;
+  border:1.5px solid var(--line); position:relative; z-index:1; background:var(--card);
   touch-action:pan-y; cursor:pointer;
 }
-.rcard.exp{background:var(--card); border-color:var(--line); border-left:3px solid var(--exp)}
-.rcard.inc{background:var(--card); border-color:var(--line); border-left:3px solid var(--inc)}
-.rcard.trf{background:var(--card); border-color:var(--line); border-left:3px solid var(--accent)}
-.rcard.trf .cico{box-shadow:0 0 10px -2px var(--accent)}
+.rcard:hover{border-color:var(--muted)}
 .rcard .cico{
   width:40px; height:40px; border-radius:999px; flex:0 0 40px; position:relative;
   background:var(--card-2); border:1.5px solid var(--line);
   display:flex; align-items:center; justify-content:center; font-size:19px;
 }
-.rcard.exp .cico{box-shadow:0 0 10px -2px var(--exp)}
-.rcard.inc .cico{box-shadow:0 0 10px -2px var(--inc)}
 .rcard .cico .badge{
   position:absolute; right:-4px; bottom:-4px; width:18px; height:18px; border-radius:50%;
-  font-family:var(--disp); font-weight:800; font-size:9.5px; color:#fff;
+  font-family:var(--disp); font-weight:700; font-size:9.5px; color:#fff;
   display:flex; align-items:center; justify-content:center; border:1.5px solid var(--card);
 }
 .rcard .mid{flex:1; min-width:0}
@@ -394,53 +411,61 @@ body[data-view="add"] .savebar{display:block}
 .rcard .amt{font-family:var(--num); font-weight:700; font-size:15px; white-space:nowrap}
 .rcard.exp .amt{color:var(--exp)} .rcard.inc .amt{color:var(--inc)}
 .rtrash{position:absolute; top:0; right:0; bottom:0; width:76px; z-index:0;
-  background:var(--exp); border:none; color:#fff; font-size:21px; cursor:pointer}
+  background:var(--exp); border:none; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  font-family:var(--disp); font-weight:600; font-size:13px}
 .lm-wrap{display:flex; justify-content:center; margin:16px 0 6px}
-#loadmore{min-height:46px; padding:0 24px; border:1.5px solid var(--line); border-radius:999px;
-  background:var(--card); color:var(--ink); font-family:var(--disp); font-weight:700; font-size:14px; cursor:pointer}
+#loadmore{min-height:46px; padding:0 24px; border:1.5px solid var(--line); border-radius:var(--radius-btn);
+  background:var(--card); color:var(--ink); font-family:var(--disp); font-weight:600; font-size:14px; cursor:pointer}
+#loadmore:hover{border-color:var(--muted)}
 
 /* ---------- WALLET ---------- */
-.wgroup{font-family:var(--disp); font-weight:800; font-size:17px; margin:22px 4px 10px; color:var(--ink)}
+.wgroup{font-family:var(--disp); font-weight:700; font-size:17px; margin:22px 4px 10px; color:var(--ink)}
 .wcard{
-  border-radius:16px; padding:18px 20px; margin-bottom:12px; color:var(--ink);
-  background:var(--card); border:1.5px solid var(--line); border-left-width:4px;
+  border-radius:var(--radius); padding:18px 16px 18px 20px; margin-bottom:12px; color:var(--ink);
+  background:var(--card); border:1.5px solid var(--line); border-left-width:4px; /* left edge = wallet color, a real identifier */
   display:flex; align-items:center; gap:12px;
 }
-.wcard.has-debt{border-radius:16px 16px 0 0; margin-bottom:0}
+.wcard.has-debt{border-radius:var(--radius) var(--radius) 0 0; margin-bottom:0}
 .wcard .wmeta{flex:1; min-width:0}
-.wcard .wchip{width:38px; height:38px; border-radius:11px; flex:0 0 38px; display:flex;
-  align-items:center; justify-content:center; font-family:var(--disp); font-weight:800; font-size:16px}
-.wcard .wname{font-family:var(--disp); font-weight:700; font-size:16px}
+.wcard .wchip{width:38px; height:38px; border-radius:10px; flex:0 0 38px; display:flex;
+  align-items:center; justify-content:center; font-family:var(--disp); font-weight:700; font-size:16px; color:var(--ink)}
+.wcard .wname{font-family:var(--disp); font-weight:600; font-size:16px}
 .wcard .whint{font-size:11.5px; color:var(--muted); margin-top:3px}
-.wcard .wval{font-family:var(--num); font-weight:700; font-size:22px; white-space:nowrap}
-.wcard .wedit{background:var(--card-2); border:none; color:var(--muted); border-radius:999px;
-  width:33px; height:33px; font-size:14px; cursor:pointer; flex:0 0 33px}
+.wcard .wval{font-family:var(--num); font-weight:700; font-size:21px; white-space:nowrap}
+.wcard .wedit{background:var(--card-2); border:none; color:var(--muted); border-radius:var(--radius-btn);
+  width:44px; height:44px; font-size:15px; cursor:pointer; flex:0 0 44px}
+.wcard .wedit:hover{color:var(--ink)}
 .debtbox{background:var(--card); border:1.5px solid var(--line); border-top:none;
-  border-radius:0 0 16px 16px; padding:10px 20px 13px; margin-bottom:12px}
+  border-radius:0 0 var(--radius) var(--radius); padding:10px 20px 13px; margin-bottom:12px}
 .debtbox .drow{display:flex; justify-content:space-between; align-items:center;
   font-size:12.5px; color:var(--exp); padding:3px 0}
 .debtbox .drow b{font-family:var(--num); font-weight:700}
 .debtbox .drow.approx{color:var(--muted); border-top:1px dashed var(--line); margin-top:2px; padding-top:6px}
 .debtbox .drow.approx b{color:var(--ink)}
-.swipepay{position:relative; margin-top:9px; height:33px; border-radius:999px; overflow:hidden;
+.swipepay{position:relative; margin-top:9px; min-height:44px; border-radius:var(--radius-btn); overflow:hidden;
   background:var(--card-2); border:1px solid var(--line); display:flex; align-items:center;
   justify-content:center; cursor:pointer; touch-action:pan-y}
+.swipepay:hover{border-color:var(--coin)}
 .swipepay .fill{position:absolute; left:0; top:0; bottom:0; width:0; background:var(--coin); opacity:.5}
-.swipepay span{position:relative; z-index:1; font-size:11.5px; font-weight:700; color:var(--coin)}
+.swipepay span{position:relative; z-index:1; font-size:12.5px; font-weight:700; color:var(--coin-ink)}
 .swipepay.done{background:var(--person-tint); border-color:transparent; cursor:default}
 .swipepay.done span{color:var(--inc)}
 .addbtn{
-  width:100%; min-height:52px; border:1.5px dashed var(--line); border-radius:16px;
-  background:var(--card); color:var(--muted); font-family:var(--disp); font-weight:700;
+  width:100%; min-height:52px; border:1.5px dashed var(--line); border-radius:var(--radius);
+  background:var(--card); color:var(--muted); font-family:var(--disp); font-weight:600;
   font-size:14px; cursor:pointer; margin-top:6px;
 }
+.addbtn:hover{color:var(--ink); border-color:var(--muted)}
 
 /* ---------- state / overlays ---------- */
-.state{margin-top:26px; text-align:center; color:var(--muted); font-size:14px; padding:0 20px}
-.state button{margin-top:12px; min-height:44px; padding:0 20px; border:none; border-radius:12px;
-  background:var(--accent); color:#06201C; font-family:var(--disp); font-weight:700; cursor:pointer}
-.state .raw{text-align:left; font-family:var(--num); font-size:11px; background:var(--card);
-  border:1px solid var(--line); border-radius:10px; padding:10px; word-break:break-all; margin-top:14px}
+.state{margin-top:26px; text-align:center; color:var(--muted); font-size:14px; line-height:1.45; padding:0 20px}
+.state b{display:block; color:var(--ink); font-size:15px; margin-bottom:4px}
+.state button{margin-top:12px; min-height:44px; padding:0 20px; border:none; border-radius:var(--radius-btn);
+  background:var(--accent); color:var(--on-accent); font-family:var(--disp); font-weight:600; cursor:pointer}
+.state details{margin-top:14px; text-align:left; font-size:12px}
+.state summary{min-height:44px; display:flex; align-items:center; justify-content:center}
+.state .raw{text-align:left; font-family:ui-monospace, monospace; font-size:11px; background:var(--card);
+  border:1px solid var(--line); border-radius:10px; padding:10px; word-break:break-all; margin-top:6px}
 
 .ovl{position:fixed; inset:0; background:rgba(23,37,29,.5); display:none;
   align-items:flex-end; justify-content:center; z-index:30; backdrop-filter:blur(2px)}
@@ -451,11 +476,10 @@ body[data-view="add"] .savebar{display:block}
   max-height:88vh; overflow-y:auto; animation:up .28s ease-out;
 }
 @keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
-.sheet h2{font-family:var(--disp); font-weight:800; font-size:21px; margin-bottom:4px}
+.sheet h2{font-family:var(--disp); font-weight:700; font-size:21px; margin-bottom:4px}
 .sheet .sd{font-size:13px; color:var(--muted); margin-bottom:16px}
 .fld{margin-bottom:14px}
-.fld label{display:block; font-size:12px; font-weight:700; letter-spacing:.08em;
-  text-transform:uppercase; color:var(--muted); margin-bottom:6px}
+.fld label{display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:6px}
 .fld input, .fld select{
   width:100%; min-height:52px; border:1.5px solid var(--line); border-radius:14px;
   padding:0 14px; font-family:var(--body); font-size:16px; font-weight:600;
@@ -471,19 +495,22 @@ body[data-view="add"] .savebar{display:block}
 .emojis button.sel{border-color:var(--accent); background:var(--accent-tint); border-width:2.5px}
 .seg{display:grid; grid-template-columns:1fr 1fr; gap:8px}
 .seg button{
-  min-height:46px; border:1.5px solid var(--line); border-radius:12px; background:var(--card);
-  font-family:var(--disp); font-weight:700; font-size:14px; color:var(--ink); cursor:pointer;
+  min-height:46px; border:1.5px solid var(--line); border-radius:var(--radius-btn); background:var(--card);
+  font-family:var(--disp); font-weight:600; font-size:14px; color:var(--ink); cursor:pointer;
 }
-.seg button.sel{background:var(--accent); border-color:var(--accent); color:#06201C}
+.seg button:hover{border-color:var(--muted)}
+.seg button.sel{background:var(--accent); border-color:var(--accent); color:var(--on-accent)}
 .sheet .go{
-  width:100%; min-height:54px; margin-top:8px; border:none; border-radius:16px;
-  background:var(--person); color:#fff; font-family:var(--disp); font-weight:800; font-size:16px; cursor:pointer;
+  width:100%; min-height:54px; margin-top:8px; border:none; border-radius:var(--radius);
+  background:var(--person); color:var(--on-person); font-family:var(--disp); font-weight:700; font-size:16px; cursor:pointer;
 }
-.sheet .go:disabled{background:var(--disabled-bg); color:var(--muted)}
+.sheet .go:not(:disabled):hover{filter:brightness(1.06)}
+.sheet .go:disabled{background:var(--disabled-bg); color:var(--disabled-fg)}
 .sheet .ghost{
-  width:100%; min-height:44px; margin-top:8px; border:none; border-radius:14px;
-  background:none; color:var(--muted); font-family:var(--disp); font-weight:700; font-size:14px; cursor:pointer;
+  width:100%; min-height:44px; margin-top:8px; border:none; border-radius:var(--radius-btn);
+  background:none; color:var(--muted); font-family:var(--disp); font-weight:600; font-size:14px; cursor:pointer;
 }
+.sheet .ghost:hover{color:var(--ink)}
 .sheet .danger{color:var(--exp)}
 .manage-list{display:flex; flex-direction:column; gap:8px; margin-bottom:14px}
 .mrow{
@@ -492,11 +519,12 @@ body[data-view="add"] .savebar{display:block}
 }
 .mrow .dot{width:30px; height:30px; border-radius:999px; flex:0 0 30px; display:flex;
   align-items:center; justify-content:center; color:#fff; font-family:var(--disp);
-  font-weight:800; font-size:13px}
+  font-weight:700; font-size:13px}
 .mrow .t{flex:1; min-width:0}
 .mrow .t b{font-size:14.5px; display:block}
 .mrow .t small{font-size:11.5px; color:var(--muted)}
-.mrow .x{background:none; border:none; color:var(--exp); font-size:17px; cursor:pointer; padding:4px 6px}
+.mrow .x{background:none; border:none; color:var(--exp); font-size:17px; cursor:pointer; min-width:44px; min-height:44px; margin:-8px -8px -8px 0}
+.mrow[role="button"]:hover{border-color:var(--muted)}
 
 /* receipt */
 .slip .perf{height:12px; margin:-24px -22px 16px;
@@ -507,7 +535,8 @@ body[data-view="add"] .savebar{display:block}
 .slip .amt{font-family:var(--num); font-weight:700; font-size:33px; margin:10px 0 6px}
 
 @media (prefers-reduced-motion: reduce){ .sheet{animation:none} *{transition:none!important} }
-button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--coin); outline-offset:2px}
+button:focus-visible,input:focus-visible,select:focus-visible,[role="button"]:focus-visible,summary:focus-visible{outline:3px solid var(--coin); outline-offset:2px}
+.rcard:focus-visible{outline-offset:-3px} /* its wrapper clips anything drawn outside */
 </style>
 </head>
 <body data-view="add">
@@ -515,8 +544,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 <header>
   <h1>Duit Kita<span class="dot">.</span></h1>
   <div style="display:flex;gap:8px;align-items:center">
-    <button class="theme-toggle" id="eye-toggle" type="button" aria-label="Toggle balance visibility">👁</button>
-    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light/dark theme">☀️</button>
+    <button class="theme-toggle" id="eye-toggle" type="button" aria-label="Hide balances" aria-pressed="false"></button>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to light theme"></button>
   </div>
 </header>
 <div class="syncbar" id="sync-bar" role="status" aria-live="polite"></div>
@@ -535,13 +564,12 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   </section>
 
   <section id="report-sec">
-    <div class="label">Monthly Report <span style="font-weight:600;letter-spacing:0;text-transform:none;font-size:11px" id="rep-month"></span></div>
+    <div class="label">Monthly report <span style="font-weight:600;letter-spacing:0;text-transform:none;font-size:11px" id="rep-month"></span></div>
     <div class="reportslider" id="reportslider"></div>
     <div class="dots" id="reportdots"></div>
   </section>
 
   <div class="state" id="home-state"></div>
-  <footer class="foot">duitkita_v2 · 2026</footer>
   <div class="nav-spacer" aria-hidden="true"></div>
 </main>
 
@@ -556,11 +584,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     <div class="cal-toggle-wrap"><button id="cal-toggle" type="button" class="cal-toggle">Expand to month ▾</button></div>
   </section>
 
-  <div class="label" style="margin-top:2px">Transaction History</div>
+  <div class="label" style="margin-top:2px">Transaction history</div>
   <div id="tx-list"></div>
-  <div class="lm-wrap" id="lm-wrap" style="display:none"><button id="loadmore" type="button">Load More</button></div>
+  <div class="lm-wrap" id="lm-wrap" style="display:none"><button id="loadmore" type="button">Show older transactions</button></div>
   <div class="state" id="tx-state"></div>
-  <footer class="foot">duitkita_v2 · 2026</footer>
   <div class="nav-spacer" aria-hidden="true"></div>
 </main>
 
@@ -584,8 +611,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     </div>
     <div class="catrow" id="cats"></div>
     <div class="reveal" id="note-reveal">
-      <input id="note-input" type="text" maxlength="140" placeholder="Add a note (optional)" autocomplete="off">
-      <div class="hint">Optional — e.g. what it was for</div>
+      <label class="label" for="note-input">Note (optional)</label>
+      <input id="note-input" type="text" maxlength="140" placeholder="What it was for" autocomplete="off">
     </div>
   </section>
 
@@ -607,14 +634,15 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
       <div class="label"><span>Category</span></div>
       <div class="catrow" id="payto-cats"></div>
     </div>
-    <div style="margin-top:12px">
-      <input id="transfer-note" type="text" maxlength="140" placeholder="Note (optional)" autocomplete="off"
+    <div style="margin-top:16px">
+      <label class="label" for="transfer-note">Note (optional)</label>
+      <input id="transfer-note" type="text" maxlength="140" placeholder="What it was for" autocomplete="off"
         style="width:100%;min-height:52px;border:1.5px solid var(--line);border-radius:var(--radius);padding:0 16px;font-family:var(--body);font-size:16px;font-weight:600;background:var(--card);color:var(--ink);outline:none;">
     </div>
   </section>
 
   <section>
-    <div class="label">Amount</div>
+    <label class="label" for="amt-input">Amount</label>
     <div class="amtbox">
       <span class="amtcur">Rp</span>
       <input id="amt-input" inputmode="numeric" placeholder="0" autocomplete="off">
@@ -634,13 +662,12 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     <div class="label">Day</div>
     <div class="grid g-day" id="days"></div>
     <div class="reveal" id="day-reveal">
+      <label class="label" for="day-input">Date (up to 30 days back)</label>
       <input id="day-input" type="date">
-      <div class="hint">Up to 30 days back</div>
     </div>
   </section>
 
   <div class="scroll-spacer"></div>
-  <footer class="foot">duitkita_v2 · 2026</footer>
 </main>
 
 <!-- ==================== WALLET ==================== -->
@@ -648,7 +675,6 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   <div id="wallet-list"></div>
   <button class="addbtn" id="add-wallet-btn" type="button">+ Add a wallet</button>
   <div class="state" id="wallet-state"></div>
-  <footer class="foot">duitkita_v2 · 2026</footer>
   <div class="nav-spacer" aria-hidden="true"></div>
 </main>
 
@@ -658,10 +684,11 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 </div>
 
 <nav class="navbar">
-  <button class="navbtn" data-view="home" type="button"><span class="ic">🏠</span>Home</button>
-  <button class="navbtn sel" data-view="add" type="button"><span class="ic">➕</span>Add</button>
-  <button class="navbtn" data-view="transaction" type="button"><span class="ic">📋</span>Transaction</button>
-  <button class="navbtn" data-view="wallet" type="button"><span class="ic">👛</span>Wallet</button>
+  <button class="navbtn" data-view="home" type="button"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3.5l9 7V20.5h-6v-6H9v6H3z"/></svg>Home</button>
+  <button class="navbtn sel" data-view="add" type="button"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5v15M4.5 12h15"/></svg>Add</button>
+  <!-- receipt icon: the app's identity motif (same shape as the app icon and the saved-entry receipt) -->
+  <button class="navbtn" data-view="transaction" type="button"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 3h13v18l-2.2-1.6-2.2 1.6-2.1-1.6-2.1 1.6-2.2-1.6L5.5 21z"/><path d="M9 8h6M9 12h6"/></svg>Transaction</button>
+  <button class="navbtn" data-view="wallet" type="button"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7.5h15.5a1.5 1.5 0 0 1 1.5 1.5v10a1.5 1.5 0 0 1-1.5 1.5h-14A1.5 1.5 0 0 1 3.5 19z"/><path d="M3.5 7.5 15.5 4v3.5M16 14h2"/></svg>Wallet</button>
 </nav>
 
 <!-- generic bottom sheet -->
@@ -700,11 +727,23 @@ let BAL = { balances:{}, debts:{}, starting:{} };
 
 const now = new Date();
 
+/* ================= icons (see the .icon CSS note for why these replace emoji) ================= */
+const ICON = {
+  sun:   '<path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/><circle cx="12" cy="12" r="4"/>',
+  moon:  '<path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"/>',
+  eye:   '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/>',
+  trash: '<path d="M4 7h16M9.5 7V4h5v3M6 7l1 13.5h10L18 7M10 11v6M14 11v6"/>',
+  sliders:'<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>'
+};
+const icon = (name, size) => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"${size?` style="width:${size}px;height:${size}px"`:""}>${ICON[name]}</svg>`;
+
 /* ================= theme (dark default, light option) ================= */
 const THEME_KEY = "duitkita-theme";
 function applyTheme(t){
   document.documentElement.setAttribute("data-theme", t);
-  const btn=$("theme-toggle"); if(btn) btn.textContent = (t==="light" ? "🌙" : "☀️");
+  const btn=$("theme-toggle");
+  if(btn){ btn.innerHTML = icon(t==="light" ? "moon" : "sun", 20); btn.setAttribute("aria-label", t==="light" ? "Switch to dark theme" : "Switch to light theme"); }
   const meta=document.querySelector('meta[name="theme-color"]');
   if(meta) meta.content = (t==="light" ? "#EEF1F5" : "#0E1116");
 }
@@ -718,15 +757,23 @@ $("theme-toggle").onclick = ()=>{
   const next = cur==="light" ? "dark" : "light";
   try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
   applyTheme(next);
+  applyPersonColor(); // the readable shade of the person's color differs per theme
 };
 
 /* ================= balance visibility toggle ================= */
 let balHidden = false;
+function renderEye(){
+  const b=$("eye-toggle");
+  b.innerHTML = icon(balHidden ? "eyeOff" : "eye", 20);
+  b.setAttribute("aria-label", balHidden ? "Show balances" : "Hide balances");
+  b.setAttribute("aria-pressed", String(balHidden));
+  b.classList.toggle("hidden", balHidden);
+}
+renderEye();
 $("eye-toggle").onclick = ()=>{
   balHidden = !balHidden;
   document.body.classList.toggle("hide-bal", balHidden);
-  $("eye-toggle").textContent = balHidden ? "🙈" : "👁";
-  $("eye-toggle").classList.toggle("hidden", balHidden);
+  renderEye();
 };
 
 /* ================= api ================= */
@@ -807,7 +854,7 @@ async function flushOutbox(){
       await api(p, { tries:2 });
       outboxRemove(p.clientId); synced++;
     }catch(e){
-      if(e.retryable) break; // still offline / server down — try again later, keep order
+      if(e.retryable) break; // still offline or server down: try again later, keep order
       outboxRemove(p.clientId);
       outboxRejected.push({ p, error:e.message });
     }
@@ -828,12 +875,12 @@ function renderSyncBar(){
   if(!n && !outboxRejected.length){ bar.className="syncbar"; bar.innerHTML=""; return; }
   let html = "";
   if(n){
-    html += `<span>⏳ ${n} ${n===1?"entry":"entries"} saved on this phone — ${flushing?"syncing…":"waiting to sync"}</span>`+
+    html += `<span>${n} ${n===1?"entry":"entries"} saved on this phone, ${flushing?"syncing now…":"waiting to sync"}</span>`+
             (flushing?"":`<button type="button" id="sync-now">Sync now</button>`);
   }
   if(outboxRejected.length){
     const r = outboxRejected[outboxRejected.length-1];
-    html += `<span class="rej">⚠️ ${outboxRejected.length} queued ${outboxRejected.length===1?"entry was":"entries were"} rejected: ${esc(r.error)} `+
+    html += `<span class="rej">${outboxRejected.length} queued ${outboxRejected.length===1?"entry was":"entries were"} rejected: ${esc(r.error)} `+
             `(${esc(fmt(r.p.amount))} on ${esc(r.p.date)}). Please re-enter it.</span>`+
             `<button type="button" id="sync-dismiss">OK</button>`;
   }
@@ -877,11 +924,38 @@ async function boot(){
     renderSyncBar();
     flushOutbox(); // send anything left over from a previous failed session
   }catch(e){
-    $("home-state").innerHTML = "Couldn't reach the backend.<br><button id='b-retry' type='button'>Retry</button>"+
-      "<div class='raw'>"+esc(e.message)+"</div>";
-    $("b-retry").onclick = boot;
+    stateError("home-state", "your household", e, boot);
+    /* the app opens on Add, so say it there too instead of leaving a dead form */
+    const eb=$("err");
+    eb.innerHTML = "Couldn't reach your Google Sheet, so people, categories and wallets aren't loaded. "+
+      "<button type='button' class='ghost' style='min-height:44px;margin:4px 0 0;color:inherit;text-decoration:underline;background:none;border:none;font:inherit;cursor:pointer'>Try again</button>";
+    eb.querySelector("button").onclick = ()=>{ eb.classList.remove("show"); boot(); };
+    eb.classList.add("show");
   }
 }
+
+/* ================= loading / error states ================= */
+function stateLoading(id, what){
+  $(id).innerHTML = `<span role="status">Loading ${what}…</span>`;
+}
+function stateError(id, what, err, retry){
+  const el=$(id);
+  el.innerHTML = `<b>Couldn't load ${what}.</b>`+
+    `Your Google Sheet didn't answer. Check your connection, then try again.<br>`+
+    `<button type="button">Try again</button>`+
+    `<details><summary>Technical details</summary><div class="raw">${esc(err && err.message || String(err))}</div></details>`;
+  el.querySelector("button").onclick = retry;
+}
+
+/* ================= keyboard ================= */
+/* Escape closes the open sheet; Enter/Space activate custom role="button" rows (R-32) */
+document.addEventListener("keydown", e=>{
+  if(e.key==="Escape" && $("sheet-ovl").classList.contains("show")){ e.preventDefault(); closeSheet(); return; }
+  const t=e.target;
+  if((e.key==="Enter" || e.key===" ") && t && t.getAttribute && t.getAttribute("role")==="button" && t.tagName!=="BUTTON"){
+    e.preventDefault(); t.click();
+  }
+});
 
 /* ================= navbar ================= */
 document.querySelectorAll(".navbtn").forEach(btn=>{
@@ -915,12 +989,33 @@ function buildMembers(){
   el.appendChild(add);
 }
 
+/* The selected person's color drives buttons and accents. Member colors are user-picked, so work out
+   a readable text color for them instead of assuming one (R-25): white or near-black on the color,
+   and a lighter (dark theme) or darker (light theme) shade of it for text on cards. */
+function hexRgb(h){ return [1,3,5].map(i=>parseInt(h.slice(i,i+2),16)); }
+function relLum(c){ const f=v=>{ v/=255; return v<=.03928 ? v/12.92 : Math.pow((v+.055)/1.055,2.4); }; return .2126*f(c[0])+.7152*f(c[1])+.0722*f(c[2]); }
+function cRatio(a,b){ const x=relLum(a), y=relLum(b); return (Math.max(x,y)+.05)/(Math.min(x,y)+.05); }
+function applyPersonColor(){
+  if(!S.memberId) return;
+  const hex = String(memberColor(S.memberId)||"");
+  const root = document.documentElement.style;
+  root.setProperty("--person", hex);
+  root.setProperty("--person-tint", hex + "22");
+  if(!/^#[0-9a-f]{6}$/i.test(hex)){ root.setProperty("--person-deep", hex); return; }
+  const c = hexRgb(hex);
+  const light = document.documentElement.getAttribute("data-theme")==="light";
+  /* worst surface this text sits on: the person tint (13%) over the page background */
+  const page = light ? [238,241,245] : [14,17,22], toward = light ? [0,0,0] : [255,255,255];
+  const surface = page.map((v,i)=>Math.round(v+(c[i]-v)*0.133));
+  let deep = c;
+  for(let t=0.05; t<=1 && cRatio(deep, surface) < 4.8; t+=0.05) deep = c.map((v,i)=>Math.round(v+(toward[i]-v)*t));
+  root.setProperty("--person-deep", "#"+deep.map(v=>v.toString(16).padStart(2,"0")).join(""));
+  root.setProperty("--on-person", cRatio([255,255,255],c) >= cRatio([6,18,12],c) ? "#FFFFFF" : "#06120C");
+}
+
 function selectMember(id, silent){
   S.memberId = id;
-  const c = memberColor(id);
-  document.documentElement.style.setProperty("--person", c);
-  document.documentElement.style.setProperty("--person-deep", c);
-  document.documentElement.style.setProperty("--person-tint", c + "22");
+  applyPersonColor();
   S.categoryId = null; S.walletId = null; S.fromWalletId = null; S.toWalletId = null; S.note = "";
   if($("note-input")) $("note-input").value = "";
   if($("note-reveal")) $("note-reveal").classList.remove("show");
@@ -1275,7 +1370,7 @@ $("save").onclick = async ()=>{
   err.classList.remove("show");
   btn.disabled=true; btn.textContent="Saving…";
   let payload, out;
-  /* one clientId per tap of Save — every retry of this save reuses it */
+  /* one clientId per tap of Save; every retry of this save reuses it */
   const clientId = newClientId();
   if(S.type==="Transfer"){
     payload = { action:"saveTransfer", type:"Transfer", date:entryDate(), memberId:S.memberId,
@@ -1288,7 +1383,7 @@ $("save").onclick = async ()=>{
                 note:(S.note||"").trim(), clientId };
   }
   try{
-    out = await api(payload, { onRetry:(n,t)=>{ btn.textContent = `Connection slow — retrying (${n}/${t})…`; } });
+    out = await api(payload, { onRetry:(n,t)=>{ btn.textContent = `Connection slow, retrying (${n}/${t})…`; } });
     showSlip(payload, out.loggedAt);
     TX.all = [];
   }catch(e){
@@ -1297,8 +1392,8 @@ $("save").onclick = async ()=>{
       outboxAdd(payload);
       showSlip(payload, null, true);
     } else {
-      /* the backend rejected the data itself (bad date, missing field…) — retrying won't help */
-      err.textContent = "Couldn't save — " + e.message;
+      /* the backend rejected the data itself (bad date, missing field…), so retrying won't help */
+      err.textContent = "Couldn't save: " + e.message;
       err.classList.add("show");
       refresh();
     }
@@ -1316,10 +1411,10 @@ function showSlip(p, loggedAt, queued){
   lastClientId = p.clientId || null;
   lastQueued = !!queued;
   const isIn=p.type==="Income", isTrf=p.type==="Transfer";
-  const title = queued ? "Saved on this phone ⏳"
+  const title = queued ? "Saved on this phone"
     : (isTrf ? "Transfer done ✓" : (isIn ? "Income logged ✓" : "Logged ✓"));
   const queuedNote = queued
-    ? `<div class="sd" style="margin:4px 0 6px">Couldn't reach the sheet right now. This entry is kept on your phone and will sync automatically — no need to submit it again.</div>`
+    ? `<div class="sd" style="margin:4px 0 6px">Couldn't reach the sheet right now. This entry is kept on your phone and will sync automatically, so there's no need to submit it again.</div>`
     : "";
   const amtColor = isTrf ? "var(--accent)" : (isIn ? "var(--inc)" : "var(--exp)");
   const amtPrefix = isTrf ? "" : (isIn ? "+" : "");
@@ -1346,14 +1441,14 @@ function showSlip(p, loggedAt, queued){
     if(lastQueued){
       /* still waiting on the phone → just drop it from the queue */
       if(lastClientId && outboxHas(lastClientId)){ outboxRemove(lastClientId); closeSheet(); resetForm(); }
-      else b.textContent="Already synced — delete it from Transaction history";
+      else b.textContent="Already synced. Delete it from Transaction history.";
       return;
     }
     if(!lastLoggedAt) return;
     b.disabled=true; b.textContent="Deleting…";
     const act = lastIsTransfer ? "deleteTransfer" : "deleteTx";
     try{ await api({action:act, loggedAt:lastLoggedAt}); TX.all=[]; closeSheet(); resetForm(); }
-    catch(e){ b.disabled=false; b.textContent="Couldn't delete — retry"; }
+    catch(e){ b.disabled=false; b.textContent="Couldn't delete. Tap to try again."; }
   };
 }
 function resetForm(){
@@ -1373,13 +1468,43 @@ function resetForm(){
 }
 
 /* ================= sheets (modals) ================= */
+let sheetReturnFocus = null;
 function openSheet(html, cls){
-  const body=$("sheet-body");
+  const body=$("sheet-body"), ovl=$("sheet-ovl");
   body.className = "sheet" + (cls?" "+cls:"");
   body.innerHTML = html;
-  $("sheet-ovl").classList.add("show");
+  /* behave like a dialog: named by its heading, focus moves in, Escape closes (see keyboard handler) */
+  body.setAttribute("role","dialog");
+  body.setAttribute("aria-modal","true");
+  const h=body.querySelector("h2");
+  if(h){ h.id = h.id || "sheet-title"; body.setAttribute("aria-labelledby", h.id); }
+  else body.removeAttribute("aria-labelledby");
+  linkFieldLabels(body);
+  if(!ovl.classList.contains("show")) sheetReturnFocus = document.activeElement;
+  ovl.classList.add("show");
+  body.tabIndex = -1;
+  body.focus({preventScroll:true}); // focus the sheet itself so the phone keyboard doesn't pop up uninvited
 }
-function closeSheet(){ $("sheet-ovl").classList.remove("show"); }
+function closeSheet(){
+  const wasReceipt = $("sheet-body").classList.contains("slip");
+  $("sheet-ovl").classList.remove("show");
+  /* closing the receipt any way (Escape, tapping outside) readies the form for the next entry;
+     before, only "Log another" did, and Save stayed stuck on "Saving…" */
+  if(wasReceipt) resetForm();
+  let back = sheetReturnFocus; sheetReturnFocus = null;
+  if(!back || back===document.body || !document.contains(back) || back.disabled) back = document.querySelector(".navbtn.sel");
+  if(back && back.focus) back.focus({preventScroll:true});
+}
+/* tie each sheet field label to its input so the field has a real accessible name (R-39) */
+let fldSeq = 0;
+function linkFieldLabels(root){
+  root.querySelectorAll(".fld").forEach(f=>{
+    const lab=f.querySelector("label"), ctl=f.querySelector("input,select,textarea");
+    if(!lab || !ctl || lab.htmlFor) return;
+    if(!ctl.id) ctl.id = "fld-" + (++fldSeq);
+    lab.htmlFor = ctl.id;
+  });
+}
 $("sheet-ovl").addEventListener("click", e=>{ if(e.target.id==="sheet-ovl") closeSheet(); });
 
 /* ---- members ---- */
@@ -1420,7 +1545,7 @@ function openCycleSheet(memberId){
       const mm=D.members.find(x=>x.id===memberId); if(mm) mm.cycleDay=v;
       closeSheet();
       if(document.body.dataset.view==="home") renderHome();
-    }catch(e){ b.disabled=false; b.textContent="Couldn't save — "+e.message; }
+    }catch(e){ b.disabled=false; b.textContent="Couldn't save: "+e.message; }
   };
 }
 
@@ -1435,7 +1560,7 @@ function openMembersSheet(){
     </div>`).join("");
   openSheet(`
     <h2>Household</h2>
-    <div class="sd">Everyone who logs in this household. The number is each person's <b>cycle start day</b> — the day their salary lands (1–28). Budgets and totals group by that day instead of the 1st.</div>
+    <div class="sd">Everyone who logs in this household. The number is each person's <b>cycle start day</b>: the day their salary lands (1–28). Budgets and totals group by that day instead of the 1st.</div>
     <div class="manage-list">${rows || "<div class='sd'>No members yet.</div>"}</div>
     <div class="fld"><label>Add someone</label>
       <input id="nm-name" type="text" placeholder="e.g. Dinda" maxlength="30" autocomplete="off"></div>
@@ -1463,7 +1588,7 @@ function openMembersSheet(){
     try{
       await api({action:"addMember", name, color, cycleDay:cyc});
       await reloadData(); closeSheet(); openMembersSheet();
-    }catch(e){ b.disabled=false; b.textContent="Couldn't add — "+e.message; }
+    }catch(e){ b.disabled=false; b.textContent="Couldn't add: "+e.message; }
   };
   /* inline cycle-day editing per member */
   $("sheet-body").querySelectorAll("[data-cyc]").forEach(inp=>{
@@ -1568,7 +1693,7 @@ function openCategorySheet(editId){
       if(existing) await api({action:"updateCategory", id:existing.id, name, emoji, budget, ownerId, kind});
       else await api({action:"addCategory", name, emoji, budget, ownerId, kind});
       await reloadData(); openCategoriesSheet();
-    }catch(e){ b.disabled=false; b.textContent="Couldn't save — "+e.message; }
+    }catch(e){ b.disabled=false; b.textContent="Couldn't save: "+e.message; }
   };
 }
 
@@ -1606,7 +1731,7 @@ function openWalletSheet(editId){
   const normals = D.wallets.filter(w=>w.type!=="debt" && (!ex || w.id!==ex.id));
   openSheet(`
     <h2>${ex?"Edit":"New"} wallet</h2>
-    <div class="sd">A place money sits — or a credit line you pay off later.</div>
+    <div class="sd">A place money sits, or a credit line you pay off later.</div>
     <div class="fld"><label>Name</label>
       <input id="wf-name" type="text" maxlength="30" placeholder="e.g. BCA" value="${esc(ex?ex.name:"")}"></div>
     <div class="fld"><label>Belongs to</label>
@@ -1622,7 +1747,7 @@ function openWalletSheet(editId){
     <div class="fld" id="wf-link-fld" style="display:none">
       <label>Paid from which wallet?</label>
       <select id="wf-link">
-        <option value="">— choose later —</option>
+        <option value="">Choose later</option>
         ${normals.map(w=>`<option value="${esc(w.id)}" ${ex&&ex.linkedWalletId===w.id?"selected":""}>${esc(walletLabel(w.id))}</option>`).join("")}
       </select></div>
     <button class="go" id="wf-save" type="button">${ex?"Save changes":"Add wallet"}</button>
@@ -1649,7 +1774,7 @@ function openWalletSheet(editId){
       await reloadData();
       if(document.body.dataset.view==="wallet"){ closeSheet(); loadWallets(); }
       else openWalletsSheet();
-    }catch(e){ b.disabled=false; b.textContent="Couldn't save — "+e.message; }
+    }catch(e){ b.disabled=false; b.textContent="Couldn't save: "+e.message; }
   };
 }
 
@@ -1674,16 +1799,14 @@ let sliderSyncing = false; // guards against the two sliders fighting each other
 async function loadHome(){
   if(!D.members.length) return;
   buildHomeMembers();
-  $("home-state").innerHTML = TX.all.length ? "" : "Loading…";
+  if(TX.all.length) $("home-state").innerHTML = ""; else stateLoading("home-state", "this month's totals");
   try{
     const lst = await api({action:"list"});
     TX.all = lst.entries || [];
     $("home-state").innerHTML = "";
     renderHome();
   }catch(e){
-    $("home-state").innerHTML = "Couldn't load — <button id='h-retry' type='button'>Retry</button>"+
-      "<div class='raw'>"+esc(e.message)+"</div>";
-    $("h-retry").onclick = loadHome;
+    stateError("home-state", "your totals", e, loadHome);
   }
 }
 
@@ -1753,7 +1876,7 @@ function buildTxWallets(){
     b.onclick=()=>{ TX.wallet=id; TX.shown=PAGE; buildTxWallets(); renderTxPage(); };
     el.appendChild(b);
   };
-  mk("all","All Wallets");
+  mk("all","All wallets");
   /* label wallets that share a name with the member's name to avoid confusion */
   const nameCounts = {};
   wallets.forEach(w=>{ nameCounts[w.name]=(nameCounts[w.name]||0)+1; });
@@ -1769,16 +1892,14 @@ async function loadTransactionPage(){
   if(!D.members.length) return;
   buildTxMembers();
   buildTxWallets();
-  $("tx-state").innerHTML = TX.all.length ? "" : "Loading…";
+  if(TX.all.length) $("tx-state").innerHTML = ""; else stateLoading("tx-state", "your transactions");
   try{
     const lst = await api({action:"list"});
     TX.all = lst.entries || [];
     $("tx-state").innerHTML = "";
     renderTxPage();
   }catch(e){
-    $("tx-state").innerHTML = "Couldn't load — <button id='t-retry' type='button'>Retry</button>"+
-      "<div class='raw'>"+esc(e.message)+"</div>";
-    $("t-retry").onclick = loadTransactionPage;
+    stateError("tx-state", "your transactions", e, loadTransactionPage);
   }
 }
 
@@ -1832,6 +1953,20 @@ function renderTxCalendar(){
   if(btn) btn.textContent = calMode==="week" ? "Expand to month ▾" : "Collapse to week ▴";
 }
 
+/* one calendar day: a real button when it has entries (keyboard + screen reader), plain box otherwise */
+function calCell(dateStr, dayNum, e, inc, today){
+  const has = e>0 || inc>0;
+  const cls = `calcell${has?" has":""}${today?" today":""}`;
+  const inner = `<span class="cd">${dayNum}</span>`+
+    (e>0?`<span class="ce">-${compactAmt(e)}</span>`:"")+
+    (inc>0?`<span class="ci">+${compactAmt(inc)}</span>`:"");
+  const cur = today ? ` aria-current="date"` : "";
+  if(!has) return `<div class="${cls}"${cur}>${inner}</div>`;
+  const when = new Date(dateStr+"T00:00:00").toLocaleDateString("id-ID",{day:"numeric", month:"long"});
+  const what = [e>0?("spent "+fmt(e)):"", inc>0?("income "+fmt(inc)):""].filter(Boolean).join(", ");
+  return `<button type="button" class="${cls}" data-date="${esc(dateStr)}" aria-label="${esc(when+": "+what)}"${cur}>${inner}</button>`;
+}
+
 /* rolling 7-day windows ending today; each slide steps back one week */
 function renderCalWeek(){
   const slider = $("calslider"), dots = $("caldots");
@@ -1856,12 +1991,7 @@ function renderCalWeek(){
       const dObj=new Date(ds+"T00:00:00");
       heads += `<div class="caldayhead">${esc(dObj.toLocaleDateString("id-ID",{weekday:"short"}))}</div>`;
       const t=map[ds]||{e:0,i:0};
-      const has=t.e>0||t.i>0, today=ds===todayStr;
-      cells += `<div class="calcell${has?" has":""}${today?" today":""}"${has?` data-date="${esc(ds)}"`:""}>
-          <span class="cd">${dObj.getDate()}</span>
-          ${t.e>0?`<span class="ce">-${compactAmt(t.e)}</span>`:""}
-          ${t.i>0?`<span class="ci">+${compactAmt(t.i)}</span>`:""}
-        </div>`;
+      cells += calCell(ds, dObj.getDate(), t.e, t.i, ds===todayStr);
     });
 
     const L=new Date(dates[0]+"T00:00:00"), Rr=new Date(dates[6]+"T00:00:00");
@@ -1872,9 +2002,9 @@ function renderCalWeek(){
     const page=document.createElement("div"); page.className="calpage week";
     page.innerHTML = `
       <div class="cal-head">
-        <button class="cal-arrow prev" type="button" aria-label="Previous">‹</button>
+        <button class="cal-arrow prev" type="button" aria-label="Previous week"><span aria-hidden="true">‹</span></button>
         <div class="cal-month">${esc(rangeLabel)}</div>
-        <button class="cal-arrow next" type="button" aria-label="Next">›</button>
+        <button class="cal-arrow next" type="button" aria-label="Next week"><span aria-hidden="true">›</span></button>
       </div>
       <div class="calgrid calhead">${heads}</div>
       <div class="calgrid calbody">${cells}</div>`;
@@ -1913,23 +2043,16 @@ function renderCalMonth(){
     for(let k=0;k<offset;k++) cells+=`<div class="calcell empty"></div>`;
     for(let day=1;day<=dim;day++){
       const dateStr = key+"-"+String(day).padStart(2,"0");
-      const e=dayExp[day]||0, inc=dayInc[day]||0;
-      const has = e>0 || inc>0;
-      const today = dateStr===todayStr;
-      cells += `<div class="calcell${has?" has":""}${today?" today":""}"${has?` data-date="${esc(dateStr)}"`:""}>
-          <span class="cd">${day}</span>
-          ${e>0?`<span class="ce">-${compactAmt(e)}</span>`:""}
-          ${inc>0?`<span class="ci">+${compactAmt(inc)}</span>`:""}
-        </div>`;
+      cells += calCell(dateStr, day, dayExp[day]||0, dayInc[day]||0, dateStr===todayStr);
     }
 
     const monthLabel = d.toLocaleDateString("id-ID",{month:"long", year:"numeric"});
     const page=document.createElement("div"); page.className="calpage";
     page.innerHTML = `
       <div class="cal-head">
-        <button class="cal-arrow prev" type="button" aria-label="Previous">‹</button>
+        <button class="cal-arrow prev" type="button" aria-label="Previous month"><span aria-hidden="true">‹</span></button>
         <div class="cal-month">${esc(monthLabel)}</div>
-        <button class="cal-arrow next" type="button" aria-label="Next">›</button>
+        <button class="cal-arrow next" type="button" aria-label="Next month"><span aria-hidden="true">›</span></button>
       </div>
       <div class="calgrid calhead">${WEEKDAYS_ID.map(w=>`<div class="caldayhead">${w}</div>`).join("")}</div>
       <div class="calgrid calbody">${cells}</div>`;
@@ -1956,7 +2079,7 @@ function openDayHistory(dateStr){
       : `${esc(catEmoji(r.categoryId))} ${esc(catLabel(r.categoryId))} · ${esc(walletLabel(r.walletId))}${r.note?" · "+esc(r.note):""}`;
     const amtColor = isTrf ? "var(--accent)" : (isIn ? "var(--inc)" : "var(--exp)");
     const amtPfx = isTrf ? "" : (isIn ? "+" : "−");
-    return `<div class="mrow" data-log="${esc(String(r.loggedAt))}" style="cursor:pointer">
+    return `<div class="mrow" data-log="${esc(String(r.loggedAt))}" role="button" tabindex="0">
         <span class="dot" style="background:${isTrf?"var(--accent-tint)":esc(memberColor(r.memberId))};color:${isTrf?"var(--accent)":"#fff"}">${isTrf?"↔":esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span>
         <span class="t"><b style="color:${amtColor}">${amtPfx}${fmt(r.amount)}</b>
           <small>${label2}</small></span>
@@ -2071,21 +2194,21 @@ function renderOverviewSlides(){
       const todayExp = rows.filter(r=>isExpenseRow(r)&&r.date===todayKey).reduce((a,r)=>a+r.amount,0);
       const weekExp = rows.filter(r=>isExpenseRow(r)&&r.date>=monKey&&r.date<=todayKey).reduce((a,r)=>a+r.amount,0);
       sub2Label1="Today"; sub2Val1=todayExp;
-      sub2Label2="This Week"; sub2Val2=weekExp;
+      sub2Label2="This week"; sub2Val2=weekExp;
     } else {
       const dailyAvg = Math.round(exp/(p.days||1));
-      sub2Label1="Daily Avg"; sub2Val1=dailyAvg;
-      sub2Label2="Weekly Avg"; sub2Val2=Math.round(dailyAvg*7);
+      sub2Label1="Daily average"; sub2Val1=dailyAvg;
+      sub2Label2="Weekly average"; sub2Val2=Math.round(dailyAvg*7);
     }
 
-    const capBase = (cd===1 && i===0) ? "This Month" : p.label;
+    const capBase = (cd===1 && i===0) ? "This month" : p.label;
     const cap = capBase + (TX.member==="all" ? "" : " · " + memberName(TX.member));
     const range = cd===1 ? p.label : (fmtShort(p.fromStr)+" – "+fmtShort(p.toStr));
 
     const card=document.createElement("div");
     card.className="sumcard";
     card.innerHTML=`
-      <button class="cyc-gear" type="button" aria-label="Cycle settings">⚙︎</button>
+      <button class="cyc-gear" type="button" aria-label="Pay cycle settings">${icon("sliders",20)}</button>
       <div class="cap">${esc(cap)}</div>
       <div class="dt">${esc(range)}</div>
       <div class="big ${exp?"":"zero"} bal-mask">${exp?"−"+fmt(exp):"Rp0"}</div>
@@ -2135,7 +2258,7 @@ function renderBudgetSlides(){
     const page=document.createElement("div"); page.className="budgetpage";
     if(!list.length){
       page.innerHTML = "<div class='sd' style='color:var(--muted);font-size:13px;padding:2px 4px'>"+
-        (i===0 ? "No budgets set yet — add one when creating or editing a category on the Add page."
+        (i===0 ? "No budgets set yet. Add one when you create or edit a category on the Add page."
                 : "No budgets tracked for this cycle.")+"</div>";
     } else {
       list.forEach(b=>{
@@ -2240,25 +2363,25 @@ function renderReportSlides(){
     const page=document.createElement("div"); page.className="reportpage";
     if(!items.length){
       page.innerHTML = `<div class="rep-month-label">${esc(periodLabel)}</div>
-        <div class="rep-empty">No expenses recorded this ${p.cd===1?"month":"cycle"}.</div>`;
+        <div class="rep-empty">No expenses recorded this ${p.cd===1?"month":"cycle"}. Expenses you log on the Add tab show up here by category.</div>`;
     } else {
       const legend = items.map(it=>{
         const pct=Math.round(it.value/totalExp*100);
-        return `<div class="legrow" data-cat="${esc(it.categoryId)}" data-from="${esc(p.fromStr)}" data-to="${esc(p.toStr)}" data-label="${esc(p.label)}">
+        return `<button type="button" class="legrow" data-cat="${esc(it.categoryId)}" data-from="${esc(p.fromStr)}" data-to="${esc(p.toStr)}" data-label="${esc(p.label)}">
             <span class="legdot" style="background:${it.color}22;border-color:${it.color}">${esc(it.emoji||"✨")}</span>
             <span class="nm">${esc(it.name)}</span>
             <span class="val">${fmt(it.value)}</span>
             <span class="pctv">${pct}%</span>
-            <span class="chev">›</span>
-          </div>`;
+            <span class="chev" aria-hidden="true">›</span>
+          </button>`;
       }).join("");
 
       page.innerHTML = `
         <div class="rep-month-label">${esc(periodLabel)}</div>
         <div class="pie-wrap">${pieSVG(items, totalExp)}</div>
         <div class="rep-totals">
-          <div class="sr"><span>Total Spent</span><b>${fmt(totalExp)}</b></div>
-          <div class="sr"><span>Total Income</span><b class="inc">${fmt(totalInc)}</b></div>
+          <div class="sr"><span>Total spent</span><b>${fmt(totalExp)}</b></div>
+          <div class="sr"><span>Total income</span><b class="inc">${fmt(totalInc)}</b></div>
           <div class="sr"><span>${net>=0?"Surplus":"Deficit"}</span>
             <b style="color:${net>=0?"var(--inc)":"var(--exp)"}">${fmt(Math.abs(net))}</b></div>
         </div>
@@ -2332,7 +2455,7 @@ function openBudgetEdit(b){
       const cat = D.categories.find(c=>c.id===b.categoryId);
       if(cat) cat.budget = amt;
       closeSheet(); renderHome();
-    }catch(e){ btn.disabled=false; btn.textContent="Couldn't save — "+e.message; }
+    }catch(e){ btn.disabled=false; btn.textContent="Couldn't save: "+e.message; }
   };
 }
 
@@ -2345,7 +2468,7 @@ function openBudgetHistory(b, period){
   const total = rows.reduce((a,r)=>a+r.amount,0);
   const periodLabel = p.label;
   const listHtml = rows.length ? rows.map(r=>`
-      <div class="mrow" data-log="${esc(String(r.loggedAt))}" style="cursor:pointer">
+      <div class="mrow" data-log="${esc(String(r.loggedAt))}" role="button" tabindex="0">
         <span class="dot" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span>
         <span class="t"><b>${income?"+":"−"}${fmt(r.amount)}</b>
           <small>${esc(r.date)} · ${esc(walletLabel(r.walletId))}${r.note?" · "+esc(r.note):""}</small></span>
@@ -2375,7 +2498,10 @@ function openBudgetHistory(b, period){
 function renderTxList(rows){
   const list=$("tx-list"); list.innerHTML="";
   if(!rows.length){
-    list.innerHTML="<div class='sd' style='color:var(--muted);font-size:13px;padding:2px 4px'>No transactions yet.</div>";
+    const filtered = TX.member!=="all" || TX.wallet!=="all";
+    list.innerHTML = "<div class='sd' style='color:var(--muted);font-size:13px;padding:2px 4px'>"+
+      (filtered ? "Nothing matches this filter. Choose Everyone or All wallets to see more."
+                : "No transactions yet. Log your first one from the Add tab.")+"</div>";
     $("lm-wrap").style.display="none"; return;
   }
   const sorted = rows.slice().sort((a,b)=>{
@@ -2403,11 +2529,15 @@ function renderTxList(rows){
     const isIn=r.type==="Income", isTrf=r.type==="Transfer";
     const isPayto = isTrf && r.subtype==="payto";
     const wrap=document.createElement("div"); wrap.className="rwrap";
+    /* the swipe-revealed delete button sits behind the row, so keep it out of the Tab order;
+       keyboard and mouse users delete from the row's detail sheet instead */
+    const trashBtn = `<button class="rtrash" type="button" tabindex="-1" aria-label="Delete">${icon("trash",22)}</button>`;
+    const rowAttrs = (label)=>` role="button" tabindex="0" aria-label="${esc(label)}"`;
     if(isTrf && !isPayto){
-      /* normal transfer — teal card */
+      /* normal transfer */
       wrap.innerHTML =
-        `<button class="rtrash" type="button" aria-label="Delete">🗑️</button>`+
-        `<div class="rcard trf">`+
+        trashBtn+
+        `<div class="rcard trf"${rowAttrs("Transfer "+fmt(r.amount)+", "+walletLabel(r.fromWalletId)+" to "+walletLabel(r.toWalletId))}>`+
           `<div class="cico">↔`+
             `<span class="badge" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span></div>`+
           `<div class="mid"><div class="cat">${esc(walletLabel(r.fromWalletId))} → ${esc(walletLabel(r.toWalletId))}</div>`+
@@ -2415,10 +2545,10 @@ function renderTxList(rows){
           `<div class="amt" style="color:var(--accent)">${fmt(r.amount)}</div>`+
         `</div>`;
     } else if(isPayto){
-      /* pay to — red expense card showing the category */
+      /* pay to: an expense row showing the category */
       wrap.innerHTML =
-        `<button class="rtrash" type="button" aria-label="Delete">🗑️</button>`+
-        `<div class="rcard exp">`+
+        trashBtn+
+        `<div class="rcard exp"${rowAttrs("Pay to, "+catLabel(r.categoryId)+", minus "+fmt(r.amount))}>`+
           `<div class="cico">${esc(catEmoji(r.categoryId))}`+
             `<span class="badge" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span></div>`+
           `<div class="mid"><div class="cat">${esc(catLabel(r.categoryId))}</div>`+
@@ -2427,8 +2557,8 @@ function renderTxList(rows){
         `</div>`;
     } else {
       wrap.innerHTML =
-        `<button class="rtrash" type="button" aria-label="Delete">🗑️</button>`+
-        `<div class="rcard ${isIn?"inc":"exp"}">`+
+        trashBtn+
+        `<div class="rcard ${isIn?"inc":"exp"}"${rowAttrs((isIn?"Income, ":"Expense, ")+catLabel(r.categoryId)+", "+(isIn?"plus ":"minus ")+fmt(r.amount)+", "+memberName(r.memberId))}>`+
           `<div class="cico">${esc(catEmoji(r.categoryId))}`+
             `<span class="badge" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span></div>`+
           `<div class="mid"><div class="cat">${esc(catLabel(r.categoryId))}</div>`+
@@ -2446,7 +2576,7 @@ $("loadmore").onclick = ()=>{ TX.shown += PAGE; renderTxList(txRows()); };
 const TRASH_W = 76;
 function attachSwipeDelete(wrap, entry){
   const card=wrap.querySelector(".rcard"), trash=wrap.querySelector(".rtrash");
-  let sx=0, cx=0, drag=false, moved=false;
+  let sx=0, cx=0, drag=false, moved=false, lastTouch=0;
   card.addEventListener("touchstart", e=>{ sx=e.touches[0].clientX; drag=true; moved=false; card.style.transition="none"; },{passive:true});
   card.addEventListener("touchmove", e=>{
     if(!drag) return;
@@ -2457,7 +2587,7 @@ function attachSwipeDelete(wrap, entry){
     card.style.transform=`translateX(${cx}px)`;
   },{passive:true});
   card.addEventListener("touchend", (e)=>{
-    drag=false; card.style.transition="transform .18s ease-out";
+    drag=false; lastTouch=Date.now(); card.style.transition="transform .18s ease-out";
     const open = cx < -TRASH_W/2;
     card.style.transform = open ? `translateX(-${TRASH_W}px)` : "translateX(0)";
     /* a genuine tap (no meaningful drag) opens the detail sheet */
@@ -2467,21 +2597,21 @@ function attachSwipeDelete(wrap, entry){
     }
     cx=0;
   }, {passive:false});
-  /* desktop / non-touch: plain click opens detail */
+  /* mouse, keyboard (Enter/Space) and any click not already handled as a touch tap */
   card.addEventListener("click", e=>{
-    if("ontouchstart" in window) return; // touch handled above
+    if(Date.now()-lastTouch < 700) return; // this tap was handled in touchend
     openTxDetail(entry);
   });
   trash.onclick = async ev=>{
     ev.stopPropagation();
-    if(entry.loggedAt==null){ trash.textContent="⚠️"; return; }
+    if(entry.loggedAt==null){ trash.textContent="!"; trash.setAttribute("aria-label","Can't delete this entry yet"); return; }
     trash.disabled=true; trash.textContent="…";
     try{
       const act = entry.type==="Transfer" ? "deleteTransfer" : "deleteTx";
       await api({action:act, loggedAt:entry.loggedAt});
       TX.all = TX.all.filter(x=>x.loggedAt!==entry.loggedAt);
       renderTxPage();
-    }catch(e){ trash.disabled=false; trash.textContent="⚠️"; }
+    }catch(e){ trash.disabled=false; trash.textContent="Retry"; trash.setAttribute("aria-label","Delete failed, try again"); }
   };
 }
 
@@ -2501,7 +2631,7 @@ function openTxDetail(entry){
       ${entry.note?`<div class="row"><span>Note</span><b>${esc(entry.note)}</b></div>`:""}
       <div class="seg" style="margin-top:16px">
         <button class="go" type="button" id="td-close">Close</button>
-        <button type="button" id="td-edit" style="background:${isPay?"var(--exp)":"var(--accent)"};border-color:${isPay?"var(--exp)":"var(--accent)"};color:#fff">Edit</button>
+        <button type="button" id="td-edit" style="background:${isPay?"var(--exp)":"var(--accent)"};border-color:${isPay?"var(--exp)":"var(--accent)"};color:${isPay?"var(--on-exp)":"var(--on-accent)"}">Edit</button>
       </div>
       <button class="ghost danger" type="button" id="td-del">Delete this ${isPay?"payment":"transfer"}</button>
     `);
@@ -2512,7 +2642,7 @@ function openTxDetail(entry){
         await api({action:"deleteTransfer", loggedAt:entry.loggedAt});
         TX.all=TX.all.filter(x=>x.loggedAt!==entry.loggedAt);
         closeSheet(); renderTxPage();
-      }catch(e){ b.disabled=false; b.textContent="Couldn't delete — retry"; }
+      }catch(e){ b.disabled=false; b.textContent="Couldn't delete. Tap to try again."; }
     };
     $("td-edit").onclick = ()=>openTransferEdit(entry);
     return;
@@ -2527,11 +2657,21 @@ function openTxDetail(entry){
     ${entry.note?`<div class="row"><span>Note</span><b>${esc(entry.note)}</b></div>`:""}
     <div class="seg" style="margin-top:16px">
       <button type="button" id="td-close">Close</button>
-      <button type="button" id="td-edit" style="background:var(--person);border-color:var(--person);color:#fff">Edit</button>
+      <button type="button" id="td-edit" style="background:var(--person);border-color:var(--person);color:var(--on-person)">Edit</button>
     </div>
+    <button class="ghost danger" type="button" id="td-del">Delete this ${isIn?"income":"expense"}</button>
   `);
   $("td-close").onclick = closeSheet;
   $("td-edit").onclick = ()=>openTxEdit(entry);
+  /* delete without swiping, so it also works with a mouse or keyboard */
+  $("td-del").onclick = async ()=>{
+    const b=$("td-del"); b.disabled=true; b.textContent="Deleting…";
+    try{
+      await api({action:"deleteTx", loggedAt:entry.loggedAt});
+      TX.all=TX.all.filter(x=>x.loggedAt!==entry.loggedAt);
+      closeSheet(); renderTxPage();
+    }catch(e){ b.disabled=false; b.textContent="Couldn't delete. Tap to try again."; }
+  };
 }
 
 function openTransferEdit(entry){
@@ -2596,7 +2736,7 @@ function openTransferEdit(entry){
       const i=TX.all.findIndex(x=>x.loggedAt===entry.loggedAt);
       if(i>=0) TX.all[i]={...TX.all[i], fromWalletId:from, toWalletId:to, amount:amt, date, note, categoryId:catId};
       closeSheet(); renderTxPage();
-    }catch(e){ b.disabled=false; b.textContent="Couldn't save — "+e.message; }
+    }catch(e){ b.disabled=false; b.textContent="Couldn't save: "+e.message; }
   };
 }
 
@@ -2681,7 +2821,7 @@ function openTxEdit(entry){
       if(i>=0) TX.all[i] = { loggedAt:E.loggedAt, date:E.date, memberId:E.memberId,
         categoryId:E.categoryId, amount:E.amount, walletId:E.walletId, type:E.type, note:(E.note||"").trim() };
       closeSheet(); renderHome(); renderTxPage();
-    }catch(e){ b.disabled=false; b.textContent="Couldn't save — "+e.message; }
+    }catch(e){ b.disabled=false; b.textContent="Couldn't save: "+e.message; }
   }
   render();
 }
@@ -2691,16 +2831,14 @@ $("add-wallet-btn").onclick = ()=>openWalletSheet(null);
 
 async function loadWallets(){
   if(!D.wallets.length && !D.members.length) return;
-  $("wallet-state").innerHTML="Loading…";
+  stateLoading("wallet-state", "wallet balances");
   try{
     const out = await api({action:"balances"});
     BAL.balances=out.balances||{}; BAL.debts=out.debts||{}; BAL.starting=out.starting||{};
     $("wallet-state").innerHTML="";
     renderWallets();
   }catch(e){
-    $("wallet-state").innerHTML="Couldn't load — <button id='w-retry' type='button'>Retry</button>"+
-      "<div class='raw'>"+esc(e.message)+"</div>";
-    $("w-retry").onclick=loadWallets;
+    stateError("wallet-state", "wallet balances", e, loadWallets);
   }
 }
 
@@ -2712,8 +2850,8 @@ function renderWallets(){
   const debts = D.wallets.filter(w=>w.type==="debt");
   const normals = D.wallets.filter(w=>w.type!=="debt");
   /* group: joint first, then each member */
-  const groups = [{key:JOINT, label:"Joint / Household"}]
-    .concat(D.members.map(m=>({key:m.id, label:m.name+"'s Wallets"})));
+  const groups = [{key:JOINT, label:"Joint household"}]
+    .concat(D.members.map(m=>({key:m.id, label:m.name+"'s wallets"})));
 
   let idx=0;
   groups.forEach(g=>{
@@ -2731,11 +2869,11 @@ function renderWallets(){
       card.className="wcard"+(linked.length?" has-debt":"");
       card.style.borderLeftColor=color;
       card.innerHTML=`
-        <div class="wchip" style="background:${color}22;color:${color}">${esc((w.name[0]||"?").toUpperCase())}</div>
+        <div class="wchip" style="background:${color}22" aria-hidden="true">${esc((w.name[0]||"?").toUpperCase())}</div>
         <div class="wmeta"><div class="wname">${esc(w.name)}</div>
           <div class="whint">${BAL.starting[w.id]?("start "+fmt(BAL.starting[w.id])):"no starting balance set"}</div></div>
         <div class="wval bal-mask">${fmt(val)}</div>
-        <button class="wedit" type="button" aria-label="Options">✎</button>`;
+        <button class="wedit" type="button" aria-label="${esc(w.name)}: balance and options"><span aria-hidden="true">✎</span></button>`;
       card.querySelector(".wedit").onclick=()=>openBalanceSheet(w);
       el.appendChild(card);
 
@@ -2747,15 +2885,18 @@ function renderWallets(){
           const amt=BAL.debts[dw.id]||0;
           return `<div class="drow"><span>${esc(dw.name)} bill</span><b class="bal-mask">−${fmt(amt)}</b></div>`;
         }).join("")
-        + `<div class="drow approx"><span>Approx. Balance</span><b class="bal-mask">${fmt(val-total)}</b></div>`
+        + `<div class="drow approx"><span>Balance after bills (approx.)</span><b class="bal-mask">${fmt(val-total)}</b></div>`
         + linked.map(dw=>{
             const amt=BAL.debts[dw.id]||0;
             return amt>0
-              ? `<div class="swipepay" data-w="${esc(dw.id)}"><div class="fill"></div><span>Swipe to confirm ${esc(dw.name)} paid</span></div>`
+              ? `<div class="swipepay" data-w="${esc(dw.id)}" role="button" tabindex="0" aria-label="Mark ${esc(dw.name)} bill of ${esc(fmt(amt))} as paid"><div class="fill"></div><span aria-hidden="true">Swipe to mark ${esc(dw.name)} paid</span></div>`
               : `<div class="swipepay done"><span>${esc(dw.name)} all caught up ✓</span></div>`;
           }).join("");
         el.appendChild(box);
-        box.querySelectorAll(".swipepay[data-w]").forEach(bar=>attachSwipePay(bar, bar.dataset.w));
+        box.querySelectorAll(".swipepay[data-w]").forEach(bar=>{
+          const dw = debts.find(x=>x.id===bar.dataset.w);
+          attachSwipePay(bar, bar.dataset.w, dw ? dw.name : "this bill", BAL.debts[bar.dataset.w]||0, w.name);
+        });
       }
     });
 
@@ -2765,18 +2906,18 @@ function renderWallets(){
       const card=document.createElement("div");
       card.className="wcard"; card.style.borderLeftColor="var(--exp)";
       card.innerHTML=`
-        <div class="wchip" style="background:#E5573D22;color:var(--exp)">${esc((dw.name[0]||"?").toUpperCase())}</div>
+        <div class="wchip" style="background:#E5573D22" aria-hidden="true">${esc((dw.name[0]||"?").toUpperCase())}</div>
         <div class="wmeta"><div class="wname">${esc(dw.name)}</div>
           <div class="whint">credit / bill · not linked to a wallet yet</div></div>
         <div class="wval bal-mask" style="color:var(--exp)">−${fmt(amt)}</div>
-        <button class="wedit" type="button" aria-label="Edit">✎</button>`;
+        <button class="wedit" type="button" aria-label="Edit ${esc(dw.name)}"><span aria-hidden="true">✎</span></button>`;
       card.querySelector(".wedit").onclick=()=>openWalletSheet(dw.id);
       el.appendChild(card);
     });
   });
 
   if(!el.children.length){
-    el.innerHTML="<div class='sd' style='color:var(--muted);font-size:13px;padding:14px 4px'>No wallets yet — add your first one below.</div>";
+    el.innerHTML="<div class='sd' style='color:var(--muted);font-size:13px;padding:14px 4px'>No wallets yet. Add your first one below.</div>";
   }
 }
 
@@ -2803,11 +2944,11 @@ function openBalanceSheet(w){
     const val=Number(String($("bf-val").value).replace(/[^\d]/g,""))||0;
     const b=$("bf-save"); b.disabled=true; b.textContent="Saving…";
     try{ await api({action:"setBalance", walletId:w.id, value:val}); closeSheet(); loadWallets(); }
-    catch(e){ b.disabled=false; b.textContent="Couldn't save — "+e.message; }
+    catch(e){ b.disabled=false; b.textContent="Couldn't save: "+e.message; }
   };
 }
 
-function attachSwipePay(bar, walletId){
+function attachSwipePay(bar, walletId, billName, billAmt, fromName){
   const fill=bar.querySelector(".fill");
   let sx=0, drag=false, w=0;
   bar.addEventListener("touchstart", e=>{ sx=e.touches[0].clientX; w=bar.clientWidth; drag=true; fill.style.transition="none"; },{passive:true});
@@ -2822,16 +2963,26 @@ function attachSwipePay(bar, walletId){
     if(fill.offsetWidth/w > 0.85) confirmPaid(walletId, bar);
     else fill.style.width="0px";
   });
-  bar.addEventListener("click", ()=>confirmPaid(walletId, bar));
+  /* a tap, click or Enter asks first instead of paying at once, so a stray tap can't clear a bill */
+  bar.addEventListener("click", ()=>{
+    openSheet(`
+      <h2>Mark ${esc(billName)} paid?</h2>
+      <div class="sd">This clears the current bill of <b>${esc(fmt(billAmt))}</b> and deducts it from ${esc(fromName)}.</div>
+      <button class="go" id="mp-yes" type="button">Mark as paid</button>
+      <button class="ghost" id="mp-no" type="button">Cancel</button>
+    `);
+    $("mp-no").onclick = closeSheet;
+    $("mp-yes").onclick = ()=>{ closeSheet(); confirmPaid(walletId, bar); };
+  });
 }
 async function confirmPaid(walletId, bar){
   bar.querySelector("span").textContent="Confirming…";
   try{
     await api({action:"markPaid", walletId});
-    TX.all = []; // force reload so the auto-created Debt Payment transaction appears
+    TX.all = []; // force a reload of the history
     loadWallets();
   }
-  catch(e){ bar.querySelector("span").textContent="Couldn't confirm — tap to retry"; bar.querySelector(".fill").style.width="0px"; }
+  catch(e){ bar.querySelector("span").textContent="Couldn't confirm. Tap to try again."; bar.querySelector(".fill").style.width="0px"; }
 }
 
 /* ================= go ================= */
