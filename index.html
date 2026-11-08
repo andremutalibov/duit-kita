@@ -45,6 +45,13 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
+html{-webkit-text-size-adjust:100%; text-size-adjust:100%}
+html,body{max-width:100%; overflow-x:clip} /* safety net: nothing can widen the page sideways; sliders keep their own scrolling */
+/* iPhone date fields have a built-in width; make them behave like ordinary boxes */
+input[type="date"]{-webkit-appearance:none; appearance:none; display:block; width:100%; min-width:0; max-width:100%; text-align:left; line-height:normal}
+input[type="date"]::-webkit-date-and-time-value{text-align:left; min-width:0; margin:0}
+input[type="date"]::-webkit-datetime-edit{padding:0; min-width:0}
+input[type="date"]::-webkit-calendar-picker-indicator{margin:0}
 body{
   font-family:var(--body); background:var(--paper); color:var(--ink);
   font-variant-numeric:tabular-nums; /* amounts line up digit for digit */
@@ -159,7 +166,7 @@ body[data-view="add"] .savebar{display:block}
 .trf-disabled{opacity:.35; cursor:not-allowed}
 .cyc-input{width:48px; min-height:38px; text-align:center; border:1.5px solid var(--line);
   border-radius:10px; background:var(--card-2); color:var(--ink); font-family:var(--num);
-  font-weight:700; font-size:15px; outline:none; flex:0 0 48px; margin-right:6px}
+  font-weight:700; font-size:16px; outline:none; flex:0 0 48px; margin-right:6px}
 .cyc-input:focus{border-color:var(--accent)}
 
 .reveal{display:none; margin-top:10px}
@@ -173,7 +180,7 @@ body[data-view="add"] .savebar{display:block}
 /* note: always visible, deliberately smaller and quieter than the amount box (62px, 2px teal border, 25px) */
 .note-field{
   width:100%; min-height:46px; padding:0 14px; border:1.5px solid var(--line); border-radius:var(--radius);
-  background:var(--card); color:var(--ink); font-family:var(--body); font-size:15px; font-weight:500; outline:none;
+  background:var(--card); color:var(--ink); font-family:var(--body); font-size:16px; font-weight:500; outline:none; /* 16px minimum: iPhone zooms the page into smaller fields */
 }
 .note-field::placeholder{color:var(--muted)}
 .note-field:focus{border-color:var(--accent)}
