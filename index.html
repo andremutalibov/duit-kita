@@ -90,7 +90,11 @@ header h1 .dot{color:var(--person)}
 .syncbar.bad button{background:var(--exp); color:var(--on-exp)}
 .err{color:var(--exp); font-size:13px; font-weight:600; margin:2px 0 6px}
 /* hide-balance mode */
-body.hide-bal .bal-mask{filter:blur(7px); user-select:none; pointer-events:none; transition:filter .2s}
+/* every amount marked .bal-mask is wrapped (by maskAmounts) into the real value plus a fixed "Rp ****",
+   so a hidden amount gives away neither its digits nor its size */
+.amt-hide{display:none}
+body.hide-bal .bal-mask .amt-real{display:none}
+body.hide-bal .bal-mask .amt-hide{display:inline}
 #eye-toggle.hidden{opacity:.5}
 /* header buttons per page: the eye only where balances show (Home, Wallet); the gear only on Add */
 body:not([data-view="home"]):not([data-view="wallet"]) #eye-toggle{display:none}
@@ -280,13 +284,16 @@ body[data-view="add"] .savebar{display:block}
 .chip-pill.sel{border-color:var(--accent); background:var(--accent-tint); color:var(--accent)}
 .chip-pill.sel .icon{color:var(--accent)}
 /* people: same rectangle, a little taller, sharing the row equally (no initials, a colour dot instead) */
-.who-pills .chip-pill.person{flex:1 1 0; min-width:104px; min-height:44px; justify-content:center; font-size:14px}
-.who-pills .chip-pill.add{flex:0 0 auto; min-height:44px}
+/* people: compact rounded pills, only as wide as the name, so they read differently from the
+   full-width Expense / Income / Transfer tabs (owner's choice, round 8) */
+.who-pills{justify-content:flex-start}
+.who-pills .chip-pill.person, .who-pills .chip-pill.add{flex:0 0 auto; min-width:0; min-height:36px; padding:0 16px 0 14px; border-radius:999px; font-size:14px; gap:8px}
+.who-pills .chip-pill.person::after, .who-pills .chip-pill.add::after{inset:-5px -4px} /* 36px pill, 44px touch area */
+#v-add #who-card .chip-pill:not(.sel), #v-add .card-sec #trf-recipients .chip-pill:not(.sel){background:transparent}
 .pdot{width:10px; height:10px; border-radius:50%; flex:0 0 10px}
 /* the selected person is filled with their own colour, like the Expense / Income / Transfer toggle */
 #members .chip-pill.sel{border-color:var(--person); background:var(--person); color:var(--on-person)}
 #members .chip-pill.sel .pdot{background:var(--on-person) !important}
-.who-pills .chip-pill.person::after{display:none} /* already 44px tall */
 
 /* section cards on the Add page: quiet containers that group related fields */
 #v-add .card-sec{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; margin-top:12px; box-shadow:var(--card-shadow)}
@@ -302,6 +309,11 @@ body[data-view="add"] .savebar{display:block}
 #v-add #who-card .chip-pill, #v-add #day-card .g-day .chip, #v-add #day-card .reveal input{background:var(--card)}
 #v-add #day-card .g-day .chip.sel{background:var(--accent-tint)}
 #v-add #day-card .label{padding-left:2px}
+/* custom date: the date sits in the middle of its box; the picker icon is pinned right so it doesn't pull the date off centre */
+#day-input{position:relative; text-align:center; padding:0 44px}
+#day-input::-webkit-date-and-time-value{text-align:center}
+#day-input::-webkit-datetime-edit{display:inline-flex; justify-content:center; width:100%}
+#day-input::-webkit-calendar-picker-indicator{position:absolute; right:14px; top:50%; transform:translateY(-50%)}
 /* categories: slightly tighter and thinner rows (36px to 34px, 8px to 6px between rows) */
 #cats, #payto-cats{row-gap:6px}
 #cats .chip-pill, #payto-cats .chip-pill{min-height:34px}
@@ -468,6 +480,10 @@ button.calcell{appearance:none; -webkit-appearance:none}
 .legrow .val{font-family:var(--num); font-weight:700; font-size:12.5px; margin-right:2px; color:var(--ink)}
 .legrow .pctv{font-family:var(--num); font-size:11.5px; color:var(--muted); min-width:32px; text-align:right}
 .legrow .chev{color:var(--muted); font-size:16px; font-weight:700}
+/* consolidated income row, above the expense categories: green instead of the category colours */
+.legrow.inc-row .legdot{background:color-mix(in srgb, var(--inc) 14%, transparent); border-color:var(--inc); color:var(--inc)}
+.legrow.inc-row .val{color:var(--inc)}
+.legend .leg-sep{height:1px; background:var(--line); margin:4px 2px}
 .rep-empty{text-align:center; color:var(--muted); font-size:13px; padding:26px 10px}
 
 .mfilter{display:flex; gap:8px; overflow-x:auto; margin-top:12px; padding-bottom:2px; scrollbar-width:none}
@@ -817,6 +833,7 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby0k-IyHSOKKaYSmvhTd
 
 const $ = id => document.getElementById(id);
 const fmt = n => "Rp" + Math.round(Number(n)||0).toLocaleString("id-ID");
+const mk = n => `<span class="bal-mask">${fmt(n)}</span>`; /* an amount the eye button can hide */
 /* compact form for tight spaces: 347000 -> 347k, 1500000 -> 1.5M */
 const compactAmt = n => {
   const a = Math.abs(Number(n)||0);
@@ -853,8 +870,25 @@ const ICON = {
   pencil:'<path d="M4 20h4.5L19.5 9 15 4.5 4 15.5z"/><path d="M13 6.5l4.5 4.5"/>',
   gear:  '<path d="M10.3 3h3.4l.5 2.4 1.7.7 2-1.4 2.4 2.4-1.4 2 .7 1.7 2.4.5v3.4l-2.4.5-.7 1.7 1.4 2-2.4 2.4-2-1.4-1.7.7-.5 2.4h-3.4l-.5-2.4-1.7-.7-2 1.4-2.4-2.4 1.4-2-.7-1.7-2.4-.5v-3.4l2.4-.5.7-1.7-1.4-2 2.4-2.4 2 1.4 1.7-.7z"/><circle cx="12" cy="12" r="3"/>',
   up:    '<path d="M12 19V5M6 11l6-6 6 6"/>',
-  down:  '<path d="M12 5v14M6 13l6 6 6-6"/>'
+  down:  '<path d="M12 5v14M6 13l6 6 6-6"/>',
+  moneyIn:'<path d="M12 3v11M7.5 9.5 12 14l4.5-4.5"/><path d="M4 14.5V20h16v-5.5"/>'
 };
+
+/* Eye button: wrap every .bal-mask amount once into its real text plus a fixed "Rp ****".
+   A MutationObserver catches amounts rendered later (slides, wallets, sheets), so render code only
+   has to add the class. */
+function maskAmounts(root){
+  const els = root.matches && root.matches(".bal-mask") ? [root] : [];
+  if(root.querySelectorAll) els.push(...root.querySelectorAll(".bal-mask"));
+  els.forEach(el=>{
+    if(el.dataset.masked) return;
+    el.dataset.masked = "1";
+    el.innerHTML = `<span class="amt-real">${el.innerHTML}</span><span class="amt-hide">Rp ****</span>`;
+  });
+}
+new MutationObserver(list=>{
+  list.forEach(m=>m.addedNodes.forEach(n=>{ if(n.nodeType===1) maskAmounts(n); }));
+}).observe(document.body, {childList:true, subtree:true});
 const icon = (name, size) => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"${size?` style="width:${size}px;height:${size}px"`:""}>${ICON[name]}</svg>`;
 
 /* Category icons, drawn in the same style as the navbar. The sheet still stores the emoji
@@ -2599,8 +2633,8 @@ function renderOverviewSlides(){
         <div class="sr"><span>Net</span><b class="bal-mask" style="color:${net<0?"var(--exp)":"var(--inc)"}">${net<0?"−":""}${fmt(Math.abs(net))}</b></div>
       </div>
       <div class="sub2">
-        <div class="sr"><span>${sub2Label1}</span><b>${sub2Val1?fmt(sub2Val1):"Rp0"}</b></div>
-        <div class="sr"><span>${sub2Label2}</span><b>${sub2Val2?fmt(sub2Val2):"Rp0"}</b></div>
+        <div class="sr"><span>${sub2Label1}</span><b class="bal-mask">${sub2Val1?fmt(sub2Val1):"Rp0"}</b></div>
+        <div class="sr"><span>${sub2Label2}</span><b class="bal-mask">${sub2Val2?fmt(sub2Val2):"Rp0"}</b></div>
       </div>`;
     card.querySelector(".cyc-gear").onclick = ()=>openCycleSheet(TX.member); // "all" = household cycle
     slider.appendChild(card);
@@ -2652,15 +2686,15 @@ function renderBudgetSlides(){
         const income = b.kind==="income";
         const cls = income ? (b.used>=b.budget?"":"warn") : (over?"over":(pct>=80?"warn":""));
         const remLabel = income
-          ? (b.used>=b.budget ? "target met" : fmt(b.budget-b.used)+" to go")
-          : (over ? fmt(b.used-b.budget)+" over" : fmt(b.remaining)+" left");
+          ? (b.used>=b.budget ? "target met" : mk(b.budget-b.used)+" to go")
+          : (over ? mk(b.used-b.budget)+" over" : mk(b.remaining)+" left");
         const d=document.createElement("div");
         d.className="bud"; d.style.cursor="pointer";
         d.innerHTML=`
           <div class="top"><span class="budico" style="background:${catColor(b.categoryId)}22;border-color:${catColor(b.categoryId)}">${catIcon(b.emoji, 17)}</span>${esc(b.name)}
             <span class="rem ${over&&!income?"over":"ok"}">${remLabel}</span></div>
           <div class="bar"><i class="${cls}" style="width:${pct}%"></i></div>
-          <div class="sub">${fmt(b.used)} of ${fmt(b.budget)}${income?" target":""}</div>`;
+          <div class="sub">${mk(b.used)} of ${mk(b.budget)}${income?" target":""}</div>`;
         d.onclick = ()=>openBudgetHistory(b, p);
         page.appendChild(d);
       });
@@ -2746,27 +2780,36 @@ function renderReportSlides(){
     const periodLabel = p.label;
 
     const page=document.createElement("div"); page.className="reportpage";
+    /* all income in this cycle as one row above the expense categories; tapping it lists the entries */
+    const incomeRow = totalInc ? `<button type="button" class="legrow inc-row" data-income="1" data-from="${esc(p.fromStr)}" data-to="${esc(p.toStr)}" data-label="${esc(p.label)}">
+            <span class="legdot">${icon("moneyIn", 17)}</span>
+            <span class="nm">Income</span>
+            <span class="val bal-mask">+${fmt(totalInc)}</span>
+            <span class="pctv"></span>
+            <span class="chev" aria-hidden="true">›</span>
+          </button>` : "";
     const totalsHtml = `
         <div class="rep-totals">
-          <div class="sr"><span>Total income</span><b class="inc">${fmt(totalInc)}</b></div>
-          ${t.received ? `<div class="sr"><span>Total received</span><b class="inc">${fmt(t.received)}</b></div>` : ""}
-          <div class="sr"><span>Total payout${view==="all"?`<span class="tag">not in surplus</span>`:""}</span><b>${fmt(t.payout)}</b></div>
-          <div class="sr"><span>Total spent</span><b>${fmt(totalExp)}</b></div>
+          <div class="sr"><span>Total income</span><b class="inc bal-mask">${fmt(totalInc)}</b></div>
+          ${t.received ? `<div class="sr"><span>Total received</span><b class="inc bal-mask">${fmt(t.received)}</b></div>` : ""}
+          <div class="sr"><span>Total payout${view==="all"?`<span class="tag">not in surplus</span>`:""}</span><b class="bal-mask">${fmt(t.payout)}</b></div>
+          <div class="sr"><span>Total spent</span><b class="bal-mask">${fmt(totalExp)}</b></div>
           <div class="sr"><span>${net>=0?"Surplus":"Deficit"}</span>
-            <b style="color:${net>=0?"var(--inc)":"var(--exp)"}">${fmt(Math.abs(net))}</b></div>
+            <b class="bal-mask" style="color:${net>=0?"var(--inc)":"var(--exp)"}">${fmt(Math.abs(net))}</b></div>
         </div>`;
     if(!items.length){
       /* totals still show: income and payouts matter even in a cycle with no spending yet */
       page.innerHTML = `<div class="rep-month-label">${esc(periodLabel)}</div>
         <div class="rep-empty">No expenses recorded this ${p.cd===1?"month":"cycle"}. Expenses you log on the Add tab show up here by category.</div>`+
-        ((totalInc||t.received||t.payout) ? totalsHtml : "");
+        ((totalInc||t.received||t.payout) ? totalsHtml : "")+
+        (incomeRow ? `<div class="legend">${incomeRow}</div>` : "");
     } else {
       const legend = items.map(it=>{
         const pct=Math.round(it.value/totalExp*100);
         return `<button type="button" class="legrow" data-cat="${esc(it.categoryId)}" data-from="${esc(p.fromStr)}" data-to="${esc(p.toStr)}" data-label="${esc(p.label)}">
             <span class="legdot" style="background:${it.color}22;border-color:${it.color}">${catIcon(it.emoji, 17)}</span>
             <span class="nm">${esc(it.name)}</span>
-            <span class="val">${fmt(it.value)}</span>
+            <span class="val bal-mask">${fmt(it.value)}</span>
             <span class="pctv">${pct}%</span>
             <span class="chev" aria-hidden="true">›</span>
           </button>`;
@@ -2776,7 +2819,7 @@ function renderReportSlides(){
         <div class="rep-month-label">${esc(periodLabel)}</div>
         <div class="pie-wrap">${pieSVG(items, totalExp)}</div>
         ${totalsHtml}
-        <div class="legend">${legend}</div>`;
+        <div class="legend">${incomeRow ? incomeRow+'<div class="leg-sep" aria-hidden="true"></div>' : ""}${legend}</div>`;
     }
     slider.appendChild(page);
     const dot=document.createElement("span"); if(i===0) dot.className="on";
@@ -2786,6 +2829,9 @@ function renderReportSlides(){
   slider.scrollLeft=0;
   slider.onscroll = ()=>syncSliders(slider, dots);
 
+  slider.querySelectorAll(".legrow[data-income]").forEach(row=>{
+    row.onclick = ()=>openIncomeList({ fromStr:row.dataset.from, toStr:row.dataset.to, label:row.dataset.label }, TX.member);
+  });
   /* tapping a legend row opens that category's history for that cycle */
   slider.querySelectorAll(".legrow[data-cat]").forEach(row=>{
     row.onclick = ()=>{
@@ -2851,6 +2897,30 @@ function openBudgetEdit(b){
 }
 
 /* tap a budget bar → see that category's transactions for the period */
+/* every income entry counted in the report's "Income" row, newest first */
+function openIncomeList(p, view){
+  const rows = TX.all.filter(r=>r.date>=p.fromStr && r.date<=p.toStr && rowFlow(r, view)==="income")
+    .sort((a,c)=>{ if(c.date!==a.date) return c.date.localeCompare(a.date); return (c.loggedAt||0)-(a.loggedAt||0); });
+  const total = rows.reduce((a,r)=>a+r.amount,0);
+  const listHtml = rows.length ? rows.map(r=>`
+      <div class="mrow" data-log="${esc(String(r.loggedAt))}" role="button" tabindex="0">
+        <span class="dot" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span>
+        <span class="t"><b class="bal-mask" style="color:var(--inc)">+${fmt(r.amount)}</b>
+          <small>${esc(catLabel(r.categoryId))} · ${esc(r.date)} · ${esc(walletLabel(r.walletId))}${r.note?" · "+esc(r.note):""}</small></span>
+      </div>`).join("")
+    : `<div class='sd'>No income recorded in ${esc(p.label)}.</div>`;
+  openSheet(`
+    <h2 class="h-ic">${icon("moneyIn", 22)}Income</h2>
+    <div class="sd">${esc(p.label)} · ${mk(total)} received${view==="all"?"":" by "+esc(memberName(view))}</div>
+    <div class="manage-list">${listHtml}</div>
+    <div class="seg" style="margin-top:4px"><button class="ghost" id="il-close" type="button">Close</button></div>
+  `);
+  $("il-close").onclick = closeSheet;
+  $("sheet-body").querySelectorAll("[data-log]").forEach(row=>{
+    row.onclick = ()=>{ const entry = TX.all.find(x=>x.loggedAt===Number(row.dataset.log)); if(entry) openTxDetail(entry); };
+  });
+}
+
 function openBudgetHistory(b, period){
   const p = period && period.fromStr ? period : periodFor(0);
   /* list exactly what was counted: the report passes its view; a budget counts by its owner (joint = Everyone) */
@@ -2864,13 +2934,13 @@ function openBudgetHistory(b, period){
   const listHtml = rows.length ? rows.map(r=>`
       <div class="mrow" data-log="${esc(String(r.loggedAt))}" role="button" tabindex="0">
         <span class="dot" style="background:${esc(memberColor(r.memberId))}">${esc((memberName(r.memberId)[0]||"?").toUpperCase())}</span>
-        <span class="t"><b>${income?"+":"−"}${fmt(r.amount)}</b>
+        <span class="t"><b class="bal-mask">${income?"+":"−"}${fmt(r.amount)}</b>
           <small>${esc(r.date)} · ${esc(walletLabel(r.walletId || r.fromWalletId))}${r.type==="Transfer"?" · split bill":""}${r.note?" · "+esc(r.note):""}</small></span>
       </div>`).join("")
     : `<div class='sd'>No transactions in this category in ${esc(periodLabel)}.</div>`;
   openSheet(`
     <h2 class="h-ic">${catIcon(b.emoji, 22)}${esc(b.name)}</h2>
-    <div class="sd">${esc(periodLabel)} · ${fmt(total)} ${income?"received":"spent"}${b.budget?(" of "+fmt(b.budget)+(income?" target":" budget")):""}</div>
+    <div class="sd">${esc(periodLabel)} · ${mk(total)} ${income?"received":"spent"}${b.budget?(" of "+mk(b.budget)+(income?" target":" budget")):""}</div>
     <div class="manage-list">${listHtml}</div>
     <div class="seg" style="margin-top:4px">
       <button class="ghost" id="bh-close" type="button">Close</button>
@@ -3275,7 +3345,7 @@ function renderWallets(){
       card.innerHTML=`
         <div class="wchip" style="background:${color}22" aria-hidden="true">${esc((w.name[0]||"?").toUpperCase())}</div>
         <div class="wmeta"><div class="wname">${esc(w.name)}</div>
-          <div class="whint">${BAL.starting[w.id]?("start "+fmt(BAL.starting[w.id])):"no starting balance set"}</div></div>
+          <div class="whint">${BAL.starting[w.id]?(`start <span class="bal-mask">${fmt(BAL.starting[w.id])}</span>`):"no starting balance set"}</div></div>
         <div class="wval bal-mask">${fmt(val)}</div>
         <button class="wedit" type="button" aria-label="${esc(w.name)}: balance and options">${icon("pencil",17)}</button>`;
       card.querySelector(".wedit").onclick=()=>openBalanceSheet(w);
